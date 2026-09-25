@@ -85,7 +85,9 @@ Import / export :
 server/           Node exécute le TypeScript tel quel (pas d'étape de build)
   index.ts        point d'entrée : sert l'API et le front compilé (dist/)
   app.ts          routes API, fichiers statiques, sécurité
-  db.ts           accès SQLite, migrations du schéma
+  db.ts           accès SQLite
+  migrations.ts   scripts de migration numérotés et leur application
+  migrate.ts      commande pnpm db:migrate
   markdown.ts     import du markdown
   test/           tests API (node:test)
 shared/types.ts   types échangés entre serveur et front
@@ -107,4 +109,11 @@ En dev, l'API est branchée dans le serveur Vite (`vite.config.ts`) : une seule 
 `setting` (key, value) : réglages de l'application (ex. `jira_base_url`).
 `position` = ordre (priorité) des tâches dans leur projet.
 `notes` = contenu en Markdown. Une tâche est faite quand `done_at` est rempli (le journal, ce sont ces tâches-là), à reporter quand `jira_wanted_at` l'est et pas `jira_at`, reportée quand `jira_at` l'est. Ticket : `jira_key` (lien construit avec `jira_base_url`, qui peut donc changer) ou `jira_url` (lien complet). Liens en http(s) uniquement.
-Le schéma est versionné (`PRAGMA user_version`) : une base plus ancienne, importée ou non, est mise à niveau à l'ouverture.
+### Versions du schéma
+
+- Chaque évolution de la base est un **script numéroté** dans `server/migrations.ts` (version, nom, SQL). On ajoute une version en fin de liste, on ne modifie jamais un script publié.
+- À l'ouverture (démarrage ou import d'une base), les scripts manquants sont appliqués **dans l'ordre**, chacun dans une transaction : une base en version 2 passe en version 6 via 3, 4, 5 et 6.
+- Suivi dans la table technique `schema_migration` (version, nom, version de l'outil, date d'application).
+- Avant de migrer une base existante, une **sauvegarde** est faite à côté : `tasks.db.v2.bak`.
+- Une base plus récente que l'outil est refusée (mettre l'outil à jour).
+- `pnpm db:migrate [fichier]` : affiche la version et l'historique, et migre si besoin.

@@ -23,44 +23,7 @@ export interface TaskPatch {
   notes?: string | null;
 }
 import type { ImportItem } from './markdown.ts';
-
-// Schéma versionné via PRAGMA user_version : chaque entrée = une migration.
-const MIGRATIONS = [
-  `
-  CREATE TABLE project (
-    id          INTEGER PRIMARY KEY,
-    name        TEXT    NOT NULL,
-    created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
-    archived_at TEXT
-  );
-  CREATE TABLE task (
-    id          INTEGER PRIMARY KEY,
-    project_id  INTEGER NOT NULL REFERENCES project(id) ON DELETE CASCADE,
-    title       TEXT    NOT NULL,
-    created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
-    done_at     TEXT    -- 'YYYY-MM-DD', NULL = à faire
-  );
-  CREATE INDEX task_project ON task(project_id);
-  CREATE INDEX task_done_at ON task(done_at);
-  `,
-  // 2 : tâche reportée dans Jira (horodatage du report, NULL = non reportée).
-  `ALTER TABLE task ADD COLUMN jira_at TEXT;`,
-  // 3 : ordre des tâches dans leur projet (priorité), initialisé sur l'ordre de création.
-  `ALTER TABLE task ADD COLUMN position INTEGER NOT NULL DEFAULT 0;
-   UPDATE task SET position = id;`,
-  // 4 : suivi Jira en deux temps (à reporter, puis reportée) et lien du ticket.
-  `ALTER TABLE task ADD COLUMN jira_wanted_at TEXT;
-   ALTER TABLE task ADD COLUMN jira_url TEXT;
-   UPDATE task SET jira_wanted_at = jira_at WHERE jira_at IS NOT NULL;`,
-  // 5 : détails de la tâche (notes, lien), clé du ticket Jira, réglages de l'application.
-  `ALTER TABLE task ADD COLUMN notes TEXT;
-   ALTER TABLE task ADD COLUMN link TEXT;
-   ALTER TABLE task ADD COLUMN jira_key TEXT;
-   CREATE TABLE setting (key TEXT PRIMARY KEY, value TEXT);`,
-  // 6 : le lien de la tâche rejoint ses notes (Markdown), la colonne disparaît.
-  `UPDATE task SET notes = COALESCE(notes || char(10) || char(10), '') || link WHERE link IS NOT NULL;
-   ALTER TABLE task DROP COLUMN link;`,
-];
+import { LATEST_VERSION, migrate, schemaVersion, type MigrationReport } from './migrations.ts';
 
 // À reporter dans Jira : marquée mais pas encore reportée.
 const JIRA_PENDING = 'jira_wanted_at IS NOT NULL AND jira_at IS NULL';
@@ -91,31 +54,18 @@ export function today(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-function userVersion(db: DatabaseSync): number {
-  return (db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version;
-}
-
-function migrate(db: DatabaseSync) {
-  for (let v = userVersion(db); v < MIGRATIONS.length; v++) {
-    db.exec('BEGIN');
-    try {
-      db.exec(MIGRATIONS[v]);
-      db.exec(`PRAGMA user_version = ${v + 1}`);
-      db.exec('COMMIT');
-    } catch (err) {
-      db.exec('ROLLBACK');
-      throw err;
-    }
-  }
-}
-
-function openDb(file: string): DatabaseSync {
+// Ouvre la base et l'amène à la dernière version du schéma (voir migrations.ts).
+function openDb(file: string): { db: DatabaseSync; migration: MigrationReport } {
   const db = new DatabaseSync(file);
   db.exec('PRAGMA foreign_keys = ON');
   // Ne pas exécuter de fonctions SQL appelées depuis le schéma (vues, triggers) d'une base importée.
   db.exec('PRAGMA trusted_schema = OFF');
-  migrate(db);
-  return db;
+  try {
+    return { db, migration: migrate(db, file) };
+  } catch (err) {
+    db.close();
+    throw err;
+  }
 }
 
 // Vérifie qu'un fichier est une base SQLite compatible avant de l'importer.
@@ -137,7 +87,7 @@ export function validateDbFile(file: string) {
     if (extra.n) throw new Error('triggers ou vues non autorisés');
     const { quick_check: check } = db.prepare('PRAGMA quick_check').get() as { quick_check: string };
     if (check !== 'ok') throw new Error('base corrompue');
-    if (userVersion(db) > MIGRATIONS.length) throw new Error('base créée par une version plus récente');
+    if (schemaVersion(db) > LATEST_VERSION) throw new Error('base créée par une version plus récente');
   } catch (err) {
     throw new Error(`Fichier invalide : ${(err as Error).message}`);
   } finally {
@@ -148,11 +98,13 @@ export function validateDbFile(file: string) {
 export class Store {
   readonly file: string;
   db: DatabaseSync;
+  // Migrations appliquées à l'ouverture (vide si la base était à jour).
+  migration: MigrationReport;
 
   constructor(file: string) {
     this.file = file;
     if (file !== ':memory:') fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
-    this.db = openDb(file);
+    ({ db: this.db, migration: this.migration } = openDb(file));
     if (file !== ':memory:') fs.chmodSync(file, 0o600);
   }
 
@@ -406,6 +358,6 @@ export class Store {
     for (const suffix of ['-wal', '-shm']) fs.rmSync(this.file + suffix, { force: true });
     fs.copyFileSync(file, this.file);
     fs.chmodSync(this.file, 0o600);
-    this.db = openDb(this.file);
+    ({ db: this.db, migration: this.migration } = openDb(this.file));
   }
 }

@@ -407,3 +407,71 @@ test('journal : liste des jours ayant des entrées, filtrée par projet', async 
   const { body: onlyA } = await call('GET', `/api/journal?project=${a.id}`);
   assert.deepEqual(onlyA.dates, ['2019-03-01', '2019-03-03']);
 });
+
+test('versions du schéma : base neuve suivie dans schema_migration', async () => {
+  const { MIGRATIONS, LATEST_VERSION } = await import('../migrations.ts');
+  const fresh = new Store(path.join(dir, 'neuve.sqlite'));
+  const rows = fresh.db.prepare('SELECT version, name, applied_at FROM schema_migration ORDER BY version').all() as {
+    version: number;
+    name: string;
+    applied_at: string | null;
+  }[];
+  assert.deepEqual(rows.map((r) => r.version), MIGRATIONS.map((m) => m.version));
+  assert.ok(rows.every((r) => r.applied_at));
+  assert.equal(fresh.migration.from, 0);
+  assert.equal(fresh.migration.backup, null); // rien à sauvegarder
+  assert.equal((fresh.db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version, LATEST_VERSION);
+  fresh.close();
+});
+
+test('versions du schéma : base v2 → dernière version (3, 4, 5, 6…), sauvegarde avant', async () => {
+  const { DatabaseSync } = await import('node:sqlite');
+  const { LATEST_VERSION } = await import('../migrations.ts');
+  const file = path.join(dir, 'v2.sqlite');
+  const v2 = new DatabaseSync(file);
+  v2.exec(`CREATE TABLE project (id INTEGER PRIMARY KEY, name TEXT NOT NULL,
+             created_at TEXT NOT NULL DEFAULT (datetime('now')), archived_at TEXT);
+           CREATE TABLE task (id INTEGER PRIMARY KEY, project_id INTEGER NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+             title TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')), done_at TEXT, jira_at TEXT);
+           INSERT INTO project (name) VALUES ('Ancien');
+           INSERT INTO task (project_id, title, jira_at) VALUES (1, 'Reportée en v2', '2026-01-01 09:00:00');
+           PRAGMA user_version = 2;`);
+  v2.close();
+
+  const store2 = new Store(file);
+  const m = store2.migration;
+  assert.equal(m.from, 2);
+  assert.deepEqual(m.applied.map((x) => x.version), Array.from({ length: LATEST_VERSION - 2 }, (_, i) => i + 3));
+  // Suivi : versions 1-2 connues (date inconnue), les suivantes datées.
+  const rows = store2.db.prepare('SELECT version, applied_at FROM schema_migration ORDER BY version').all() as {
+    version: number;
+    applied_at: string | null;
+  }[];
+  assert.deepEqual(rows.filter((r) => !r.applied_at).map((r) => r.version), [1, 2]);
+  // Données conservées et transformées par les migrations.
+  assert.deepEqual(store2.state().projects[0].tasks[0], {
+    id: 1, project_id: 1, title: 'Reportée en v2', jira_wanted_at: '2026-01-01 09:00:00',
+    jira_at: '2026-01-01 09:00:00', jira_key: null, jira_url: null, notes: null,
+  });
+  store2.close();
+
+  // La sauvegarde est la base v2 intacte.
+  assert.equal(m.backup, `${file}.v2.bak`);
+  const bak = new DatabaseSync(m.backup!, { readOnly: true });
+  assert.equal((bak.prepare('PRAGMA user_version').get() as { user_version: number }).user_version, 2);
+  bak.close();
+
+  // Réouverture : plus rien à appliquer.
+  const again = new Store(file);
+  assert.deepEqual(again.migration.applied, []);
+  again.close();
+});
+
+test('versions du schéma : base plus récente que l’outil refusée', async () => {
+  const { DatabaseSync } = await import('node:sqlite');
+  const file = path.join(dir, 'future.sqlite');
+  const future = new DatabaseSync(file);
+  future.exec('PRAGMA user_version = 999');
+  future.close();
+  assert.throws(() => new Store(file), /plus récente que l'outil/);
+});
