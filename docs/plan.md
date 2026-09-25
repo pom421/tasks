@@ -7,7 +7,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-- [~] Branche `ui/taches-icones-a-droite` : icônes de la tâche (report, détails) alignées à droite, titre cliquable sur toute la largeur. À valider par l'utilisateur, puis fusion dans `main`
+Rien.
 
 ## Décisions attendues
 
@@ -28,6 +28,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
+- [x] Tâche : icônes (report, détails) à droite, titre cliquable sur toute la largeur (branche fusionnée)
 - [x] Suppression homogène : plus de ✕ ni de fenêtre de confirmation, corbeille du projet en deux temps
 - [x] Installation automatique des dépendances en session web (hook SessionStart + setup script)
 - [x] Skills du projet : livrer, verifier-ci, nouveau-controle, capture-ecran, migration
