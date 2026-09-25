@@ -3,6 +3,7 @@ import type { DoneTask, JournalDay, JournalFilter, Project } from '../../shared/
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { formatDay, isComplete, localToday } from '@/lib/dates';
 import { cn } from '@/lib/utils';
+import { useListAnimation } from '@/lib/animation';
 import { Button } from '@/components/ui/button';
 import { TaskRow } from './TaskRow';
 
@@ -31,6 +32,21 @@ export function journalQuery(f: Filter): JournalFilter {
 
 const fieldClass = 'rounded-md border bg-background px-1.5 py-0.5 text-sm';
 
+// Tâches d'un projet dans une journée (liste animée : recherche, cocher / décocher).
+function Group({ name, tasks, showProject }: { name: string; tasks: DoneTask[]; showProject: boolean }) {
+  const ref = useListAnimation<HTMLUListElement>();
+  return (
+    <div>
+      {showProject && <div className="project-label mt-1.5 ml-1 text-sm font-semibold">{name}</div>}
+      <ul ref={ref}>
+        {tasks.map((t) => (
+          <TaskRow key={t.id} task={t} />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function Day({ day, showProjects }: { day: JournalDay; showProjects: boolean }) {
   // Regroupe les tâches consécutives d'un même projet.
   const groups: { id: number; name: string; tasks: DoneTask[] }[] = [];
@@ -46,14 +62,7 @@ function Day({ day, showProjects }: { day: JournalDay; showProjects: boolean }) 
       </h3>
       {!day.tasks.length && <p className="empty py-1 text-sm italic text-muted-foreground">Rien de fait ce jour-là.</p>}
       {groups.map((g, i) => (
-        <div key={`${g.id}-${i}`}>
-          {showProjects && <div className="project-label mt-1.5 ml-1 text-sm font-semibold">{g.name}</div>}
-          <ul>
-            {g.tasks.map((t) => (
-              <TaskRow key={t.id} task={t} />
-            ))}
-          </ul>
-        </div>
+        <Group key={`${g.id}-${i}`} name={g.name} tasks={g.tasks} showProject={showProjects} />
       ))}
     </div>
   );
@@ -68,6 +77,7 @@ interface JournalProps {
 }
 
 export function Journal({ days, dates, projects, filter, onFilter }: JournalProps) {
+  const daysRef = useListAnimation<HTMLDivElement>();
   const today = localToday();
   const dayMode = isDayMode(filter);
   const current = filter.day || today;
@@ -205,9 +215,9 @@ export function Journal({ days, dates, projects, filter, onFilter }: JournalProp
           Aujourd’hui
         </Button>
       </div>
-      <div id="journal-days">
+      <div ref={daysRef} id="journal-days">
         {dayMode ? (
-          <Day day={days[0] ?? { date: current, tasks: [] }} showProjects={!filter.project} />
+          <Day key={current} day={days[0] ?? { date: current, tasks: [] }} showProjects={!filter.project} />
         ) : (
           days.map((d) => <Day key={d.date} day={d} showProjects={!filter.project} />)
         )}

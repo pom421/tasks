@@ -27,6 +27,7 @@ Rien.
 
 ## Fait (récent)
 
+- [x] Animations des listes (AutoAnimate) : déplacement, filtres, recherche du Log
 - [x] Installation automatique des dépendances en session web (hook SessionStart + setup script)
 - [x] Skills du projet : livrer, verifier-ci, nouveau-controle, capture-ecran, migration
 - [x] Filtres sobres : contour, icône vide / pleine selon l'état (`87f5ede`)

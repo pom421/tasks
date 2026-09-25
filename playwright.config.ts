@@ -13,7 +13,9 @@ export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
   reporter: process.env.CI ? 'github' : 'list',
   // Locale fixe : format des dates (mm/jj/aaaa) et textes identiques partout.
-  use: { trace: 'retain-on-failure', locale: 'en-US', timezoneId: 'Europe/Paris' },
+  // Animations coupées (prefers-reduced-motion) : tests déterministes. Les
+  // animations ont leurs propres tests (e2e/animation.spec.ts), qui les réactivent.
+  use: { trace: 'retain-on-failure', locale: 'en-US', timezoneId: 'Europe/Paris', reducedMotion: 'reduce' },
   projects: [
     {
       name: 'chromium',
