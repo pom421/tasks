@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type FormEvent } from 'react';
+import { useEffect, useId, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,37 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
       .then((s) => setJiraBaseUrl(s.jira_base_url ?? ''))
       .catch((err) => setStatus({ error: err.message }));
   }, []);
+
+  // Export / import de la base.
+  const dbInput = useRef<HTMLInputElement>(null);
+  const mdInput = useRef<HTMLInputElement>(null);
+  const [data, setData] = useState<{ ok?: string; error?: string }>({});
+  const run = async (fn: () => Promise<string>) => {
+    setData({});
+    try {
+      setData({ ok: await fn() });
+    } catch (err) {
+      setData({ error: (err as Error).message });
+    }
+  };
+  const importDb = (file: File) => {
+    if (!confirm('Remplacer TOUTE la base actuelle par ce fichier ?\nPensez à exporter avant.')) return;
+    run(async () => {
+      await api.importDb(file);
+      return 'Base importée.';
+    });
+  };
+  const importMd = (file: File) =>
+    run(async () => {
+      const r = await api.importMarkdown(await file.text());
+      return `Import : ${r.projects} projet(s) créé(s), ${r.tasks} tâche(s).`;
+    });
+  // Relâche le fichier choisi pour pouvoir réimporter le même.
+  const pick = (handler: (file: File) => void) => (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (file) handler(file);
+  };
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
@@ -87,6 +118,36 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
             </p>
           )}
         </form>
+      </section>
+
+      <section aria-labelledby={`${id}-data`} className="mt-10">
+        <h2 id={`${id}-data`} className="font-semibold">
+          Données
+        </h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Exporter télécharge la base (.sqlite). Importer .sqlite la remplace entièrement ; importer .md ajoute des projets et des tâches.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          <Button variant="outline" size="sm" asChild>
+            <a href="/api/export">Exporter</a>
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => dbInput.current?.click()}>
+            Importer .sqlite
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => mdInput.current?.click()}>
+            Importer .md
+          </Button>
+          <input ref={dbInput} type="file" accept=".sqlite,.db,.sqlite3" hidden onChange={pick(importDb)} />
+          <input ref={mdInput} type="file" accept=".md,.markdown,.txt" hidden onChange={pick(importMd)} />
+        </div>
+        <p id="data-status" role="status" className="mt-2 text-sm text-muted-foreground">
+          {data.ok}
+        </p>
+        {data.error && (
+          <p role="alert" className="text-sm text-destructive">
+            {data.error}
+          </p>
+        )}
       </section>
     </div>
   );

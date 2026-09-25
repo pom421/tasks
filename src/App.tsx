@@ -186,10 +186,6 @@ export function App() {
   const projectName = (t: Task & { project_name?: string }) =>
     t.project_name ?? data.projects.find((p) => p.id === t.project_id)?.name ?? '';
 
-  // Projets affichés selon « Archivés » (seulement les archivés, ou seulement
-  // les autres) : base des compteurs des boutons à reporter et Favoris.
-  const visibleProjects = data.projects.filter((p) => Boolean(p.archived_at) === archivedOnly);
-
   if (path === '/admin') {
     return <SettingsPage onBack={() => navigate('/')} />;
   }
@@ -212,10 +208,11 @@ export function App() {
       )}
       <div className="mx-auto max-w-2xl px-4">
         <Toolbar
-          jiraPending={visibleProjects.flatMap((p) => p.tasks).filter((t) => jiraState(t) === 'wanted').length}
+          // Compteurs sur tous les projets : un bouton ne disparaît pas selon les autres filtres.
+          jiraPending={data.projects.flatMap((p) => p.tasks).filter((t) => jiraState(t) === 'wanted').length}
           jiraFilter={jiraOnly}
           onJiraFilter={() => setJiraOnly((v) => !v)}
-          favorites={visibleProjects.filter((p) => p.favorite_at).length}
+          favorites={data.projects.filter((p) => p.favorite_at).length}
           favoritesOnly={favoritesOnly}
           onFavoritesOnly={() => setFavoritesOnly((v) => !v)}
           archived={data.projects.filter((p) => p.archived_at).length}

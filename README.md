@@ -50,7 +50,7 @@ Vérifications :
   - `Ctrl+Entrée` (ou `Entrée` dans le titre / le ticket) enregistre et repasse en lecture seule ; un second `Ctrl+Entrée` (ou `Échap`) ferme. Enregistrement automatique.
   - Ouverte par `L` (ou `J` → reporté), la fiche démarre en édition sur le ticket et `Entrée` la ferme.
 - Report : une tâche passe « à reporter », puis « reporté » (badge après le titre, avec l'identifiant du ticket).
-- Réglages (icône ⚙, page `/admin`, `Échap` pour revenir) : URL de base des tickets (ex. `https://entreprise.atlassian.net`), qui transforme les identifiants en liens (`URL/browse/PROJ-123`). Conservée en base.
+- Réglages (icône ⚙, page `/admin`, `Échap` pour revenir) : URL de base des tickets (ex. `https://entreprise.atlassian.net`), qui transforme les identifiants en liens (`URL/browse/PROJ-123`), conservée en base ; export / import des données.
 
 Clavier (`?` affiche l'aide) :
 
@@ -76,7 +76,7 @@ Clavier (`?` affiche l'aide) :
 | `d` / `f` | Filtre du Log par journée / par projet (`f` hors projet sélectionné) |
 | `/` | Rechercher dans le Log |
 
-Import / export :
+Import / export (page Réglages) :
 
 - **Exporter** télécharge la base `.sqlite`. **Importer .sqlite** remplace toute la base.
 - **Importer .md** ajoute des projets et tâches depuis un markdown : puce = projet, sous-puce = tâche, une ligne avec une date (`## 24/09/2026`) ouvre une journée de tâches faites.

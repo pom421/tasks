@@ -1,6 +1,4 @@
-import { useRef, type ChangeEvent } from 'react';
 import { Archive, Heart, Settings as SettingsIcon } from 'lucide-react';
-import { api } from '@/lib/api';
 import { useActions } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -44,69 +42,16 @@ interface ToolbarProps {
 }
 
 export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, favorites, favoritesOnly, onFavoritesOnly, archived, archivedOnly, onArchivedOnly, helpOpen, onHelpOpen }: ToolbarProps) {
-  const { act, toast, navigate } = useActions();
-  const dbInput = useRef<HTMLInputElement>(null);
-  const mdInput = useRef<HTMLInputElement>(null);
+  const { navigate } = useActions();
 
-  const importDb = (file: File) => {
-    if (!confirm('Remplacer TOUTE la base actuelle par ce fichier ?\nPensez à exporter avant.')) return;
-    act(async () => {
-      await api.importDb(file);
-      toast('Base importée');
-    });
-  };
-
-  const importMd = (file: File) =>
-    act(async () => {
-      const r = await api.importMarkdown(await file.text());
-      toast(`Import : ${r.projects} projet(s) créé(s), ${r.tasks} tâche(s)`);
-    });
-
-  // Relâche le fichier choisi pour pouvoir réimporter le même.
-  const pick = (handler: (file: File) => void) => (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (file) handler(file);
-  };
-
+  // Filtres de la zone des projets, combinables (ET logique). Chacun n'est
+  // affiché que s'il peut servir (ou s'il est actif, pour pouvoir le couper),
+  // indépendamment des autres filtres actifs.
+  // Boutons bascule : plein quand actif, état annoncé par aria-pressed.
   return (
     <header className="flex flex-wrap items-center justify-between gap-2 pt-6 pb-2">
       <h1 className="text-2xl font-bold">Tâches</h1>
       <nav className="flex flex-wrap items-center gap-1.5">
-        <Button variant="outline" size="sm" asChild>
-          <a href="/api/export">Exporter</a>
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => dbInput.current?.click()}>
-          Importer .sqlite
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => mdInput.current?.click()}>
-          Importer .md
-        </Button>
-        <Button variant="outline" size="sm" title="Raccourcis (?)" onClick={() => onHelpOpen(true)}>
-          ?
-        </Button>
-        <Button variant="outline" size="sm" asChild>
-          <a
-            href="/admin"
-            id="settings-link"
-            title="Réglages"
-            aria-label="Réglages"
-            onClick={(e) => {
-              e.preventDefault();
-              navigate('/admin');
-            }}
-          >
-            <SettingsIcon aria-hidden />
-          </a>
-        </Button>
-        <input ref={dbInput} type="file" accept=".sqlite,.db,.sqlite3" hidden onChange={pick(importDb)} />
-        <input ref={mdInput} type="file" accept=".md,.markdown,.txt" hidden onChange={pick(importMd)} />
-      </nav>
-
-      {/* Ligne réservée (hauteur fixe) : les boutons apparaissent sans rien décaler.
-          Chacun n'est affiché que s'il a un effet (ou s'il est actif, pour pouvoir le couper).
-          Boutons bascule : plein quand actif, état annoncé par aria-pressed. */}
-      <div className="flex h-8 w-full justify-end gap-1.5">
         {(jiraPending > 0 || jiraFilter) && (
           <Button
             id="jira-pending"
@@ -143,7 +88,24 @@ export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, favorites, favo
             <Heart aria-hidden className="text-red-600" fill="currentColor" /> Favoris
           </Button>
         )}
-      </div>
+        <Button variant="outline" size="sm" title="Raccourcis (?)" onClick={() => onHelpOpen(true)}>
+          ?
+        </Button>
+        <Button variant="outline" size="sm" asChild>
+          <a
+            href="/admin"
+            id="settings-link"
+            title="Réglages, export et import"
+            aria-label="Réglages"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate('/admin');
+            }}
+          >
+            <SettingsIcon aria-hidden />
+          </a>
+        </Button>
+      </nav>
 
       <Dialog open={helpOpen} onOpenChange={onHelpOpen}>
         <DialogContent>

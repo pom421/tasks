@@ -376,6 +376,58 @@ test('boutons de filtre : à reporter, Archivés, Favoris, dans cet ordre, seule
   await expect(page.locator('#projects .project-head .name')).toHaveText(['Alpha', 'Beta']);
 });
 
+test('filtres combinés (ET) : aucun bouton ne disparaît quand un autre est actif', async ({ page, store, data }) => {
+  // Gamma : archivé, favori, avec une tâche à reporter. Delta : archivé seulement.
+  const gamma = store.createProject('Gamma');
+  store.updateTask(store.createTask(gamma.id, 'G à reporter').id, { jira: 'wanted' });
+  store.createTask(gamma.id, 'G normale');
+  store.updateProject(gamma.id, { archived: true, favorite: true });
+  const delta = store.createProject('Delta');
+  store.updateProject(delta.id, { archived: true });
+  store.updateProject(data.alpha.id, { favorite: true }); // favori, non archivé
+  store.updateTask(data.tasks.trois.id, { jira: 'wanted' }); // Beta : à reporter, non favori
+  await reload(page);
+
+  const buttons = page.locator('#jira-pending, #archived-only, #favorites-only');
+  const heads = page.locator('#projects .project-head .name');
+  const tasks = page.locator('#projects .task .name');
+  await expect(page.locator('#jira-pending')).toHaveText('2 tâches à reporter'); // tous projets confondus
+
+  await page.locator('#archived-only').click();
+  await expect(heads).toHaveText(['Gamma', 'Delta']);
+  await expect(buttons).toHaveCount(3); // Favoris et à reporter restent là
+  await page.locator('#favorites-only').click(); // archivés ET favoris
+  await expect(heads).toHaveText(['Gamma']);
+  await expect(tasks).toHaveText(['G à reporter', 'G normale']);
+  await page.locator('#jira-pending').click(); // ET à reporter
+  await expect(heads).toHaveText(['Gamma']);
+  await expect(tasks).toHaveText(['G à reporter']);
+  await expect(buttons).toHaveCount(3);
+
+  await page.locator('#archived-only').click(); // favoris ET à reporter, non archivés : aucun
+  await expect(heads).toHaveCount(0);
+  await expect(buttons).toHaveCount(3);
+  await page.locator('#favorites-only').click(); // à reporter seulement
+  await expect(heads).toHaveText(['Beta']);
+});
+
+test('barre d’outils : filtres à la place de l’export / import, qui sont dans les réglages', async ({ page }) => {
+  await expect(page.getByRole('banner').getByRole('button', { name: /Importer/ })).toHaveCount(0);
+  await expect(page.getByRole('banner').getByRole('link', { name: 'Exporter' })).toHaveCount(0);
+
+  await page.getByRole('link', { name: 'Réglages' }).click();
+  await expect(page.getByRole('link', { name: 'Exporter' })).toHaveAttribute('href', '/api/export');
+  // Import .md depuis les réglages, visible au retour sur la liste.
+  await page.locator('input[type=file][accept^=".md"]').setInputFiles({
+    name: 'import.md',
+    mimeType: 'text/markdown',
+    buffer: Buffer.from('- Importé\n  - Tâche importée\n'),
+  });
+  await expect(page.locator('#data-status')).toHaveText('Import : 1 projet(s) créé(s), 1 tâche(s).');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#projects .project-head .name')).toHaveText(['Alpha', 'Beta', 'Importé']);
+});
+
 test('clavier sur un projet : f favori, a archiver, x x supprimer, u annule tout', async ({ page, store, data }) => {
   const beta = () => store.state().projects.find((p) => p.id === data.beta.id);
   store.updateTask(data.tasks.trois.id, { doneAt: '2026-09-20', notes: 'historique' });
@@ -552,7 +604,7 @@ test('réglages (/admin) : URL Jira conservée en base, lien depuis la fiche', a
   await expect(page.getByRole('heading', { name: 'Réglages' })).toBeVisible();
   await page.getByLabel('URL de base des tickets').fill('https://entreprise.atlassian.net/');
   await page.getByRole('button', { name: 'Enregistrer' }).click();
-  await expect(page.getByRole('status')).toHaveText('Réglages enregistrés.');
+  await expect(page.getByText('Réglages enregistrés.')).toBeVisible();
   expect(store.settings().jira_base_url).toBe('https://entreprise.atlassian.net');
 
   // Rechargement direct de /admin : valeur relue en base.
