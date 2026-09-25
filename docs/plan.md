@@ -7,7 +7,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-- [~] Vérifier la CI de `87f5ede` (filtres sobres)
+Rien.
 
 ## Décisions attendues
 
