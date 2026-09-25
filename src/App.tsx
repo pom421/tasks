@@ -8,6 +8,7 @@ import { ProjectList } from '@/components/ProjectList';
 import { Journal, NO_FILTER, type Filter } from '@/components/Journal';
 import { TaskDialog } from '@/components/TaskDialog';
 import { SettingsPage } from '@/components/SettingsPage';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 interface Data {
   projects: Project[];
@@ -161,6 +162,7 @@ export function App() {
 
   return (
     <ActionsContext.Provider value={actions}>
+      <TooltipProvider>
       {current && (
         <TaskDialog
           key={openTask.opening}
@@ -194,6 +196,7 @@ export function App() {
           {message}
         </div>
       )}
+      </TooltipProvider>
     </ActionsContext.Provider>
   );
 }

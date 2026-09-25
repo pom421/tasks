@@ -58,7 +58,7 @@ function ProjectCard({ project: p, onMove }: { project: Project; onMove?: MoveTa
         ))}
       </ul>
       <AddInput
-        placeholder="+ Ajouter une tâche"
+        placeholder="+ Ajouter une tâche (n)"
         navKey={`add:${p.id}`}
         onFocus={() => setLastProject(p.id)}
         onAdd={addTask}

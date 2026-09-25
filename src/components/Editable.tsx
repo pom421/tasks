@@ -1,16 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface EditableNameProps {
   value: string;
   navKey: string;
   onSave: (value: string) => void;
   className?: string;
+  // Sur une ligne, avec « … » si trop long ; titre complet en info-bulle.
+  truncate?: boolean;
 }
 
 // Nom navigable au clavier. Clic ou Entrée -> champ d'édition :
 // Entrée enregistre, Échap annule, dans les deux cas le focus revient au nom.
-export function EditableName({ value, navKey, onSave, className }: EditableNameProps) {
+export function EditableName({ value, navKey, onSave, className, truncate = false }: EditableNameProps) {
+  const [tooltip, setTooltip] = useState(false);
   const [editing, setEditing] = useState(false);
   const refocus = useRef(false);
   const span = useRef<HTMLSpanElement>(null);
@@ -52,11 +56,10 @@ export function EditableName({ value, navKey, onSave, className }: EditableNameP
     );
   }
 
-  return (
+  const name = (
     <span
       ref={span}
-      className={cn('name cursor-text outline-none [overflow-wrap:anywhere]', className)}
-      title="Cliquer ou Entrée pour modifier"
+      className={cn('name cursor-text outline-none', truncate ? 'min-w-0 truncate' : '[overflow-wrap:anywhere]', className)}
       tabIndex={0}
       data-nav=""
       data-nav-key={navKey}
@@ -71,6 +74,18 @@ export function EditableName({ value, navKey, onSave, className }: EditableNameP
     >
       {value}
     </span>
+  );
+  if (!truncate) return name;
+
+  // Info-bulle au survol ou au focus clavier, seulement si le titre est coupé.
+  const isTruncated = () => Boolean(span.current && span.current.scrollWidth > span.current.clientWidth);
+  return (
+    <Tooltip open={tooltip} onOpenChange={(open) => setTooltip(open && isTruncated())}>
+      <TooltipTrigger asChild>{name}</TooltipTrigger>
+      <TooltipContent side="bottom" align="start" className="full-title">
+        {value}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 

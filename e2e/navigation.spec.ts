@@ -478,3 +478,43 @@ test('bouton « tâches à reporter » : place réservée, rien ne bouge quand i
   expect(await top()).toBe(before);
   await expect(row(page, data.tasks.une.id).locator('.report-wanted')).toHaveText('à reporter');
 });
+
+test('titre long : « … » sur une ligne, titre complet au survol ou au focus clavier', async ({ page, store, data }) => {
+  const long = 'Préparer la présentation trimestrielle pour le comité de direction avec les chiffres consolidés de toutes les équipes produit';
+  store.updateTask(data.tasks.une.id, { title: long, jira: 'done', jiraKey: 'PROJ-1234' });
+  await page.reload();
+  const name = page.locator(`[data-nav-key="task:${data.tasks.une.id}"]`);
+  // Une seule ligne, coupée : le badge reste visible.
+  expect(await name.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+  await expect(row(page, data.tasks.une.id).locator('.report-done')).toBeInViewport();
+  expect(await row(page, data.tasks.une.id).evaluate((el) => el.getBoundingClientRect().height)).toBeLessThan(40);
+
+  await name.hover();
+  await expect(page.locator('.full-title')).toHaveText(long);
+  await page.mouse.move(400, 650, { steps: 5 }); // déplacement réel (Radix ignore une « téléportation »)
+  await expect(page.locator('.full-title')).toHaveCount(0);
+
+  // Au clavier aussi (et annoncé : le titre complet décrit l'élément).
+  await pressDown(page, 2);
+  await expect(page.locator('.full-title')).toHaveText(long);
+  await expect(name).toHaveAccessibleDescription(long);
+
+  // Titre court : pas d'info-bulle.
+  await page.keyboard.press('j');
+  await page.locator(`[data-nav-key="task:${data.tasks.deux.id}"]`).hover();
+  await page.waitForTimeout(500);
+  await expect(page.locator('.full-title')).toHaveCount(0);
+});
+
+test('ligne épurée et fiche ordonnée : titre, ticket, contenu', async ({ page, data }) => {
+  await expect(page.locator(`[data-nav-key="add:${data.alpha.id}"]`)).toHaveAttribute('placeholder', '+ Ajouter une tâche (n)');
+  const une = row(page, data.tasks.une.id);
+  await une.hover();
+  await expect(une.locator('.actions button')).toHaveText(['✕']); // plus de « reporté » / « détails »
+
+  await pressDown(page, 2);
+  await page.keyboard.press('Shift+Enter');
+  const dialog = page.getByRole('dialog', { name: 'Une' });
+  const labels = await dialog.locator('label').allTextContents();
+  expect(labels).toEqual(['Ticket', 'Contenu']);
+});

@@ -104,10 +104,31 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
           focusByKey(`task:${task.id}`);
         }}
       >
-        <DialogTitle className="pr-6 leading-snug">{task.title}</DialogTitle>
+        <DialogTitle className="pr-6 leading-snug [overflow-wrap:anywhere]">{task.title}</DialogTitle>
         <DialogDescription>
           {projectName} · {state}
         </DialogDescription>
+
+        <div className="grid gap-1.5 sm:max-w-xs">
+          <Label htmlFor={`${id}-ticket`}>Ticket</Label>
+          <Input
+            ref={ticketInput}
+            id={`${id}-ticket`}
+            placeholder="PROJ-123"
+            autoComplete="off"
+            value={ticket}
+            onChange={(e) => setTicket(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && !e.ctrlKey && !e.metaKey && close()}
+            aria-invalid={Boolean(error)}
+            aria-describedby={error ? `${id}-error` : undefined}
+          />
+        </div>
+
+        {error && (
+          <p id={`${id}-error`} role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
 
         <div className="grid min-h-0 flex-1 gap-1.5">
           <Label id={`${id}-notes-label`} htmlFor={editing ? `${id}-notes` : undefined}>
@@ -150,26 +171,6 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
           </p>
         </div>
 
-        <div className="grid gap-1.5 sm:max-w-xs">
-          <Label htmlFor={`${id}-ticket`}>Ticket</Label>
-          <Input
-            ref={ticketInput}
-            id={`${id}-ticket`}
-            placeholder="PROJ-123"
-            autoComplete="off"
-            value={ticket}
-            onChange={(e) => setTicket(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !e.ctrlKey && !e.metaKey && close()}
-            aria-invalid={Boolean(error)}
-            aria-describedby={error ? `${id}-error` : undefined}
-          />
-        </div>
-
-        {error && (
-          <p id={`${id}-error`} role="alert" className="text-sm text-destructive">
-            {error}
-          </p>
-        )}
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={close}>

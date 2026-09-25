@@ -91,7 +91,7 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
   return (
     <li
       className={cn(
-        'task group flex items-center gap-2 rounded px-1 py-0.5 hover:bg-accent has-[.name:focus]:bg-accent has-[.name:focus]:shadow-[inset_3px_0_var(--color-primary)]',
+        'task group flex min-w-0 items-center gap-2 rounded px-1 py-0.5 text-sm hover:bg-accent has-[.name:focus]:bg-accent has-[.name:focus]:shadow-[inset_3px_0_var(--color-primary)]',
         confirmDelete && 'bg-destructive/10 has-[.name:focus]:bg-destructive/10 has-[.name:focus]:shadow-[inset_3px_0_var(--color-destructive)]',
       )}
       onKeyDown={onKeyDown}
@@ -103,6 +103,7 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
           value={task.title}
           navKey={navKey}
           className={done ? 'text-muted-foreground' : undefined}
+          truncate
           onSave={(title) => patch({ title })}
         />
         <ReportBadge task={task} />
@@ -120,17 +121,11 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
         )}
       </span>
       {confirmDelete ? (
-        <span className="confirm-delete text-xs text-destructive" role="alert">
+        <span className="confirm-delete flex-none text-xs text-destructive" role="alert">
           x pour supprimer · Échap pour annuler
         </span>
       ) : (
-        <span className="actions invisible flex gap-0.5 group-hover:visible group-focus-within:visible">
-          <Button variant="ghost" size="xs" className="text-muted-foreground" title="Report : à reporter → reporté → rien (J)" onClick={cycleJira}>
-            {{ none: 'à reporter', wanted: 'reporté', done: 'ne plus reporter' }[jiraState(task)]}
-          </Button>
-          <Button variant="ghost" size="xs" className="text-muted-foreground" title="Contenu et ticket (o ou Maj+Entrée)" onClick={() => openTask(task, 'notes')}>
-            détails
-          </Button>
+        <span className="actions invisible flex flex-none gap-0.5 group-hover:visible group-focus-within:visible">
           {done &&
             (editingDate ? (
               <input
