@@ -33,6 +33,23 @@ Vérifications :
 - `pnpm test` : API et import (Node, sans navigateur)
 - `pnpm test:e2e` : interface dans Chromium. La première fois, installer le navigateur : `pnpm exec playwright install chromium`
 
+## Claude Code sur le web (environnement cloud)
+
+Chaque session démarre dans un conteneur neuf : les dépendances doivent y être installées.
+
+- **Automatique (rien à configurer)** : le hook `.claude/hooks/session-start.sh`, déclaré dans `.claude/settings.json`, lance `scripts/setup-cloud.sh` au démarrage de chaque session web (`corepack enable` + `pnpm install --frozen-lockfile`). Rapide quand le store pnpm est déjà en cache.
+- **Optionnel, « Setup script » de l'environnement** : menu de l'environnement cloud (barre de titre de la session) → *Edit* → champ *Setup script*. Il tourne à la création du conteneur, avant Claude. À coller :
+  ```bash
+  #!/bin/bash
+  set -euo pipefail
+  # Dépôt tasks : à la racine de la session, ou cloné à côté.
+  for dir in "${CLAUDE_PROJECT_DIR:-$PWD}" /home/user/tasks; do
+    if [ -x "$dir/scripts/setup-cloud.sh" ]; then exec "$dir/scripts/setup-cloud.sh"; fi
+  done
+  echo "tasks introuvable : rien à installer"
+  ```
+- Navigateur des tests : pas de téléchargement, le Chromium du conteneur (`/opt/pw-browsers/chromium`) est détecté par `playwright.config.ts`. `pnpm test:e2e` marche tel quel.
+
 ## Utilisation
 
 - Cocher une tâche → elle passe dans le Log, datée du jour. La décocher → elle revient dans son projet.

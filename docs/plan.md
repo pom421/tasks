@@ -27,6 +27,7 @@ Rien.
 
 ## Fait (récent)
 
+- [x] Installation automatique des dépendances en session web (hook SessionStart + setup script)
 - [x] Skills du projet : livrer, verifier-ci, nouveau-controle, capture-ecran, migration
 - [x] Filtres sobres : contour, icône vide / pleine selon l'état (`87f5ede`)
 - [x] Message de liste vide avec plusieurs filtres (`4358d0b`)

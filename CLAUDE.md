@@ -49,7 +49,10 @@ modèle de données) et `docs/plan.md` (tâches en cours, décisions attendues).
 
 ## Pièges connus
 
-- e2e en local (conteneur) : `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm test:e2e`.
+- Conteneur cloud : dépendances installées par le hook `SessionStart`
+  (`scripts/setup-cloud.sh`) ; Chromium du conteneur détecté par
+  `playwright.config.ts`, `pnpm test:e2e` marche tel quel (ne pas lancer
+  `playwright install`).
 - Tests e2e : attendre ce qui est **affiché** (attribut, texte), pas l'état de la
   base, sinon course avec la mise à jour de l'interface (échec CI déjà vu).
 - Boutons visibles au survol seulement (`invisible group-hover:visible`) :

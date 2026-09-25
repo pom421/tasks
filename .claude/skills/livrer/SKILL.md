@@ -9,7 +9,7 @@ description: Vérifier, documenter, commiter et pousser une modification termin�
    ```sh
    pnpm typecheck
    pnpm test
-   PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm test:e2e
+   pnpm test:e2e
    ```
    Un test qui échoue n'est jamais « instable » : trouver la cause. En cas de doute,
    `pnpm exec playwright test -g "<nom>" --repeat-each 20`.
