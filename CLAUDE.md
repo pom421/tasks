@@ -60,10 +60,6 @@ modèle de données) et `docs/plan.md` (tâches en cours, décisions attendues).
 - Ne pas lancer `pkill -f` / `pgrep` avec un motif qui correspond à la commande
   elle-même : le shell se tue.
 
-- Animations (AutoAnimate) : un élément retiré reste ~180 ms dans la page
-  (marqué `__aa_del`) ; `navItems()` l'ignore. Les tests e2e tournent sans
-  animation (`reducedMotion: 'reduce'`), sauf `e2e/animation.spec.ts`.
-
 ## Réponses à l'utilisateur
 
 - En français, courtes, en listes à puces ; une phrase d'intro sur le rôle.

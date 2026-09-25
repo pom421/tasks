@@ -61,7 +61,6 @@ Chaque session démarre dans un conteneur neuf : les dépendances doivent y êtr
 - Nouveau projet → curseur directement sur la saisie de sa première tâche.
 - Projet : cœur ♡ = favori (plein et rouge quand actif, `f`). Au survol d'un projet : icônes archive (archiver / désarchiver, `a`) et corbeille (supprimer, `x` `x`), avec leur nom en info-bulle. Tout est annulable (`u`), y compris la suppression : le projet revient avec toutes ses tâches, Log compris.
 - Sous la barre d'outils, alignés à droite, trois filtres de la **zone des projets** (sans effet sur le Log), combinables : « N tâches à reporter » (`r`), « Archivés » (seulement les projets archivés), « Favoris » (seulement les favoris, `*`). Chacun n'apparaît que s'il sert (au moins une tâche à faire à reporter, un projet archivé, un favori) ; actif, son icône se remplit (pas de fond coloré).
-- Animations : déplacer une tâche ou un projet, filtrer, rechercher dans le Log, cocher / décocher (AutoAnimate, 180 ms). Coupées si le système demande de réduire les animations.
 - Souris : clic sur un nom pour le modifier. Titre trop long : coupé par « … », affiché en entier au survol (ou au focus clavier).
 - Fiche d'une tâche (`Maj+Entrée`, `o` ou icône 🗒) : titre complet, identifiant du ticket (`PROJ-123`), puis contenu en Markdown. L'icône 🗒 signale une tâche qui a du contenu.
   - Lecture seule par défaut. `e` (comme GitLab) passe tout en édition : titre, puis `Tab` → ticket, puis `Tab` → contenu. Double-clic sur le contenu : édition directement dedans.
@@ -126,7 +125,6 @@ src/              front React (Vite)
   lib/markdown.ts rendu Markdown assaini (marked + DOMPurify)
   components/ui/  composants shadcn/ui (copiés dans le projet, modifiables)
   lib/nav.ts      navigation clavier (focus, ↑/↓, restauration après re-rendu)
-  lib/animation.ts animation des listes (AutoAnimate)
   lib/api.ts      appels au serveur, typés
 e2e/              tests d'interface (Playwright), 1 serveur + 1 base vierge par test
 ```

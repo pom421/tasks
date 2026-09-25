@@ -19,6 +19,7 @@ Rien.
 
 ## Idées / plus tard
 
+- [ ] ~~Animations des listes~~ : AutoAnimate essayé puis retiré (rendu jugé pire). Ne pas reproposer sans nouvelle demande.
 - [ ] Corbeille durable (table `trash` : JSON du projet + tâches) si l'annulation
   `u`, limitée à l'onglet et à une seule action, ne suffit plus
 - [ ] Mémoriser les filtres (projets et Log) entre deux rechargements
@@ -27,7 +28,6 @@ Rien.
 
 ## Fait (récent)
 
-- [x] Animations des listes (AutoAnimate) : déplacement, filtres, recherche du Log
 - [x] Installation automatique des dépendances en session web (hook SessionStart + setup script)
 - [x] Skills du projet : livrer, verifier-ci, nouveau-controle, capture-ecran, migration
 - [x] Filtres sobres : contour, icône vide / pleine selon l'état (`87f5ede`)

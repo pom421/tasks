@@ -3,7 +3,6 @@ import { Archive, ArchiveRestore, Heart, Trash2 } from 'lucide-react';
 import { jiraState, type Project, type Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
 import { useActions } from '@/lib/actions';
-import { useListAnimation } from '@/lib/animation';
 import { moveDirection } from '@/lib/nav';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -27,7 +26,6 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
   const archived = Boolean(p.archived_at);
   const favorite = Boolean(p.favorite_at);
   const navKey = `project:${p.id}`;
-  const tasksRef = useListAnimation<HTMLUListElement>();
 
   // L'annulation n'est mémorisée qu'une fois l'action réussie.
   const undoable = (label: string, run: () => Promise<unknown>, undo: () => Promise<unknown>) =>
@@ -156,7 +154,7 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
           </span>
         )}
       </div>
-      <ul ref={tasksRef}>
+      <ul>
         {p.tasks.map((t) => (
           <TaskRow key={t.id} task={t} onMove={onMove && ((direction) => onMove(t, direction))} />
         ))}
@@ -180,7 +178,6 @@ interface ProjectListProps {
 
 export function ProjectList({ projects, archivedOnly, jiraOnly, favoritesOnly }: ProjectListProps) {
   const { act } = useActions();
-  const listRef = useListAnimation<HTMLElement>();
   const visible = projects
     .filter((p) => Boolean(p.archived_at) === archivedOnly) // Archivés : seulement eux
     .filter((p) => !favoritesOnly || p.favorite_at)
@@ -247,7 +244,7 @@ export function ProjectList({ projects, archivedOnly, jiraOnly, favoritesOnly }:
 
   return (
     <>
-      <section ref={listRef} id="projects" aria-label="Projets">
+      <section id="projects" aria-label="Projets">
         {visible.map((p) => (
           // Liste filtrée : les positions affichées ne sont pas les vraies, pas de déplacement.
           <ProjectCard

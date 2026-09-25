@@ -9,18 +9,9 @@ export interface FocusSnapshot {
   index: number;
 }
 
-// Élément en train de disparaître : AutoAnimate le garde dans la page le temps
-// de l'animation de sortie et le marque (propriété __aa_del sur l'enfant animé).
-function isLeaving(el: HTMLElement): boolean {
-  for (let node: HTMLElement | null = el; node; node = node.parentElement) {
-    if ((node as HTMLElement & { __aa_del?: boolean }).__aa_del) return true;
-  }
-  return false;
-}
-
 export function navItems(): HTMLElement[] {
-  // offsetParent null = élément masqué ; élément sortant (animation) ignoré.
-  return [...document.querySelectorAll<HTMLElement>('[data-nav]')].filter((el) => el.offsetParent !== null && !isLeaving(el));
+  // offsetParent null = élément masqué.
+  return [...document.querySelectorAll<HTMLElement>('[data-nav]')].filter((el) => el.offsetParent !== null);
 }
 
 function focusItem(el: HTMLElement | undefined) {
