@@ -874,6 +874,28 @@ test('e sur une tâche : fiche ouverte directement en édition, titre sélection
   await expect.poll(() => current(page)).toBe(`task:${data.tasks.deux.id}`);
 });
 
+test('écran large : projets à gauche, Log à droite, toujours visible ; écran étroit : l’un sous l’autre', async ({ page, store, data }) => {
+  for (let i = 0; i < 30; i++) store.createTask(data.beta.id, `Tâche ${i}`);
+  await page.setViewportSize({ width: 1280, height: 600 });
+  await reload(page);
+  const projects = (await page.locator('#projects').boundingBox())!;
+  const log = (await page.locator('#journal').boundingBox())!;
+  expect(log.x).toBeGreaterThan(projects.x + projects.width - 1); // à droite
+  expect(Math.abs(log.y - projects.y)).toBeLessThan(40); // en haut, à la même hauteur
+
+  // Tâche cochée tout en bas de la liste : elle apparaît dans le Log, visible sans défiler.
+  const last = page.locator('#projects .task .name', { hasText: 'Tâche 29' });
+  await last.focus();
+  await page.keyboard.press(' ');
+  await expect(page.locator('#journal .task .name', { hasText: 'Tâche 29' })).toBeInViewport();
+
+  await page.setViewportSize({ width: 800, height: 600 });
+  const narrowProjects = (await page.locator('#projects').boundingBox())!;
+  const narrowLog = (await page.locator('#journal').boundingBox())!;
+  expect(narrowLog.y).toBeGreaterThan(narrowProjects.y + narrowProjects.height); // dessous
+  expect(Math.abs(narrowLog.x - narrowProjects.x)).toBeLessThan(2);
+});
+
 test('zone « Log » : un cadre par jour', async ({ page, store, data }) => {
   store.updateTask(data.tasks.une.id, { doneAt: '2026-09-20' });
   store.updateTask(data.tasks.deux.id, { doneAt: '2026-09-21' });

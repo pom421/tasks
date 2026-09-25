@@ -7,7 +7,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-Rien.
+- [~] Branche `ui/disposition-deux-colonnes` : projets à gauche, Log à droite (sticky) sur écran large. À valider par l'utilisateur, puis fusion dans `main`
 
 ## Décisions attendues
 
