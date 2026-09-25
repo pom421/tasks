@@ -1,4 +1,4 @@
-import { Archive, Heart, Settings as SettingsIcon } from 'lucide-react';
+import { Archive, Flag, Heart, Settings as SettingsIcon } from 'lucide-react';
 import { useActions } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -41,13 +41,17 @@ interface ToolbarProps {
   onHelpOpen: (open: boolean) => void;
 }
 
+// Actif : texte à pleine intensité ; inactif : atténué.
+const filterClass = (active: boolean) => (active ? 'text-foreground' : 'text-muted-foreground');
+
 export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, favorites, favoritesOnly, onFavoritesOnly, archived, archivedOnly, onArchivedOnly, helpOpen, onHelpOpen }: ToolbarProps) {
   const { navigate } = useActions();
 
   // Filtres de la zone des projets, combinables (ET logique). Chacun n'est
   // affiché que s'il peut servir (ou s'il est actif, pour pouvoir le couper),
   // indépendamment des autres filtres actifs.
-  // Boutons bascule : plein quand actif, état annoncé par aria-pressed.
+  // Boutons bascule sobres : toujours à contour ; icône vide, pleine quand le
+  // filtre est actif ; état annoncé par aria-pressed.
   return (
     <header className="flex flex-wrap items-center justify-between gap-2 pt-6 pb-2">
       <h1 className="text-2xl font-bold">Tâches</h1>
@@ -55,37 +59,41 @@ export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, favorites, favo
         {(jiraPending > 0 || jiraFilter) && (
           <Button
             id="jira-pending"
-            variant={jiraFilter ? 'default' : 'outline'}
+            variant="outline"
+            className={filterClass(jiraFilter)}
             size="sm"
             aria-pressed={jiraFilter}
             title="Afficher seulement les tâches à reporter (r)"
             onClick={onJiraFilter}
           >
+            <Flag aria-hidden fill={jiraFilter ? 'currentColor' : 'none'} />
             {jiraPending} {jiraPending > 1 ? 'tâches' : 'tâche'} à reporter
           </Button>
         )}
         {(archived > 0 || archivedOnly) && (
           <Button
             id="archived-only"
-            variant={archivedOnly ? 'default' : 'outline'}
+            variant="outline"
+            className={filterClass(archivedOnly)}
             size="sm"
             aria-pressed={archivedOnly}
             title="Afficher seulement les projets archivés"
             onClick={onArchivedOnly}
           >
-            <Archive aria-hidden /> Archivés
+            <Archive aria-hidden fill={archivedOnly ? 'currentColor' : 'none'} /> Archivés
           </Button>
         )}
         {(favorites > 0 || favoritesOnly) && (
           <Button
             id="favorites-only"
-            variant={favoritesOnly ? 'default' : 'outline'}
+            variant="outline"
+            className={filterClass(favoritesOnly)}
             size="sm"
             aria-pressed={favoritesOnly}
             title="Afficher seulement les projets favoris (*)"
             onClick={onFavoritesOnly}
           >
-            <Heart aria-hidden className="text-red-600" fill="currentColor" /> Favoris
+            <Heart aria-hidden className="text-red-600" fill={favoritesOnly ? 'currentColor' : 'none'} /> Favoris
           </Button>
         )}
         <Button variant="outline" size="sm" title="Raccourcis (?)" onClick={() => onHelpOpen(true)}>

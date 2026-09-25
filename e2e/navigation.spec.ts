@@ -367,10 +367,15 @@ test('boutons de filtre : à reporter, Archivés, Favoris, dans cet ordre, seule
   // Archivés : comme « à reporter », un filtre : seulement les projets archivés.
   const archived = page.locator('#archived-only');
   await expect(archived).toHaveAttribute('aria-pressed', 'false');
+  for (const id of ['#jira-pending', '#archived-only', '#favorites-only']) {
+    await expect(page.locator(`${id} svg`), id).toHaveAttribute('fill', 'none'); // icône vide : filtre inactif
+  }
   await expect(page.locator('#projects .project-head .name')).toHaveText(['Alpha', 'Beta']);
   await archived.click();
   await expect(archived).toHaveAttribute('aria-pressed', 'true');
-  await expect(archived).toHaveClass(/bg-primary/); // plein quand actif
+  // Sobre : pas de fond coloré, l'icône se remplit.
+  await expect(archived.locator('svg')).toHaveAttribute('fill', 'currentColor');
+  await expect(archived).not.toHaveClass(/bg-primary/);
   await expect(page.locator('#projects .project-head .name')).toHaveText(['Gamma']);
   await archived.click();
   await expect(page.locator('#projects .project-head .name')).toHaveText(['Alpha', 'Beta']);
