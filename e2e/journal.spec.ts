@@ -78,9 +78,14 @@ test('< et > : jour précédent / suivant ayant des entrées, désactivés en bo
   await next.click();
   await expect(days(page)).toHaveText(['lundi 21 septembre 2026']);
   // Retour direct à aujourd'hui.
-  await page.getByRole('button', { name: 'Aujourd’hui' }).click();
+  const todayButton = page.getByRole('button', { name: 'Aujourd’hui' });
+  await todayButton.click();
   await expect(days(page)).toHaveText(['vendredi 25 septembre 2026']);
-  await expect(page.getByRole('button', { name: 'Aujourd’hui' })).toHaveCount(0);
+  await expect(todayButton).toBeDisabled(); // déjà sur aujourd'hui, mais toujours visible
+  // Tout à droite de la ligne de navigation.
+  const right = async (loc: typeof todayButton) => (await loc.boundingBox())!.x + (await loc.boundingBox())!.width;
+  const logRight = (await page.locator('#journal').boundingBox())!;
+  expect(Math.abs((await right(todayButton)) - (logRight.x + logRight.width))).toBeLessThan(2);
 });
 
 test('navigation par jour : limitée au projet filtré, désactivée pendant une période', async ({ page, store }) => {

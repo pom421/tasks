@@ -36,7 +36,7 @@ Vérifications :
 ## Utilisation
 
 - Cocher une tâche → elle passe dans le Log, datée du jour. La décocher → elle revient dans son projet.
-- Log (en bas, un cadre par jour) : par défaut, aujourd'hui (même vide). `<` / `>` passent au jour précédent / suivant qui a des entrées (désactivés en bout de liste), « Aujourd'hui » y ramène. Filtres par période (du… au…, bornes incluses) et par projet. Renseigner le début met la même date en fin : une journée entière.
+- Log (en bas, un cadre par jour) : par défaut, aujourd'hui (même vide). `<` / `>` passent au jour précédent / suivant qui a des entrées (désactivés en bout de liste) ; le bouton « Aujourd’hui », tout à droite, y ramène (désactivé si on y est déjà). Filtres par période (du… au…, bornes incluses) et par projet. Renseigner le début met la même date en fin : une journée entière.
 - Nouveau projet → curseur directement sur la saisie de sa première tâche.
 - Souris : clic sur un nom pour le modifier. Titre trop long : coupé par « … », affiché en entier au survol (ou au focus clavier).
 - Fiche d'une tâche (`Maj+Entrée`, `o` ou icône 🗒) : titre complet, identifiant du ticket (`PROJ-123`), puis contenu en Markdown. L'icône 🗒 signale une tâche qui a du contenu.

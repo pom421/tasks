@@ -534,6 +534,10 @@ test('ligne épurée et fiche ordonnée : titre, ticket, contenu', async ({ page
 });
 
 test('fiche : e modifie aussi le titre et le ticket ; Entrée dans un champ = enregistrer', async ({ page, store, data }) => {
+  // Processeur ralenti (×6), comme sur une CI chargée : la frappe rapide
+  // après e puis Tab ne doit jamais retomber dans le titre.
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 6 });
   await pressDown(page, 2);
   await page.keyboard.press('o');
   const dialog = page.getByRole('dialog', { name: 'Une' });
@@ -544,7 +548,7 @@ test('fiche : e modifie aussi le titre et le ticket ; Entrée dans un champ = en
   await page.keyboard.press('Tab');
   await page.keyboard.type('proj-5');
   await page.keyboard.press('Enter'); // enregistre et repasse en lecture
-  const renamed = page.getByRole('dialog', { name: 'Une, renommée' });
+  const renamed = page.getByRole('dialog', { name: 'Une, renommée', exact: true });
   await expect(renamed.locator('.ticket-value')).toHaveText('PROJ-5');
   expect(store.state().projects[0].tasks[0]).toMatchObject({ title: 'Une, renommée', jira_key: 'PROJ-5' });
 

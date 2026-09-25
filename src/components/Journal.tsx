@@ -162,11 +162,18 @@ export function Journal({ days, dates, projects, filter, onFilter }: JournalProp
         >
           <ChevronRight aria-hidden />
         </Button>
-        {dayMode && current !== today && (
-          <Button id="day-today" variant="ghost" size="xs" className="text-muted-foreground" onClick={() => goTo(today)}>
-            Aujourd’hui
-          </Button>
-        )}
+        {/* Tout à droite, toujours visible ; désactivé si on y est déjà. */}
+        <Button
+          id="day-today"
+          variant="outline"
+          size="sm"
+          className="ml-auto h-7"
+          title="Revenir au jour courant"
+          disabled={!dayMode || current === today}
+          onClick={() => goTo(today)}
+        >
+          Aujourd’hui
+        </Button>
       </div>
       <div id="journal-days">
         {dayMode ? (

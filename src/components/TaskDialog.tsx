@@ -1,4 +1,4 @@
-import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { JIRA_KEY_RE, type DoneTask, type Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
 import type { TaskField } from '@/lib/actions';
@@ -53,11 +53,27 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
     setValues(latest.current);
   };
 
+  // Focus à placer dès le prochain affichage (le champ visé n'existe pas encore
+  // quand on change de mode). Appliqué juste après le rendu, avant la touche
+  // suivante : si on tape vite après e puis Tab, rien ne revient en arrière.
+  const focusNext = useRef<Field | 'reader' | null>(null);
+  const [, rerender] = useState(0);
+  useLayoutEffect(() => {
+    const target = focusNext.current;
+    if (!target) return;
+    focusNext.current = null;
+    (target === 'reader' ? reader.current : refs[target].current)?.focus();
+  });
+  const focusSoon = (target: Field | 'reader') => {
+    focusNext.current = target;
+    rerender((n) => n + 1);
+  };
+
   // En édition, un champ en erreur est corrigé sur place ; en lecture, on y revient.
   const fail = (f: Field, message: string) => {
     setError({ field: f, message });
     setEditing(true);
-    requestAnimationFrame(() => refs[f].current?.focus());
+    focusSoon(f);
     return false;
   };
 
@@ -101,12 +117,12 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
 
   const startEditing = (focus: Field = 'title') => {
     setEditing(true);
-    requestAnimationFrame(() => refs[focus].current?.focus());
+    focusSoon(focus);
   };
   // Passage en lecture immédiat ; une erreur d'enregistrement ramène en édition.
   const stopEditing = async () => {
     setEditing(false);
-    requestAnimationFrame(() => reader.current?.focus());
+    focusSoon('reader');
     await persist();
   };
 
