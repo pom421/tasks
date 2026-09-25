@@ -384,11 +384,16 @@ test('clavier sur un projet : f favori, a archiver, x x supprimer, u annule tout
   await pressDown(page, 5); // Beta
   expect(await current(page)).toBe(`project:${data.beta.id}`);
 
+  // Attente sur l'affichage, pas sur la base : l'annulation n'est mémorisée
+  // qu'une fois la réponse reçue, juste avant le nouvel affichage.
+  const heart = page.locator(`#project-${data.beta.id}`).getByRole('button', { name: 'Favori' });
   await page.keyboard.press('f');
-  await expect.poll(() => Boolean(beta()?.favorite_at)).toBe(true);
+  await expect(heart).toHaveAttribute('aria-pressed', 'true');
+  expect(beta()!.favorite_at).toBeTruthy();
   await expect(page.locator('#filter-project')).not.toBeFocused(); // pas le raccourci global
   await page.keyboard.press('u');
-  await expect.poll(() => Boolean(beta()?.favorite_at)).toBe(false);
+  await expect(heart).toHaveAttribute('aria-pressed', 'false');
+  expect(beta()!.favorite_at).toBeNull();
 
   await page.keyboard.press('a');
   await expect(page.locator(`#project-${data.beta.id}`)).toHaveCount(0);
