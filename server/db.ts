@@ -1,6 +1,8 @@
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
+import type { DoneTask, ImportResult, Journal, JournalDay, JournalFilter, Project, State, Task } from '../shared/types.ts';
+import type { ImportItem } from './markdown.ts';
 
 // Schéma versionné via PRAGMA user_version : chaque entrée = une migration.
 const MIGRATIONS = [
@@ -25,21 +27,37 @@ const MIGRATIONS = [
   `ALTER TABLE task ADD COLUMN jira_at TEXT;`,
 ];
 
+// Lignes brutes renvoyées par SQLite (toutes les colonnes).
+export interface ProjectRow {
+  id: number;
+  name: string;
+  created_at: string;
+  archived_at: string | null;
+}
+
+export interface TaskRow extends Task {
+  created_at: string;
+  done_at: string | null;
+}
+
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-export function isDate(s) {
+export function isDate(s: unknown): s is string {
   return typeof s === 'string' && DATE_RE.test(s) && !Number.isNaN(Date.parse(s));
 }
 
-export function today() {
+export function today(): string {
   const d = new Date();
-  const pad = (n) => String(n).padStart(2, '0');
+  const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-function migrate(db) {
-  const { user_version: version } = db.prepare('PRAGMA user_version').get();
-  for (let v = version; v < MIGRATIONS.length; v++) {
+function userVersion(db: DatabaseSync): number {
+  return (db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version;
+}
+
+function migrate(db: DatabaseSync) {
+  for (let v = userVersion(db); v < MIGRATIONS.length; v++) {
     db.exec('BEGIN');
     try {
       db.exec(MIGRATIONS[v]);
@@ -52,7 +70,7 @@ function migrate(db) {
   }
 }
 
-function openDb(file) {
+function openDb(file: string): DatabaseSync {
   const db = new DatabaseSync(file);
   db.exec('PRAGMA foreign_keys = ON');
   // Ne pas exécuter de fonctions SQL appelées depuis le schéma (vues, triggers) d'une base importée.
@@ -62,34 +80,37 @@ function openDb(file) {
 }
 
 // Vérifie qu'un fichier est une base SQLite compatible avant de l'importer.
-export function validateDbFile(file) {
-  let db;
+export function validateDbFile(file: string) {
+  let db: DatabaseSync | undefined;
   try {
     db = new DatabaseSync(file, { readOnly: true });
-    const tables = db
-      .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
-      .all()
-      .map((r) => r.name);
+    const tables = (db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]).map(
+      (r) => r.name,
+    );
     if (!tables.includes('project') || !tables.includes('task')) {
       throw new Error('tables project/task absentes');
     }
     // Seuls tables et index sont attendus : un trigger ou une vue injecté
     // s'exécuterait ensuite à chaque écriture.
-    const extra = db.prepare("SELECT count(*) AS n FROM sqlite_master WHERE type IN ('trigger', 'view')").get();
+    const extra = db.prepare("SELECT count(*) AS n FROM sqlite_master WHERE type IN ('trigger', 'view')").get() as {
+      n: number;
+    };
     if (extra.n) throw new Error('triggers ou vues non autorisés');
-    const { quick_check: check } = db.prepare('PRAGMA quick_check').get();
+    const { quick_check: check } = db.prepare('PRAGMA quick_check').get() as { quick_check: string };
     if (check !== 'ok') throw new Error('base corrompue');
-    const { user_version: v } = db.prepare('PRAGMA user_version').get();
-    if (v > MIGRATIONS.length) throw new Error('base créée par une version plus récente');
+    if (userVersion(db) > MIGRATIONS.length) throw new Error('base créée par une version plus récente');
   } catch (err) {
-    throw new Error(`Fichier invalide : ${err.message}`);
+    throw new Error(`Fichier invalide : ${(err as Error).message}`);
   } finally {
     db?.close();
   }
 }
 
 export class Store {
-  constructor(file) {
+  readonly file: string;
+  db: DatabaseSync;
+
+  constructor(file: string) {
     this.file = file;
     if (file !== ':memory:') fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
     this.db = openDb(file);
@@ -102,14 +123,15 @@ export class Store {
 
   // --- Lecture -------------------------------------------------------------
 
-  state() {
-    const projects = this.db
-      .prepare('SELECT id, name, archived_at FROM project ORDER BY id')
-      .all();
+  state(): State {
+    const projects = this.db.prepare('SELECT id, name, archived_at FROM project ORDER BY id').all() as Omit<
+      Project,
+      'tasks'
+    >[];
     const tasks = this.db
       .prepare('SELECT id, project_id, title, jira_at FROM task WHERE done_at IS NULL ORDER BY id')
-      .all();
-    const byProject = new Map(projects.map((p) => [p.id, { ...p, tasks: [] }]));
+      .all() as unknown as Task[];
+    const byProject = new Map<number, Project>(projects.map((p) => [p.id, { ...p, tasks: [] }]));
     for (const t of tasks) byProject.get(t.project_id)?.tasks.push({ ...t });
     return { projects: [...byProject.values()] };
   }
@@ -117,9 +139,9 @@ export class Store {
   // Période [from, to] incluse, bornes facultatives ('YYYY-MM-DD').
   // done_at n'a pas d'heure : from = to couvre toute la journée.
   // Sans aucun filtre : la dernière journée travaillée.
-  journal({ from, to, projectId } = {}) {
+  journal({ from, to, projectId }: JournalFilter = {}): Journal {
     const where = ['t.done_at IS NOT NULL'];
-    const params = [];
+    const params: (string | number)[] = [];
     if (from) {
       where.push('t.done_at >= ?');
       params.push(from);
@@ -133,7 +155,7 @@ export class Store {
       params.push(projectId);
     }
     if (!from && !to && !projectId) {
-      const last = this.db.prepare('SELECT MAX(done_at) AS d FROM task').get().d;
+      const last = (this.db.prepare('SELECT MAX(done_at) AS d FROM task').get() as { d: string | null }).d;
       if (!last) return { days: [] };
       where.push('t.done_at = ?');
       params.push(last);
@@ -145,8 +167,8 @@ export class Store {
          WHERE ${where.join(' AND ')}
          ORDER BY t.done_at DESC, p.id, t.id`,
       )
-      .all(...params);
-    const days = [];
+      .all(...params) as unknown as DoneTask[];
+    const days: JournalDay[] = [];
     for (const r of rows) {
       let day = days.at(-1);
       if (day?.date !== r.done_at) days.push((day = { date: r.done_at, tasks: [] }));
@@ -157,37 +179,45 @@ export class Store {
 
   // --- Projets -------------------------------------------------------------
 
-  createProject(name) {
-    const { lastInsertRowid } = this.db.prepare('INSERT INTO project (name) VALUES (?)').run(name);
-    return this.db.prepare('SELECT * FROM project WHERE id = ?').get(lastInsertRowid);
+  private project(id: number | bigint): ProjectRow | undefined {
+    return this.db.prepare('SELECT * FROM project WHERE id = ?').get(id) as ProjectRow | undefined;
   }
 
-  updateProject(id, { name, archived }) {
+  private task(id: number | bigint): TaskRow | undefined {
+    return this.db.prepare('SELECT * FROM task WHERE id = ?').get(id) as TaskRow | undefined;
+  }
+
+  createProject(name: string): ProjectRow {
+    const { lastInsertRowid } = this.db.prepare('INSERT INTO project (name) VALUES (?)').run(name);
+    return this.project(lastInsertRowid)!;
+  }
+
+  updateProject(id: number, { name, archived }: { name?: string; archived?: boolean }) {
     if (name !== undefined) this.db.prepare('UPDATE project SET name = ? WHERE id = ?').run(name, id);
     if (archived !== undefined) {
       this.db
         .prepare(`UPDATE project SET archived_at = ${archived ? "datetime('now')" : 'NULL'} WHERE id = ?`)
         .run(id);
     }
-    return this.db.prepare('SELECT * FROM project WHERE id = ?').get(id);
+    return this.project(id);
   }
 
-  deleteProject(id) {
+  deleteProject(id: number): boolean {
     return this.db.prepare('DELETE FROM project WHERE id = ?').run(id).changes > 0;
   }
 
   // --- Tâches --------------------------------------------------------------
 
-  createTask(projectId, title) {
+  createTask(projectId: number, title: string): TaskRow {
     const { lastInsertRowid } = this.db
       .prepare('INSERT INTO task (project_id, title) VALUES (?, ?)')
       .run(projectId, title);
-    return this.db.prepare('SELECT * FROM task WHERE id = ?').get(lastInsertRowid);
+    return this.task(lastInsertRowid)!;
   }
 
   // doneAt : 'YYYY-MM-DD' pour marquer faite, null pour remettre à faire.
   // jira : true = reportée dans Jira (horodatée), false = retirée.
-  updateTask(id, { title, doneAt, jira }) {
+  updateTask(id: number, { title, doneAt, jira }: { title?: string; doneAt?: string | null; jira?: boolean }) {
     if (title !== undefined) this.db.prepare('UPDATE task SET title = ? WHERE id = ?').run(title, id);
     if (doneAt !== undefined) this.db.prepare('UPDATE task SET done_at = ? WHERE id = ?').run(doneAt, id);
     if (jira !== undefined) {
@@ -195,22 +225,21 @@ export class Store {
         .prepare(`UPDATE task SET jira_at = ${jira ? "datetime('now')" : 'NULL'} WHERE id = ?`)
         .run(id);
     }
-    return this.db.prepare('SELECT * FROM task WHERE id = ?').get(id);
+    return this.task(id);
   }
 
-  deleteTask(id) {
+  deleteTask(id: number): boolean {
     return this.db.prepare('DELETE FROM task WHERE id = ?').run(id).changes > 0;
   }
 
   // --- Import markdown -----------------------------------------------------
 
-  // items : [{ project, title|null, doneAt|null }] ; title null = projet seul.
-  // Réutilise les projets existants de même nom.
-  importItems(items) {
+  // title null = projet seul. Réutilise les projets existants de même nom.
+  importItems(items: ImportItem[]): ImportResult {
     const find = this.db.prepare('SELECT id FROM project WHERE lower(name) = lower(?)');
     const insertProject = this.db.prepare('INSERT INTO project (name) VALUES (?)');
     const insertTask = this.db.prepare('INSERT INTO task (project_id, title, done_at) VALUES (?, ?, ?)');
-    const ids = new Map();
+    const ids = new Map<string, number | bigint>();
     let projects = 0;
     let tasks = 0;
     this.db.exec('BEGIN');
@@ -218,7 +247,7 @@ export class Store {
       for (const { project, title, doneAt } of items) {
         const key = project.toLowerCase();
         if (!ids.has(key)) {
-          let id = find.get(project)?.id;
+          let id = (find.get(project) as { id: number } | undefined)?.id as number | bigint | undefined;
           if (!id) {
             id = insertProject.run(project).lastInsertRowid;
             projects++;
@@ -226,7 +255,7 @@ export class Store {
           ids.set(key, id);
         }
         if (title) {
-          insertTask.run(ids.get(key), title, doneAt ?? null);
+          insertTask.run(ids.get(key)!, title, doneAt ?? null);
           tasks++;
         }
       }
@@ -240,11 +269,11 @@ export class Store {
 
   // --- Export / import de la base -----------------------------------------
 
-  exportTo(file) {
+  exportTo(file: string) {
     this.db.exec(`VACUUM INTO '${file.replaceAll("'", "''")}'`);
   }
 
-  replaceWith(file) {
+  replaceWith(file: string) {
     validateDbFile(file);
     this.db.close();
     for (const suffix of ['-wal', '-shm']) fs.rmSync(this.file + suffix, { force: true });

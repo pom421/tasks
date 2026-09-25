@@ -1,4 +1,5 @@
-import { test, expect } from './fixtures.js';
+import type { Page } from '@playwright/test';
+import { test, expect } from './fixtures.ts';
 
 // Tâches faites le 20, le 21 (×2) et le 23 septembre.
 test.beforeEach(async ({ page, store }) => {
@@ -11,7 +12,7 @@ test.beforeEach(async ({ page, store }) => {
 });
 
 // textContent : la majuscule initiale est ajoutée en CSS.
-const days = (page) => page.locator('#journal .day h3');
+const days = (page: Page) => page.locator('#journal .day h3');
 
 test('date de début : la date de fin prend la même valeur et reçoit le focus', async ({ page }) => {
   await page.locator('#filter-from').fill('2026-09-21');

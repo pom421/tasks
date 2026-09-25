@@ -20,7 +20,14 @@ const ISO_RE = /(\d{4})-(\d{2})-(\d{2})/;
 const FR_RE = /(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})/;
 export const NO_PROJECT = 'Sans projet';
 
-function findDate(text) {
+// title null = projet seul (sans tâche) ; doneAt null = tâche à faire.
+export interface ImportItem {
+  project: string;
+  title: string | null;
+  doneAt: string | null;
+}
+
+function findDate(text: string): string | null {
   let m = text.match(ISO_RE);
   if (m) return `${m[1]}-${m[2]}-${m[3]}`;
   m = text.match(FR_RE);
@@ -28,16 +35,16 @@ function findDate(text) {
   return null;
 }
 
-function clean(text) {
+function clean(text: string): string {
   return text.replace(CHECKBOX_RE, '').replace(/\*\*|__/g, '').trim();
 }
 
-export function parseMarkdown(md) {
+export function parseMarkdown(md: string): ImportItem[] {
   const lines = md.replace(/\t/g, '  ').split(/\r?\n/);
-  const items = [];
-  let doneAt = null; // null tant qu'on est dans la zone "à faire"
-  let project = null; // projet courant (puce de niveau 0)
-  let pendingTop = null; // puce de niveau 0 pas encore classée projet/tâche
+  const items: ImportItem[] = [];
+  let doneAt: string | null = null; // null tant qu'on est dans la zone "à faire"
+  let project: string | null = null; // projet courant (puce de niveau 0)
+  let pendingTop: string | null = null; // puce de niveau 0 pas encore classée projet/tâche
 
   const flushTop = () => {
     // Une puce de niveau 0 sans sous-puces : projet vide (zone à faire) ou tâche sans projet (zone faite).

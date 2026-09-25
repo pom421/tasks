@@ -25,6 +25,7 @@ jobs:
       # corepack lit packageManager : même pnpm qu'en local, vérifié par hash.
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e

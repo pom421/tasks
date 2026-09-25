@@ -1,0 +1,73 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+/* Thème sombre selon le système (pas de bascule manuelle). */
+@custom-variant dark (@media (prefers-color-scheme: dark));
+
+/* Palette shadcn « neutral ». */
+:root {
+  --radius: 0.5rem;
+  --background: oklch(0.985 0.001 106);
+  --foreground: oklch(0.216 0.006 56);
+  --muted: oklch(0.97 0.001 106);
+  --muted-foreground: oklch(0.553 0.013 58);
+  --accent: oklch(0.97 0.001 106);
+  --accent-foreground: oklch(0.216 0.006 56);
+  --secondary: oklch(0.97 0.001 106);
+  --secondary-foreground: oklch(0.216 0.006 56);
+  --primary: oklch(0.546 0.245 262.9);
+  --primary-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.577 0.245 27.3);
+  --border: oklch(0.923 0.003 48.7);
+  --input: oklch(0.83 0.006 56);
+  --ring: oklch(0.708 0.12 262);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: oklch(0.216 0.006 56);
+    --foreground: oklch(0.923 0.003 48.7);
+    --muted: oklch(0.268 0.007 34);
+    --muted-foreground: oklch(0.709 0.01 56);
+    --accent: oklch(0.268 0.007 34);
+    --accent-foreground: oklch(0.923 0.003 48.7);
+    --secondary: oklch(0.268 0.007 34);
+    --secondary-foreground: oklch(0.923 0.003 48.7);
+    --primary: oklch(0.707 0.165 254.6);
+    --primary-foreground: oklch(0.216 0.006 56);
+    --destructive: oklch(0.704 0.191 22.2);
+    --border: oklch(0.32 0.008 40);
+    --input: oklch(0.32 0.008 40);
+    --ring: oklch(0.55 0.1 254);
+  }
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    color-scheme: light dark;
+  }
+}

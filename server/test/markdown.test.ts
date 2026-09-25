@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseMarkdown } from '../src/markdown.js';
+import { parseMarkdown } from '../markdown.ts';
 
 test('zone à faire puis journées datées', () => {
   const items = parseMarkdown(`

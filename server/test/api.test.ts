@@ -4,18 +4,22 @@ import http from 'node:http';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { Store } from '../src/db.js';
-import { createApp } from '../src/server.js';
+import { Store } from '../db.ts';
+import { createApp } from '../app.ts';
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tasks-test-'));
 const store = new Store(path.join(dir, 'tasks.db'));
-let server;
-let base;
+// Faux front compilé, pour tester le service des fichiers statiques.
+const staticDir = path.join(dir, 'dist');
+fs.mkdirSync(staticDir);
+fs.writeFileSync(path.join(staticDir, 'index.html'), '<!doctype html><title>Tâches</title>');
+let server: http.Server;
+let base: string;
 
 before(async () => {
-  server = http.createServer(createApp(store));
-  await new Promise((r) => server.listen(0, r));
-  base = `http://localhost:${server.address().port}`;
+  server = http.createServer(createApp(store, { staticDir }));
+  await new Promise<void>((r) => server.listen(0, r));
+  base = `http://localhost:${(server.address() as { port: number }).port}`;
 });
 
 after(() => {
@@ -24,18 +28,20 @@ after(() => {
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
-function contentType(body) {
+function contentType(body: unknown) {
   if (body instanceof Uint8Array) return 'application/octet-stream';
   if (typeof body === 'string') return 'text/markdown';
   return 'application/json';
 }
 
-async function call(method, url, body, headers = {}) {
+// body: any : réponses JSON lues librement dans les assertions.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function call(method: string, url: string, body?: unknown, headers: Record<string, string> = {}): Promise<{ status: number; body: any }> {
   const json = body !== undefined && contentType(body) === 'application/json';
   const res = await fetch(base + url, {
     method,
     headers: body === undefined ? headers : { 'Content-Type': contentType(body), ...headers },
-    body: json ? JSON.stringify(body) : body,
+    body: json ? JSON.stringify(body) : (body as BodyInit | undefined),
   });
   const type = res.headers.get('content-type') ?? '';
   return { status: res.status, body: type.includes('json') ? await res.json() : Buffer.from(await res.arrayBuffer()) };
@@ -51,7 +57,7 @@ test('projets et tâches : création, édition, complétion, journal', async () 
 
   let { body: state } = await call('GET', '/api/state');
   assert.equal(state.projects[0].name, 'Alpha bis');
-  assert.deepEqual(state.projects[0].tasks.map((t) => t.title), ['Une bis', 'Deux']);
+  assert.deepEqual(state.projects[0].tasks.map((t: any) => t.title), ['Une bis', 'Deux']);
 
   await call('PATCH', `/api/tasks/${t1.id}`, { done: true, done_at: '2026-09-20' });
   await call('PATCH', `/api/tasks/${t2.id}`, { done: true, done_at: '2026-09-22' });
@@ -61,24 +67,24 @@ test('projets et tâches : création, édition, complétion, journal', async () 
 
   // Sans filtre : dernière journée seulement.
   let { body: j } = await call('GET', '/api/journal');
-  assert.deepEqual(j.days.map((d) => d.date), ['2026-09-22']);
+  assert.deepEqual(j.days.map((d: any) => d.date), ['2026-09-22']);
 
   // Par projet : toutes les dates, plus récente d'abord.
   ({ body: j } = await call('GET', `/api/journal?project=${p.id}`));
-  assert.deepEqual(j.days.map((d) => d.date), ['2026-09-22', '2026-09-20']);
+  assert.deepEqual(j.days.map((d: any) => d.date), ['2026-09-22', '2026-09-20']);
 
   // Même date de début et de fin : toute la journée.
   ({ body: j } = await call('GET', '/api/journal?from=2026-09-20&to=2026-09-20'));
-  assert.deepEqual(j.days.map((d) => d.date), ['2026-09-20']);
+  assert.deepEqual(j.days.map((d: any) => d.date), ['2026-09-20']);
   assert.equal(j.days[0].tasks[0].title, 'Une bis');
 
   // Période : bornes incluses.
   ({ body: j } = await call('GET', '/api/journal?from=2026-09-20&to=2026-09-22'));
-  assert.deepEqual(j.days.map((d) => d.date), ['2026-09-22', '2026-09-20']);
+  assert.deepEqual(j.days.map((d: any) => d.date), ['2026-09-22', '2026-09-20']);
   ({ body: j } = await call('GET', '/api/journal?from=2026-09-21&to=2026-09-21'));
   assert.deepEqual(j.days, []);
   ({ body: j } = await call('GET', '/api/journal?from=2026-09-21'));
-  assert.deepEqual(j.days.map((d) => d.date), ['2026-09-22']);
+  assert.deepEqual(j.days.map((d: any) => d.date), ['2026-09-22']);
 
   // Décocher : retour dans le projet.
   await call('PATCH', `/api/tasks/${t1.id}`, { done: false });
@@ -134,14 +140,14 @@ test('import markdown', async () => {
   assert.deepEqual(body, { projects: 3, tasks: 4 });
   const { body: j } = await call('GET', '/api/journal?from=2026-09-24&to=2026-09-24');
   assert.deepEqual(
-    j.days[0].tasks.map((t) => [t.project_name, t.title]),
+    j.days[0].tasks.map((t: any) => [t.project_name, t.title]),
     [['Maison', 'Acheter peinture'], ['Sans projet', 'Tâche isolée']],
   );
 });
 
 test('sécurité : en-têtes, CSRF, DNS rebinding, Content-Type', async () => {
   const res = await fetch(`${base}/`);
-  assert.match(res.headers.get('content-security-policy'), /default-src 'self'/);
+  assert.match(res.headers.get('content-security-policy') ?? '', /default-src 'self'/);
   assert.equal(res.headers.get('x-content-type-options'), 'nosniff');
 
   // Formulaire HTML d'un autre site : Content-Type simple -> refusé.
@@ -163,7 +169,9 @@ test('sécurité : en-têtes, CSRF, DNS rebinding, Content-Type', async () => {
   assert.equal(rebinding, 421);
 
   assert.equal((await fetch(`${base}/%E0%A4%A`)).status, 400);
-  assert.equal((await fetch(`${base}/../package.json`)).status, 404);
+  // Traversée de répertoire : jamais de fichier hors dist/ (repli SPA sur index.html).
+  const traversal = await fetch(`${base}/../package.json`);
+  assert.match(await traversal.text(), /<title>Tâches<\/title>/);
 });
 
 test('import refuse une base contenant un trigger', async () => {
@@ -187,7 +195,7 @@ test('report Jira : bascule, visible dans les projets et le journal', async () =
   const { body: on } = await call('PATCH', `/api/tasks/${t.id}`, { jira: true });
   assert.ok(on.jira_at);
   let { body: state } = await call('GET', '/api/state');
-  assert.ok(state.projects.find((x) => x.id === p.id).tasks[0].jira_at);
+  assert.ok(state.projects.find((x: any) => x.id === p.id).tasks[0].jira_at);
 
   await call('PATCH', `/api/tasks/${t.id}`, { done: true, done_at: '2026-09-01' });
   const { body: j } = await call('GET', `/api/journal?project=${p.id}`);
@@ -211,6 +219,6 @@ test('migration : une base v1 (sans jira_at) est mise à niveau à l’ouverture
   v1.close();
   const old = new Store(file);
   assert.deepEqual(old.state().projects[0].tasks[0], { id: 1, project_id: 1, title: 'Tâche v1', jira_at: null });
-  assert.ok(old.updateTask(1, { jira: true }).jira_at);
+  assert.ok(old.updateTask(1, { jira: true })?.jira_at);
   old.close();
 });

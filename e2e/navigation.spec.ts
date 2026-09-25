@@ -1,7 +1,9 @@
-import { test as base, expect } from './fixtures.js';
+import type { Page } from '@playwright/test';
+import type { Store } from '../server/db.ts';
+import { test as base, expect } from './fixtures.ts';
 
 // Deux projets : Alpha (Une, Deux) et Beta (Trois).
-function seed(store) {
+function seed(store: Store) {
   const alpha = store.createProject('Alpha');
   const beta = store.createProject('Beta');
   const tasks = {
@@ -13,14 +15,14 @@ function seed(store) {
 }
 
 // Clé de navigation de l'élément qui a le focus ("project:1", "task:2"…).
-const current = (page) => page.evaluate(() => document.activeElement?.dataset.navKey ?? null);
+const current = (page: Page) => page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset.navKey ?? null);
 
-async function pressDown(page, n) {
+async function pressDown(page: Page, n: number) {
   for (let i = 0; i < n; i++) await page.keyboard.press('ArrowDown');
 }
 
 // `data` : jeu de données créé en base, page ouverte dessus.
-const test = base.extend({
+const test = base.extend<{ data: ReturnType<typeof seed> }>({
   data: async ({ page, store }, use) => {
     const data = seed(store);
     await page.goto('/');
@@ -157,13 +159,13 @@ test('nouveau projet : le focus va sur la saisie de sa première tâche', async 
   await page.keyboard.type('Gamma');
   await page.keyboard.press('Enter');
   await expect(page.locator('.project-head .name', { hasText: 'Gamma' })).toBeVisible();
-  const gamma = store.state().projects.find((p) => p.name === 'Gamma');
+  const gamma = store.state().projects.find((p) => p.name === 'Gamma')!;
   await expect(page.locator(`[data-nav-key="add:${gamma.id}"]`)).toBeFocused();
 
   await page.keyboard.type('Première tâche');
   await page.keyboard.press('Enter');
   await expect(page.locator(`#project-${gamma.id} .name`, { hasText: 'Première tâche' })).toBeVisible();
-  expect(store.state().projects.find((p) => p.id === gamma.id).tasks.map((t) => t.title)).toEqual(['Première tâche']);
+  expect(store.state().projects.find((p) => p.id === gamma.id)!.tasks.map((t) => t.title)).toEqual(['Première tâche']);
   await expect(page.locator(`[data-nav-key="add:${gamma.id}"]`)).toBeFocused();
 });
 

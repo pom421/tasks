@@ -1,11 +1,11 @@
 # Tâches
 
 Tâches par projet + journal de ce qui a été fait, jour par jour.
-Front en HTML/CSS/JS vanilla, serveur Node + SQLite. Aucune dépendance à l’exécution (Playwright sert seulement aux tests).
+SPA React + TypeScript (Vite, Tailwind, shadcn/ui), petit serveur Node + SQLite sans dépendance.
 
 ## Lancer en local
 
-1. Installer **Node.js 22.13 ou plus** (24 conseillé) : https://nodejs.org. Vérifier avec `node --version`.
+1. Installer **Node.js 22.18 ou plus** (24 conseillé) : https://nodejs.org. Vérifier avec `node --version`.
 2. Activer pnpm (livré avec Node via corepack) :
    ```sh
    corepack enable
@@ -16,17 +16,20 @@ Front en HTML/CSS/JS vanilla, serveur Node + SQLite. Aucune dépendance à l’e
    cd tasks
    pnpm install
    ```
-4. Démarrer :
+4. Démarrer (compile le front puis lance le serveur) :
    ```sh
    pnpm start
    ```
 5. Ouvrir http://localhost:3000
 
+Développement : `pnpm dev` → http://localhost:5173 (rechargement à chaud, API incluse, même base `data/tasks.db`).
+
 Arrêter : `Ctrl+C`. Les données sont dans `data/tasks.db`, qui est créé au premier lancement.
 
 Options : `PORT=8080 pnpm start` pour changer de port, `TASKS_DB=~/taches.db pnpm start` pour un autre fichier de base.
 
-Tests :
+Vérifications :
+- `pnpm typecheck` : TypeScript
 - `pnpm test` : API et import (Node, sans navigateur)
 - `pnpm test:e2e` : interface dans Chromium. La première fois, installer le navigateur : `pnpm exec playwright install chromium`
 
@@ -55,7 +58,7 @@ Clavier (`?` affiche l'aide) :
 ## Sécurité
 
 - Pas d'authentification : le serveur n'écoute que sur `127.0.0.1`, il n'est pas joignable depuis le réseau.
-- Requêtes venant d'un autre site refusées (CSRF), en-tête `Host` vérifié (DNS rebinding), CSP stricte.
+- Requêtes venant d'un autre site refusées (CSRF), en-tête `Host` vérifié (DNS rebinding), CSP stricte (scripts limités à l'app ; styles inline tolérés pour les dialogues shadcn).
 - Import `.sqlite` vérifié (intégrité, ni trigger ni vue). Base lisible par ton seul utilisateur (`600`).
 - pnpm : version épinglée par hash, npm/yarn bloqués, versions de moins de 7 jours refusées, scripts d'installation interdits (voir `pnpm-workspace.yaml`).
 - ⚠️ Exposer l'app sur un réseau (`HOST=0.0.0.0` + `ALLOWED_HOSTS=…`) la rend accessible sans mot de passe.
@@ -63,16 +66,23 @@ Clavier (`?` affiche l'aide) :
 ## Architecture
 
 ```
-src/server.js     serveur HTTP : routes API, fichiers statiques, sécurité
-src/db.js         accès SQLite, migrations du schéma
-src/markdown.js   import du markdown
-public/app.js     rendu des projets et du journal
-public/nav.js     navigation clavier (focus, ↑/↓, restauration après re-rendu)
-public/dom.js     création d'éléments, noms éditables, champs d'ajout
-public/api.js     appels au serveur
-test/             tests API (node:test)
+server/           Node exécute le TypeScript tel quel (pas d'étape de build)
+  index.ts        point d'entrée : sert l'API et le front compilé (dist/)
+  app.ts          routes API, fichiers statiques, sécurité
+  db.ts           accès SQLite, migrations du schéma
+  markdown.ts     import du markdown
+  test/           tests API (node:test)
+shared/types.ts   types échangés entre serveur et front
+src/              front React (Vite)
+  App.tsx         état, chargement des données, raccourcis globaux
+  components/     Toolbar, ProjectList, TaskRow, Journal, Editable…
+  components/ui/  composants shadcn/ui (copiés dans le projet, modifiables)
+  lib/nav.ts      navigation clavier (focus, ↑/↓, restauration après re-rendu)
+  lib/api.ts      appels au serveur, typés
 e2e/              tests d'interface (Playwright), 1 serveur + 1 base vierge par test
 ```
+
+En dev, l'API est branchée dans le serveur Vite (`vite.config.ts`) : une seule commande.
 
 ## Modèle de données
 
