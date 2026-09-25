@@ -172,6 +172,7 @@ export function createApp(store, { allowedHosts = DEFAULT_ALLOWED_HOSTS } = {}) 
       if ('done' in body) patch.doneAt = body.done ? body.done_at ?? today() : null;
       else if ('done_at' in body) patch.doneAt = body.done_at;
       if (patch.doneAt && !isDate(patch.doneAt)) throw new HttpError(400, 'Date invalide');
+      if ('jira' in body) patch.jira = Boolean(body.jira);
       const task = store.updateTask(Number(id), patch);
       if (!task) throw new HttpError(404, 'Tâche introuvable');
       send(res, 200, task);

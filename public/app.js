@@ -61,7 +61,29 @@ function deleteTask(task) {
   if (confirm(`Supprimer « ${task.title} » ?`)) act(() => api('DELETE', `/api/tasks/${task.id}`), { stay: true });
 }
 
-// Nom de tâche : Espace coche / décoche, Suppr supprime.
+const toggleJira = (task) => patchTask(task.id, { jira: !task.jira_at });
+
+// Logo Jira (Simple Icons, CC0), créé en DOM : compatible avec la CSP.
+const JIRA_PATH =
+  'M11.571 11.513H0a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 12.575 24V12.518a1.005 1.005 0 0 0-1.005-1.005z' +
+  'm5.723-5.756H5.736a5.215 5.215 0 0 0 5.215 5.214h2.129v2.058a5.218 5.218 0 0 0 5.215 5.214V6.758a1.001 1.001 0 0 0-1.001-1.001z' +
+  'M23.013 0H11.455a5.215 5.215 0 0 0 5.215 5.215h2.129v2.057A5.215 5.215 0 0 0 24 12.483V1.005A1.001 1.001 0 0 0 23.013 0Z';
+
+function jiraIcon(task) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('class', 'jira');
+  svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-label', `Reportée dans Jira le ${task.jira_at.slice(0, 10)}`);
+  const path = document.createElementNS(NS, 'path');
+  path.setAttribute('d', JIRA_PATH);
+  svg.append(path);
+  return svg;
+}
+
+// Nom de tâche + icône Jira éventuelle.
+// Clavier (hors édition) : Espace coche / décoche, j bascule Jira, Suppr supprime.
 function taskName(task, done) {
   const span = editable(task.title, `task:${task.id}`, (title) => patchTask(task.id, { title }));
   span.addEventListener('keydown', (e) => {
@@ -69,9 +91,22 @@ function taskName(task, done) {
       e.preventDefault();
       patchTask(task.id, done ? { done: false } : { done: true, done_at: localToday() }, { stay: true });
     }
+    if (e.key === 'j') {
+      e.preventDefault();
+      toggleJira(task);
+    }
     if (e.key === 'Delete') deleteTask(task);
   });
-  return span;
+  return h('span.title', {}, span, task.jira_at && jiraIcon(task));
+}
+
+function jiraButton(task) {
+  return h('button.icon', {
+    type: 'button',
+    textContent: task.jira_at ? 'retirer jira' : 'jira',
+    title: 'Reportée dans Jira (j)',
+    onclick: () => toggleJira(task),
+  });
 }
 
 // --- Rendu : projets ---------------------------------------------------------
@@ -86,6 +121,7 @@ function renderTask(task) {
     }),
     taskName(task, false),
     h('span.actions', {},
+      jiraButton(task),
       h('button.icon.danger', {
         type: 'button', textContent: '✕', title: 'Supprimer la tâche (Suppr)',
         onclick: () => deleteTask(task),
@@ -170,6 +206,7 @@ function renderDoneTask(task) {
     }),
     taskName(task, true),
     h('span.actions', {},
+      jiraButton(task),
       dateBtn,
       h('button.icon.danger', {
         type: 'button', textContent: '✕', title: 'Supprimer (Suppr)',

@@ -21,6 +21,8 @@ const MIGRATIONS = [
   CREATE INDEX task_project ON task(project_id);
   CREATE INDEX task_done_at ON task(done_at);
   `,
+  // 2 : tâche reportée dans Jira (horodatage du report, NULL = non reportée).
+  `ALTER TABLE task ADD COLUMN jira_at TEXT;`,
 ];
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -105,7 +107,7 @@ export class Store {
       .prepare('SELECT id, name, archived_at FROM project ORDER BY id')
       .all();
     const tasks = this.db
-      .prepare('SELECT id, project_id, title FROM task WHERE done_at IS NULL ORDER BY id')
+      .prepare('SELECT id, project_id, title, jira_at FROM task WHERE done_at IS NULL ORDER BY id')
       .all();
     const byProject = new Map(projects.map((p) => [p.id, { ...p, tasks: [] }]));
     for (const t of tasks) byProject.get(t.project_id)?.tasks.push({ ...t });
@@ -138,7 +140,7 @@ export class Store {
     }
     const rows = this.db
       .prepare(
-        `SELECT t.id, t.title, t.done_at, t.project_id, p.name AS project_name
+        `SELECT t.id, t.title, t.done_at, t.jira_at, t.project_id, p.name AS project_name
          FROM task t JOIN project p ON p.id = t.project_id
          WHERE ${where.join(' AND ')}
          ORDER BY t.done_at DESC, p.id, t.id`,
@@ -184,9 +186,15 @@ export class Store {
   }
 
   // doneAt : 'YYYY-MM-DD' pour marquer faite, null pour remettre à faire.
-  updateTask(id, { title, doneAt }) {
+  // jira : true = reportée dans Jira (horodatée), false = retirée.
+  updateTask(id, { title, doneAt, jira }) {
     if (title !== undefined) this.db.prepare('UPDATE task SET title = ? WHERE id = ?').run(title, id);
     if (doneAt !== undefined) this.db.prepare('UPDATE task SET done_at = ? WHERE id = ?').run(doneAt, id);
+    if (jira !== undefined) {
+      this.db
+        .prepare(`UPDATE task SET jira_at = ${jira ? "datetime('now')" : 'NULL'} WHERE id = ?`)
+        .run(id);
+    }
     return this.db.prepare('SELECT * FROM task WHERE id = ?').get(id);
   }
 

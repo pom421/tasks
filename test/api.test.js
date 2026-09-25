@@ -178,3 +178,39 @@ test('import refuse une base contenant un trigger', async () => {
   assert.equal(res.status, 400);
   assert.match(res.body.error, /trigger/);
 });
+
+test('report Jira : bascule, visible dans les projets et le journal', async () => {
+  const { body: p } = await call('POST', '/api/projects', { name: 'Jira' });
+  const { body: t } = await call('POST', '/api/tasks', { project_id: p.id, title: 'Ticket' });
+  assert.equal(t.jira_at, null);
+
+  const { body: on } = await call('PATCH', `/api/tasks/${t.id}`, { jira: true });
+  assert.ok(on.jira_at);
+  let { body: state } = await call('GET', '/api/state');
+  assert.ok(state.projects.find((x) => x.id === p.id).tasks[0].jira_at);
+
+  await call('PATCH', `/api/tasks/${t.id}`, { done: true, done_at: '2026-09-01' });
+  const { body: j } = await call('GET', `/api/journal?project=${p.id}`);
+  assert.ok(j.days[0].tasks[0].jira_at);
+
+  const { body: off } = await call('PATCH', `/api/tasks/${t.id}`, { jira: false });
+  assert.equal(off.jira_at, null);
+});
+
+test('migration : une base v1 (sans jira_at) est mise à niveau à l’ouverture', async () => {
+  const { DatabaseSync } = await import('node:sqlite');
+  const file = path.join(dir, 'v1.sqlite');
+  const v1 = new DatabaseSync(file);
+  v1.exec(`CREATE TABLE project (id INTEGER PRIMARY KEY, name TEXT NOT NULL,
+             created_at TEXT NOT NULL DEFAULT (datetime('now')), archived_at TEXT);
+           CREATE TABLE task (id INTEGER PRIMARY KEY, project_id INTEGER NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+             title TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')), done_at TEXT);
+           INSERT INTO project (name) VALUES ('Ancien');
+           INSERT INTO task (project_id, title) VALUES (1, 'Tâche v1');
+           PRAGMA user_version = 1;`);
+  v1.close();
+  const old = new Store(file);
+  assert.deepEqual(old.state().projects[0].tasks[0], { id: 1, project_id: 1, title: 'Tâche v1', jira_at: null });
+  assert.ok(old.updateTask(1, { jira: true }).jira_at);
+  old.close();
+});

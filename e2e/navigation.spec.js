@@ -166,3 +166,45 @@ test('nouveau projet : le focus va sur la saisie de sa première tâche', async 
   expect(store.state().projects.find((p) => p.id === gamma.id).tasks.map((t) => t.title)).toEqual(['Première tâche']);
   await expect(page.locator(`[data-nav-key="add:${gamma.id}"]`)).toBeFocused();
 });
+
+test('j bascule l’icône Jira après le texte de la tâche', async ({ page, store, data }) => {
+  const icon = page.locator(`li.task:has([data-nav-key="task:${data.tasks.une.id}"]) svg.jira`);
+  await pressDown(page, 2);
+  await page.keyboard.press('j');
+  await expect(icon).toBeVisible();
+  expect(store.state().projects[0].tasks[0].jira_at).toBeTruthy();
+  // Le focus reste sur la tâche : on peut rebasculer aussitôt.
+  expect(await current(page)).toBe(`task:${data.tasks.une.id}`);
+
+  await page.keyboard.press('j');
+  await expect(icon).toHaveCount(0);
+  expect(store.state().projects[0].tasks[0].jira_at).toBeNull();
+});
+
+test('j en édition : saisi comme une lettre, pas de bascule', async ({ page, store, data }) => {
+  await pressDown(page, 2);
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('End');
+  await page.keyboard.type(' jj');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#projects .name', { hasText: 'Une jj' })).toBeVisible();
+  expect(store.state().projects[0].tasks[0].jira_at).toBeNull();
+  expect(await current(page)).toBe(`task:${data.tasks.une.id}`);
+});
+
+test('icône Jira conservée dans le journal, et j y fonctionne aussi', async ({ page, store, data }) => {
+  store.updateTask(data.tasks.trois.id, { jira: true });
+  await page.reload();
+  const row = page.locator(`li.task:has([data-nav-key="task:${data.tasks.trois.id}"])`);
+  await expect(row.locator('svg.jira')).toBeVisible();
+  await pressDown(page, 6);
+  await page.keyboard.press(' ');
+  await expect(page.locator(`#journal li.task:has([data-nav-key="task:${data.tasks.trois.id}"]) svg.jira`)).toBeVisible();
+
+  // Focus resté à la même place (champ d'ajout de Beta) : descendre jusqu'au journal.
+  await pressDown(page, 2);
+  expect(await current(page)).toBe(`task:${data.tasks.trois.id}`);
+  await page.keyboard.press('j');
+  await expect(row.locator('svg.jira')).toHaveCount(0);
+  expect(store.journal({ projectId: data.beta.id }).days[0].tasks[0].jira_at).toBeNull();
+});

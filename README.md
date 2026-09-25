@@ -45,6 +45,7 @@ Clavier (`?` affiche l'aide) :
 | `Entrée` | Modifier le nom sélectionné, puis `Entrée` pour enregistrer |
 | `Échap` | Quitter l'édition sans enregistrer, retour à la navigation |
 | `Espace` | Cocher / décocher la tâche |
+| `j` | Marquer / démarquer la tâche « reportée dans Jira » (icône après le texte) |
 | `Suppr` | Supprimer la tâche |
 | `p` / `n` | Nouveau projet / nouvelle tâche |
 | `d` / `f` | Filtre du journal par période / par projet |
@@ -75,5 +76,6 @@ e2e/              tests d'interface (Playwright), 1 serveur + 1 base vierge par 
 
 ## Modèle de données
 
-`project` (id, name, created_at, archived_at) : 1 projet a 0..n `task` (id, project_id, title, created_at, done_at).
-Une tâche est faite quand `done_at` est rempli. Le journal, ce sont ces tâches-là.
+`project` (id, name, created_at, archived_at) : 1 projet a 0..n `task` (id, project_id, title, created_at, done_at, jira_at).
+Une tâche est faite quand `done_at` est rempli (le journal, ce sont ces tâches-là), reportée dans Jira quand `jira_at` l'est.
+Le schéma est versionné (`PRAGMA user_version`) : une base plus ancienne, importée ou non, est mise à niveau à l'ouverture.

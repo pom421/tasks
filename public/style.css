@@ -108,12 +108,14 @@ li.task {
   border-radius: 4px;
 }
 li.task:hover { background: var(--hover); }
-li.task .name { flex: 1; }
+/* Nom + icône Jira collée au texte ; la zone occupe toute la ligne. */
+li.task .title { flex: 1; display: flex; align-items: center; gap: 6px; min-width: 0; }
+svg.jira { width: 13px; height: 13px; flex: none; fill: #2684ff; }
 
 .name { cursor: text; overflow-wrap: anywhere; outline: none; }
 
 /* Élément courant de la navigation clavier : ligne surlignée + filet d'accent. */
-li.task:has(> .name:focus),
+li.task:has(.name:focus),
 .project-head:has(> .name:focus) {
   background: var(--hover);
   box-shadow: inset 3px 0 var(--accent);
