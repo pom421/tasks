@@ -218,7 +218,7 @@ test('migration : une base v1 (sans jira_at) est mise à niveau à l’ouverture
            PRAGMA user_version = 1;`);
   v1.close();
   const old = new Store(file);
-  assert.deepEqual(old.state().projects[0].tasks[0], { id: 1, project_id: 1, title: 'Tâche v1', jira_wanted_at: null, jira_at: null, jira_key: null, jira_url: null, notes: null, link: null });
+  assert.deepEqual(old.state().projects[0].tasks[0], { id: 1, project_id: 1, title: 'Tâche v1', jira_wanted_at: null, jira_at: null, jira_key: null, jira_url: null, notes: null });
   assert.ok(old.updateTask(1, { jira: 'done' })?.jira_at);
   old.close();
 });
@@ -326,23 +326,43 @@ test('réglages : URL Jira d’entreprise conservée en base, validée', async (
   assert.equal((await call('PUT', '/api/settings', { jira_base_url: 'https://x.io' }, { Origin: 'https://evil.example' })).status, 403);
 });
 
-test('détails de la tâche : notes, lien, ticket Jira par sa clé', async () => {
+test('détails de la tâche : notes (Markdown), ticket par sa clé', async () => {
   const { body: p } = await call('POST', '/api/projects', { name: 'Détails' });
   const { body: t } = await call('POST', '/api/tasks', { project_id: p.id, title: 'Avec détails' });
 
   const { body: d } = await call('PATCH', `/api/tasks/${t.id}`, {
-    notes: '  Contexte : voir la réunion du 12.  ',
-    link: 'https://docs.exemple.fr/specs',
+    notes: '  Contexte : voir [la spec](https://docs.exemple.fr/specs).  ',
     jira_ticket: 'abc-42',
   });
-  assert.equal(d.notes, 'Contexte : voir la réunion du 12.');
-  assert.equal(d.link, 'https://docs.exemple.fr/specs');
+  assert.equal(d.notes, 'Contexte : voir [la spec](https://docs.exemple.fr/specs).');
   assert.equal(d.jira_key, 'ABC-42'); // clé normalisée en majuscules
   assert.equal(d.jira_url, null);
   assert.ok(d.jira_at); // un ticket renseigné vaut « reportée »
 
-  assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { link: 'javascript:alert(1)' })).status, 400);
   assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { notes: 'x'.repeat(20_001) })).status, 400);
-  const { body: cleared } = await call('PATCH', `/api/tasks/${t.id}`, { notes: '', link: null });
-  assert.deepEqual([cleared.notes, cleared.link], [null, null]);
+  const { body: cleared } = await call('PATCH', `/api/tasks/${t.id}`, { notes: '' });
+  assert.equal(cleared.notes, null);
+});
+
+test('migration 6 : le lien d’une tâche (v5) rejoint ses notes', async () => {
+  const { DatabaseSync } = await import('node:sqlite');
+  const file = path.join(dir, 'v5.sqlite');
+  const v5 = new DatabaseSync(file);
+  v5.exec(`CREATE TABLE project (id INTEGER PRIMARY KEY, name TEXT NOT NULL,
+             created_at TEXT NOT NULL DEFAULT (datetime('now')), archived_at TEXT);
+           CREATE TABLE task (id INTEGER PRIMARY KEY, project_id INTEGER NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+             title TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')), done_at TEXT, jira_at TEXT,
+             position INTEGER NOT NULL DEFAULT 0, jira_wanted_at TEXT, jira_url TEXT, notes TEXT, link TEXT, jira_key TEXT);
+           CREATE TABLE setting (key TEXT PRIMARY KEY, value TEXT);
+           INSERT INTO project (name) VALUES ('P');
+           INSERT INTO task (project_id, title, notes, link) VALUES (1, 'Les deux', 'Mes notes', 'https://a.fr');
+           INSERT INTO task (project_id, title, link) VALUES (1, 'Lien seul', 'https://b.fr');
+           PRAGMA user_version = 5;`);
+  v5.close();
+  const store5 = new Store(file);
+  assert.deepEqual(
+    store5.state().projects[0].tasks.map((t) => t.notes),
+    ['Mes notes\n\nhttps://a.fr', 'https://b.fr'],
+  );
+  store5.close();
 });

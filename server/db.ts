@@ -21,7 +21,6 @@ export interface TaskPatch {
   jiraKey?: string | null;
   jiraUrl?: string | null;
   notes?: string | null;
-  link?: string | null;
 }
 import type { ImportItem } from './markdown.ts';
 
@@ -58,6 +57,9 @@ const MIGRATIONS = [
    ALTER TABLE task ADD COLUMN link TEXT;
    ALTER TABLE task ADD COLUMN jira_key TEXT;
    CREATE TABLE setting (key TEXT PRIMARY KEY, value TEXT);`,
+  // 6 : le lien de la tâche rejoint ses notes (Markdown), la colonne disparaît.
+  `UPDATE task SET notes = COALESCE(notes || char(10) || char(10), '') || link WHERE link IS NOT NULL;
+   ALTER TABLE task DROP COLUMN link;`,
 ];
 
 // À reporter dans Jira : marquée mais pas encore reportée.
@@ -166,7 +168,7 @@ export class Store {
       'tasks'
     >[];
     const tasks = this.db
-      .prepare('SELECT id, project_id, title, jira_wanted_at, jira_at, jira_key, jira_url, notes, link FROM task WHERE done_at IS NULL ORDER BY position, id')
+      .prepare('SELECT id, project_id, title, jira_wanted_at, jira_at, jira_key, jira_url, notes FROM task WHERE done_at IS NULL ORDER BY position, id')
       .all() as unknown as Task[];
     const byProject = new Map<number, Project>(projects.map((p) => [p.id, { ...p, tasks: [] }]));
     for (const t of tasks) byProject.get(t.project_id)?.tasks.push({ ...t });
@@ -201,7 +203,7 @@ export class Store {
     }
     const rows = this.db
       .prepare(
-        `SELECT t.id, t.title, t.done_at, t.jira_wanted_at, t.jira_at, t.jira_key, t.jira_url, t.notes, t.link,
+        `SELECT t.id, t.title, t.done_at, t.jira_wanted_at, t.jira_at, t.jira_key, t.jira_url, t.notes,
                 t.project_id, p.name AS project_name
          FROM task t JOIN project p ON p.id = t.project_id
          WHERE ${where.join(' AND ')}
@@ -261,9 +263,9 @@ export class Store {
 
   // doneAt : 'YYYY-MM-DD' pour marquer faite, null pour remettre à faire.
   // jira : état du suivi Jira ('none' efface aussi le ticket) ;
-  // jiraKey / jiraUrl : ticket (clé ou lien complet) ; notes, link : détails.
+  // jiraKey / jiraUrl : ticket (clé ou lien complet) ; notes : détails (Markdown).
   updateTask(id: number, patch: TaskPatch) {
-    const { title, doneAt, jira, jiraKey, jiraUrl, notes, link } = patch;
+    const { title, doneAt, jira, jiraKey, jiraUrl, notes } = patch;
     if (title !== undefined) this.db.prepare('UPDATE task SET title = ? WHERE id = ?').run(title, id);
     if (doneAt !== undefined) this.db.prepare('UPDATE task SET done_at = ? WHERE id = ?').run(doneAt, id);
     if (jira !== undefined) {
@@ -277,7 +279,6 @@ export class Store {
     if (jiraKey !== undefined) this.db.prepare('UPDATE task SET jira_key = ? WHERE id = ?').run(jiraKey, id);
     if (jiraUrl !== undefined) this.db.prepare('UPDATE task SET jira_url = ? WHERE id = ?').run(jiraUrl, id);
     if (notes !== undefined) this.db.prepare('UPDATE task SET notes = ? WHERE id = ?').run(notes, id);
-    if (link !== undefined) this.db.prepare('UPDATE task SET link = ? WHERE id = ?').run(link, id);
     return this.task(id);
   }
 

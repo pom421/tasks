@@ -102,7 +102,7 @@ function jiraTicket(value: unknown): { jiraKey: string | null; jiraUrl: string |
   const text = typeof value === 'string' ? value.trim() : '';
   if (JIRA_KEY_RE.test(text.toUpperCase())) return { jiraKey: text.toUpperCase(), jiraUrl: null };
   if (/^https?:/i.test(text)) return { jiraKey: null, jiraUrl: httpUrl(text) };
-  throw new HttpError(400, 'Ticket invalide : clé (ex. PROJ-123) ou lien http(s) attendu');
+  throw new HttpError(400, 'Ticket invalide : identifiant attendu, ex. PROJ-123');
 }
 
 function optionalText(value: unknown, label: string, max: number): string | null {
@@ -234,7 +234,7 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
       if ('done' in body) patch.doneAt = body.done ? (doneAt as string) : null;
       else if ('done_at' in body) patch.doneAt = doneAt as string | null;
       if ('jira' in body) {
-        if (!['none', 'wanted', 'done'].includes(body.jira as string)) throw new HttpError(400, 'État Jira invalide');
+        if (!['none', 'wanted', 'done'].includes(body.jira as string)) throw new HttpError(400, 'État de report invalide');
         patch.jira = body.jira as JiraState;
       }
       if ('jira_ticket' in body) {
@@ -243,7 +243,6 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
         if ((patch.jiraKey || patch.jiraUrl) && !('jira' in body)) patch.jira = 'done';
       }
       if ('notes' in body) patch.notes = optionalText(body.notes, 'Notes', 20_000);
-      if ('link' in body) patch.link = httpUrl(body.link);
       const task = store.updateTask(Number(id), patch);
       if (!task) throw new HttpError(404, 'Tâche introuvable');
       send(res, 200, task);

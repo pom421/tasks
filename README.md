@@ -39,9 +39,10 @@ Vérifications :
 - Journal : par défaut, la dernière journée. Filtres par période (du… au…, bornes incluses) et par projet. Renseigner le début met la même date en fin : une journée entière.
 - Nouveau projet → curseur directement sur la saisie de sa première tâche.
 - Souris : clic sur un nom pour le modifier.
-- Fiche d'une tâche (`o`, bouton « détails » ou icône 🗒) : notes, lien, ticket Jira. L'icône 🗒 signale une tâche qui a des notes ou un lien.
-- Jira : marquer une tâche « à reporter », puis « reportée » en saisissant le ticket (clé `PROJ-123` ou lien complet). Le compteur en haut indique ce qu'il reste à reporter (tâches à faire et faites).
-- Réglages (icône ⚙, page `/admin`) : URL du Jira de l'entreprise, qui transforme les clés en liens (`URL/browse/PROJ-123`). Conservée en base.
+- Fiche d'une tâche (`Maj+Entrée`, `o`, bouton « détails » ou icône 🗒) : contenu en Markdown et identifiant du ticket (`PROJ-123`). L'icône 🗒 signale une tâche qui a du contenu.
+  - Aperçu par défaut ; double-clic (ou `Entrée`) pour modifier ; `Ctrl+Entrée` revient à l'aperçu, un second `Ctrl+Entrée` (ou `Échap`) ferme. Enregistrement automatique.
+- Report : une tâche passe « à reporter », puis « reporté » (badge après le titre, avec l'identifiant du ticket). Le bouton « N tâches à reporter », sous la barre d'outils, n'apparaît que s'il en reste et filtre la liste.
+- Réglages (icône ⚙, page `/admin`) : URL de base des tickets (ex. `https://entreprise.atlassian.net`), qui transforme les identifiants en liens (`URL/browse/PROJ-123`). Conservée en base.
 
 Clavier (`?` affiche l'aide) :
 
@@ -52,10 +53,10 @@ Clavier (`?` affiche l'aide) :
 | `Échap` | Quitter l'édition sans enregistrer, retour à la navigation |
 | `Espace` | Cocher / décocher la tâche |
 | `Alt+↑` `Alt+↓` (ou `Alt+k` `Alt+j`) | Monter / descendre la tâche (priorité). En bord de projet, elle passe dans le projet voisin |
-| `J` (majuscule) | Suivi Jira : à reporter (icône en contour) → reportée (icône pleine, fiche proposée pour le ticket) → rien |
-| `o` | Ouvrir la fiche de la tâche (notes, lien, ticket Jira) ; `Ctrl+Entrée` enregistre depuis les notes |
-| `L` (majuscule) | Ouvrir la fiche sur le champ « Ticket Jira » |
-| `r` | Afficher seulement les tâches à reporter dans Jira (ou clic sur « Jira : N à reporter ») |
+| `Maj+Entrée` ou `o` | Ouvrir la fiche de la tâche (contenu Markdown, ticket) |
+| `J` (majuscule) | Report : à reporter → reporté (fiche proposée pour le ticket) → rien |
+| `L` (majuscule) | Ouvrir la fiche sur le champ « Ticket » |
+| `r` | Afficher seulement les tâches à reporter (ou clic sur « N tâches à reporter ») |
 | `x` puis `x` | Supprimer la tâche : le 1er appui demande confirmation, le 2e supprime (`Échap` annule). `Suppr` marche aussi |
 | `p` / `n` | Nouveau projet / nouvelle tâche |
 | `d` / `f` | Filtre du journal par période / par projet |
@@ -69,6 +70,7 @@ Import / export :
 
 - Pas d'authentification : le serveur n'écoute que sur `127.0.0.1`, il n'est pas joignable depuis le réseau.
 - Requêtes venant d'un autre site refusées (CSRF), en-tête `Host` vérifié (DNS rebinding), CSP stricte (scripts limités à l'app ; styles inline tolérés pour les dialogues shadcn).
+- Contenu Markdown assaini avant affichage (DOMPurify) : ni script, ni gestionnaire d'événement, ni lien `javascript:`.
 - Import `.sqlite` vérifié (intégrité, ni trigger ni vue). Base lisible par ton seul utilisateur (`600`).
 - pnpm : version épinglée par hash, npm/yarn bloqués, versions de moins de 7 jours refusées, scripts d'installation interdits (voir `pnpm-workspace.yaml`).
 - ⚠️ Exposer l'app sur un réseau (`HOST=0.0.0.0` + `ALLOWED_HOSTS=…`) la rend accessible sans mot de passe.
@@ -85,7 +87,8 @@ server/           Node exécute le TypeScript tel quel (pas d'étape de build)
 shared/types.ts   types échangés entre serveur et front
 src/              front React (Vite)
   App.tsx         état, chargement des données, raccourcis globaux
-  components/     Toolbar, ProjectList, TaskRow, TaskDialog, Journal, SettingsPage…
+  components/     Toolbar, ProjectList, TaskRow, TaskDialog, ReportBadge, Journal, SettingsPage…
+  lib/markdown.ts rendu Markdown assaini (marked + DOMPurify)
   components/ui/  composants shadcn/ui (copiés dans le projet, modifiables)
   lib/nav.ts      navigation clavier (focus, ↑/↓, restauration après re-rendu)
   lib/api.ts      appels au serveur, typés
@@ -96,8 +99,8 @@ En dev, l'API est branchée dans le serveur Vite (`vite.config.ts`) : une seule 
 
 ## Modèle de données
 
-`project` (id, name, created_at, archived_at) : 1 projet a 0..n `task` (id, project_id, title, created_at, done_at, position, notes, link, jira_wanted_at, jira_at, jira_key, jira_url).
+`project` (id, name, created_at, archived_at) : 1 projet a 0..n `task` (id, project_id, title, created_at, done_at, position, notes, jira_wanted_at, jira_at, jira_key, jira_url).
 `setting` (key, value) : réglages de l'application (ex. `jira_base_url`).
 `position` = ordre (priorité) des tâches dans leur projet.
-Une tâche est faite quand `done_at` est rempli (le journal, ce sont ces tâches-là), à reporter dans Jira quand `jira_wanted_at` l'est et pas `jira_at`, reportée quand `jira_at` l'est. Ticket : `jira_key` (lien construit avec `jira_base_url`, qui peut donc changer) ou `jira_url` (lien complet). Liens en http(s) uniquement.
+`notes` = contenu en Markdown. Une tâche est faite quand `done_at` est rempli (le journal, ce sont ces tâches-là), à reporter quand `jira_wanted_at` l'est et pas `jira_at`, reportée quand `jira_at` l'est. Ticket : `jira_key` (lien construit avec `jira_base_url`, qui peut donc changer) ou `jira_url` (lien complet). Liens en http(s) uniquement.
 Le schéma est versionné (`PRAGMA user_version`) : une base plus ancienne, importée ou non, est mise à niveau à l'ouverture.

@@ -11,8 +11,7 @@ export interface Task {
   jira_at: string | null; // reportée dans Jira
   jira_key: string | null; // clé du ticket (PROJ-123), lien construit avec l'URL Jira d'entreprise
   jira_url: string | null; // ou lien complet vers le ticket (http/https)
-  notes: string | null; // détails libres
-  link: string | null; // lien associé à la tâche (http/https)
+  notes: string | null; // détails, en Markdown
 }
 
 export interface Settings {
@@ -28,7 +27,7 @@ export function jiraLink(t: Pick<Task, 'jira_key' | 'jira_url'>, settings: Setti
 
 export const JIRA_KEY_RE = /^[A-Z][A-Z0-9_]*-\d+$/;
 
-export const hasDetails = (t: Pick<Task, 'notes' | 'link'>) => Boolean(t.notes || t.link);
+export const hasDetails = (t: Pick<Task, 'notes'>) => Boolean(t.notes);
 
 export function jiraState(t: Pick<Task, 'jira_wanted_at' | 'jira_at'>): JiraState {
   if (t.jira_at) return 'done';

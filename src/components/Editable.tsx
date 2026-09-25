@@ -62,7 +62,8 @@ export function EditableName({ value, navKey, onSave, className }: EditableNameP
       data-nav-key={navKey}
       onClick={() => setEditing(true)}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') {
+        // Maj+Entrée est laissée à la ligne (ouverture de la fiche d'une tâche).
+        if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
           setEditing(true);
         }

@@ -1,8 +1,10 @@
-import { useId, useState, type FormEvent, type KeyboardEvent } from 'react';
-import { JIRA_KEY_RE, jiraLink, type DoneTask, type Settings, type Task } from '../../shared/types.ts';
+import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { JIRA_KEY_RE, type DoneTask, type Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
 import type { TaskField } from '@/lib/actions';
 import { focusByKey } from '@/lib/nav';
+import { renderMarkdown } from '@/lib/markdown';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -13,63 +15,90 @@ interface TaskDialogProps {
   task: Task | DoneTask;
   projectName: string;
   field: TaskField;
-  settings: Settings;
   open: boolean;
-  onClose: () => void;
-  onSaved: () => void;
-  onOpenSettings: () => void;
+  // changed : quelque chose a été enregistré (les données sont à recharger).
+  onClose: (changed: boolean) => void;
 }
 
-const isHttpUrl = (s: string) => /^https?:\/\/\S+$/i.test(s);
+const ticketOf = (t: Task) => t.jira_key ?? t.jira_url ?? '';
+const isValidTicket = (s: string) => !s || JIRA_KEY_RE.test(s.toUpperCase()) || /^https?:\/\/\S+$/i.test(s);
 
-// Fiche d'une tâche : notes, lien et ticket Jira.
-// Accessibilité : focus piégé dans la modale, Échap ferme, titre et
-// description annoncés (Radix), libellés reliés aux champs, erreurs annoncées.
-export function TaskDialog({ task, projectName, field, settings, open, onClose, onSaved, onOpenSettings }: TaskDialogProps) {
+// Fiche d'une tâche : contenu en Markdown et identifiant du ticket.
+// Contenu : aperçu par défaut ; double-clic (ou Entrée) pour éditer ;
+// Ctrl+Entrée revient à l'aperçu (et enregistre), un second Ctrl+Entrée ferme.
+// Échap ferme aussi. Tout est enregistré automatiquement, rien n'est perdu.
+// Accessibilité : focus piégé, titre et description annoncés (Radix),
+// libellés reliés aux champs, erreurs annoncées.
+export function TaskDialog({ task, projectName, field, open, onClose }: TaskDialogProps) {
   const id = useId();
   const [notes, setNotes] = useState(task.notes ?? '');
-  const [link, setLink] = useState(task.link ?? '');
-  const [ticket, setTicket] = useState(task.jira_key ?? task.jira_url ?? '');
-  const [errors, setErrors] = useState<{ link?: string; ticket?: string; form?: string }>({});
-  const [saving, setSaving] = useState(false);
+  const [ticket, setTicket] = useState(ticketOf(task));
+  const [editing, setEditing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const saved = useRef({ notes: task.notes ?? '', ticket: ticketOf(task), changed: false });
+  const preview = useRef<HTMLDivElement>(null);
+  const ticketInput = useRef<HTMLInputElement>(null);
+  const html = useMemo(() => renderMarkdown(notes), [notes]);
 
-  const ticketKey = ticket.trim().toUpperCase();
-  const isKey = JIRA_KEY_RE.test(ticketKey);
-  const preview = isKey ? jiraLink({ jira_key: ticketKey, jira_url: null }, settings) : null;
-
-  const save = async (e?: FormEvent) => {
-    e?.preventDefault();
-    const next = {
-      link: link.trim() && !isHttpUrl(link.trim()) ? 'Adresse http(s) attendue, ex. https://…' : undefined,
-      ticket:
-        ticket.trim() && !isKey && !isHttpUrl(ticket.trim()) ? 'Clé (ex. PROJ-123) ou lien http(s) attendu' : undefined,
-    };
-    setErrors(next);
-    if (next.link || next.ticket) return;
-    setSaving(true);
+  // Enregistre ce qui a changé. false si le ticket est invalide (la fiche reste ouverte).
+  const persist = async (): Promise<boolean> => {
+    const trimmed = { notes: notes.trim(), ticket: ticket.trim() };
+    if (!isValidTicket(trimmed.ticket)) {
+      setError('Identifiant attendu, ex. PROJ-123');
+      ticketInput.current?.focus();
+      return false;
+    }
+    const patch: Parameters<typeof api.updateTask>[1] = {};
+    if (trimmed.notes !== saved.current.notes.trim()) patch.notes = trimmed.notes || null;
+    if (trimmed.ticket !== saved.current.ticket) patch.jira_ticket = trimmed.ticket || null;
+    if (!Object.keys(patch).length) return true;
     try {
-      await api.updateTask(task.id, { notes: notes.trim() || null, link: link.trim() || null, jira_ticket: ticket.trim() || null });
-      onSaved();
+      await api.updateTask(task.id, patch);
+      saved.current = { notes, ticket: trimmed.ticket, changed: true };
+      setError(null);
+      return true;
     } catch (err) {
-      setErrors({ form: (err as Error).message });
-      setSaving(false);
+      setError((err as Error).message);
+      return false;
     }
   };
 
-  // Ctrl/Cmd+Entrée enregistre depuis les notes (Entrée seule y fait un retour à la ligne).
-  const onNotesKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) save();
+  const close = async () => {
+    if (await persist()) onClose(saved.current.changed);
+  };
+
+  const startEditing = () => setEditing(true);
+  const stopEditing = async () => {
+    setEditing(false);
+    await persist();
+    requestAnimationFrame(() => preview.current?.focus());
+  };
+
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      if (editing) stopEditing();
+      else close();
+    }
   };
 
   const state = 'done_at' in task ? `faite le ${task.done_at.split('-').reverse().join('/')}` : 'à faire';
-  const describe = (...ids: (string | false | undefined)[]) => ids.filter(Boolean).join(' ') || undefined;
 
   return (
-    <Dialog open={open} onOpenChange={(value) => !value && onClose()}>
+    <Dialog open={open} onOpenChange={(value) => !value && close()}>
       <DialogContent
-        className="task-dialog sm:max-w-lg"
-        // À la fermeture, retour sur la tâche dans la liste (même si la fiche a été
-        // ouverte par J, sans élément déclencheur), pour reprendre la navigation.
+        className="task-dialog flex max-h-[90vh] flex-col gap-4 sm:max-w-3xl"
+        onKeyDown={onKeyDown}
+        // Échap : fermer en enregistrant (et rester ouvert si le ticket est invalide).
+        onEscapeKeyDown={(e) => {
+          e.preventDefault();
+          close();
+        }}
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+          (field === 'jira' ? ticketInput.current : preview.current)?.focus();
+        }}
+        // À la fermeture, retour sur la tâche dans la liste pour reprendre la navigation.
         onCloseAutoFocus={(e) => {
           e.preventDefault();
           focusByKey(`task:${task.id}`);
@@ -80,89 +109,73 @@ export function TaskDialog({ task, projectName, field, settings, open, onClose, 
           {projectName} · {state}
         </DialogDescription>
 
-        <form className="grid gap-4" onSubmit={save} noValidate>
-          <div className="grid gap-1.5">
-            <Label htmlFor={`${id}-notes`}>Notes</Label>
+        <div className="grid min-h-0 flex-1 gap-1.5">
+          <Label id={`${id}-notes-label`} htmlFor={editing ? `${id}-notes` : undefined}>
+            Contenu
+          </Label>
+          {editing ? (
             <Textarea
               id={`${id}-notes`}
+              className="min-h-[50vh] font-mono text-sm"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              onKeyDown={onNotesKey}
-              autoFocus={field === 'notes'}
-              rows={4}
+              autoFocus
               aria-describedby={`${id}-notes-hint`}
             />
-            <p id={`${id}-notes-hint`} className="text-xs text-muted-foreground">
-              Ctrl+Entrée pour enregistrer.
-            </p>
-          </div>
-
-          <div className="grid gap-1.5">
-            <Label htmlFor={`${id}-link`}>Lien</Label>
-            <Input
-              id={`${id}-link`}
-              type="url"
-              inputMode="url"
-              placeholder="https://…"
-              value={link}
-              onChange={(e) => setLink(e.target.value)}
-              aria-invalid={Boolean(errors.link)}
-              aria-describedby={describe(errors.link && `${id}-link-error`)}
-            />
-            {errors.link && (
-              <p id={`${id}-link-error`} role="alert" className="text-xs text-destructive">
-                {errors.link}
-              </p>
-            )}
-          </div>
-
-          <div className="grid gap-1.5">
-            <Label htmlFor={`${id}-jira`}>Ticket Jira</Label>
-            <Input
-              id={`${id}-jira`}
-              placeholder="PROJ-123 ou lien complet"
-              autoComplete="off"
-              value={ticket}
-              onChange={(e) => setTicket(e.target.value)}
-              autoFocus={field === 'jira'}
-              aria-invalid={Boolean(errors.ticket)}
-              aria-describedby={describe(`${id}-jira-hint`, errors.ticket && `${id}-jira-error`)}
-            />
-            <p id={`${id}-jira-hint`} className="jira-hint text-xs text-muted-foreground">
-              {isKey && preview && <>Lien : {preview}</>}
-              {isKey && !preview && (
-                <>
-                  Pour que la clé devienne un lien, renseignez l’URL de votre Jira dans les{' '}
-                  <button type="button" className="underline underline-offset-2" onClick={onOpenSettings}>
-                    réglages
-                  </button>
-                  .
-                </>
+          ) : (
+            <div
+              ref={preview}
+              tabIndex={0}
+              role="document"
+              aria-labelledby={`${id}-notes-label`}
+              aria-describedby={`${id}-notes-hint`}
+              className={cn(
+                'notes-preview markdown min-h-[50vh] overflow-y-auto rounded-md border px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
+                !notes.trim() && 'text-muted-foreground italic',
               )}
-              {!isKey && 'Renseigner un ticket marque la tâche « reportée dans Jira ».'}
-            </p>
-            {errors.ticket && (
-              <p id={`${id}-jira-error`} role="alert" className="text-xs text-destructive">
-                {errors.ticket}
-              </p>
-            )}
-          </div>
-
-          {errors.form && (
-            <p role="alert" className="text-sm text-destructive">
-              {errors.form}
-            </p>
+              onDoubleClick={startEditing}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) {
+                  e.preventDefault();
+                  startEditing();
+                }
+              }}
+              {...(notes.trim() ? { dangerouslySetInnerHTML: { __html: html } } : { children: 'Aucun contenu.' })}
+            />
           )}
+          <p id={`${id}-notes-hint`} className="text-xs text-muted-foreground">
+            {editing
+              ? 'Markdown · Ctrl+Entrée : aperçu'
+              : 'Double-clic ou Entrée : modifier · Ctrl+Entrée ou Échap : fermer'}
+          </p>
+        </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              Annuler
-            </Button>
-            <Button type="submit" disabled={saving}>
-              Enregistrer
-            </Button>
-          </DialogFooter>
-        </form>
+        <div className="grid gap-1.5 sm:max-w-xs">
+          <Label htmlFor={`${id}-ticket`}>Ticket</Label>
+          <Input
+            ref={ticketInput}
+            id={`${id}-ticket`}
+            placeholder="PROJ-123"
+            autoComplete="off"
+            value={ticket}
+            onChange={(e) => setTicket(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && !e.ctrlKey && !e.metaKey && close()}
+            aria-invalid={Boolean(error)}
+            aria-describedby={error ? `${id}-error` : undefined}
+          />
+        </div>
+
+        {error && (
+          <p id={`${id}-error`} role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={close}>
+            Fermer
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

@@ -8,14 +8,14 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 
 const SHORTCUTS: [string, string][] = [
   ['↑ ↓  j k', 'Se déplacer (Début / Fin : premier / dernier)'],
+  ['Maj+Entrée  o', 'Ouvrir la fiche de la tâche (contenu, ticket)'],
   ['Entrée', 'Modifier le nom sélectionné / valider'],
   ['Échap', "Quitter l'édition, retour à la navigation"],
   ['Espace', 'Cocher / décocher la tâche'],
   ['Alt+↑ Alt+↓', 'Monter / descendre la tâche, jusque dans le projet voisin (Alt+k / Alt+j)'],
-  ['J', 'Suivi Jira : à reporter → reportée → rien (majuscule)'],
-  ['o', 'Ouvrir la fiche de la tâche : notes, lien, ticket Jira'],
-  ['L', 'Ouvrir la fiche sur le ticket Jira (majuscule)'],
-  ['r', 'Afficher seulement les tâches à reporter dans Jira'],
+  ['J', 'Report : à reporter → reporté → rien (majuscule)'],
+  ['L', 'Ouvrir la fiche sur l’identifiant du ticket (majuscule)'],
+  ['r', 'Afficher seulement les tâches à reporter'],
   ['x x', 'Supprimer la tâche (x une 2e fois pour confirmer)'],
   ['p', 'Nouveau projet'],
   ['n', 'Nouvelle tâche (dernier projet utilisé)'],
@@ -64,18 +64,6 @@ export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, showArchived, o
     <header className="flex flex-wrap items-center justify-between gap-2 pt-6 pb-2">
       <h1 className="text-2xl font-bold">Tâches</h1>
       <nav className="flex flex-wrap items-center gap-1.5">
-        {(jiraPending > 0 || jiraFilter) && (
-          <Button
-            id="jira-pending"
-            variant={jiraFilter ? 'default' : 'ghost'}
-            size="sm"
-            aria-pressed={jiraFilter}
-            title="Afficher seulement les tâches à reporter dans Jira (r)"
-            onClick={onJiraFilter}
-          >
-            Jira : {jiraPending} à reporter
-          </Button>
-        )}
         <label className="flex items-center gap-1 text-sm text-muted-foreground">
           <Checkbox id="show-archived" checked={showArchived} onCheckedChange={(v) => onShowArchived(v === true)} /> Archivés
         </label>
@@ -108,6 +96,22 @@ export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, showArchived, o
         <input ref={dbInput} type="file" accept=".sqlite,.db,.sqlite3" hidden onChange={pick(importDb)} />
         <input ref={mdInput} type="file" accept=".md,.markdown,.txt" hidden onChange={pick(importMd)} />
       </nav>
+
+      {/* Ligne réservée (hauteur fixe) : le bouton apparaît sans rien décaler. */}
+      <div className="flex h-8 w-full justify-end">
+        {(jiraPending > 0 || jiraFilter) && (
+          <Button
+            id="jira-pending"
+            variant={jiraFilter ? 'default' : 'outline'}
+            size="sm"
+            aria-pressed={jiraFilter}
+            title="Afficher seulement les tâches à reporter (r)"
+            onClick={onJiraFilter}
+          >
+            {jiraPending} {jiraPending > 1 ? 'tâches' : 'tâche'} à reporter
+          </Button>
+        )}
+      </div>
 
       <Dialog open={helpOpen} onOpenChange={onHelpOpen}>
         <DialogContent>

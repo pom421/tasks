@@ -167,16 +167,10 @@ export function App() {
           task={current}
           projectName={projectName(current)}
           field={openTask.field}
-          settings={data.settings}
           open={openTask.open}
-          onClose={() => setOpenTask({ ...openTask, open: false })}
-          onSaved={() => {
+          onClose={(changed) => {
             setOpenTask({ ...openTask, open: false });
-            actions.act(async () => ({ focus: `task:${current.id}` }));
-          }}
-          onOpenSettings={() => {
-            setOpenTask(null);
-            navigate('/admin');
+            if (changed) actions.act(async () => ({ focus: `task:${current.id}` }));
           }}
         />
       )}

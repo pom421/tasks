@@ -122,7 +122,7 @@ export function ProjectList({ projects, showArchived, jiraOnly }: ProjectListPro
         ))}
         {!visible.length && (
           <p className="empty mt-3 italic text-muted-foreground">
-            {jiraOnly ? 'Aucune tâche à faire à reporter dans Jira.' : 'Aucun projet. Créez-en un ci-dessous.'}
+            {jiraOnly ? 'Aucune tâche à faire à reporter.' : 'Aucun projet. Créez-en un ci-dessous.'}
           </p>
         )}
       </section>

@@ -27,7 +27,6 @@ export interface TaskPatch {
   jira?: JiraState;
   jira_ticket?: string | null; // clé (PROJ-123) ou lien complet
   notes?: string | null;
-  link?: string | null;
 }
 
 export const api = {

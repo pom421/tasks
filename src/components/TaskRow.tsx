@@ -8,13 +8,13 @@ import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { EditableName } from './Editable';
-import { JiraIcon } from './JiraIcon';
+import { ReportBadge } from './ReportBadge';
 
 // Ligne de tâche, à faire (liste des projets) ou faite (journal).
 // Clavier, où que soit le focus dans la ligne (hors champ de saisie) :
-// Espace coche / décoche, J (majuscule) fait tourner le suivi Jira
-// (rien -> à reporter -> reportée -> rien), L ouvre la fiche sur le ticket
-// Jira, o ouvre la fiche (notes, lien),
+// Espace coche / décoche, J (majuscule) fait tourner le suivi du report
+// (rien -> à reporter -> reporté -> rien), o ou Maj+Entrée ouvre la fiche,
+// L l'ouvre sur l'identifiant du ticket,
 // x ou Suppr demande la suppression, un second appui la confirme,
 // Alt+↑ / Alt+↓ (ou Alt+k / Alt+j) déplacent la tâche (onMove, tâches à faire).
 export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (direction: -1 | 1) => void }) {
@@ -77,7 +77,7 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
       e.preventDefault();
       cycleJira();
     }
-    if (e.key === 'L' || e.key === 'o') {
+    if (e.key === 'L' || e.key === 'o' || (e.key === 'Enter' && e.shiftKey)) {
       e.preventDefault();
       openTask(task, e.key === 'L' ? 'jira' : 'notes');
     }
@@ -105,13 +105,13 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
           className={done ? 'text-muted-foreground' : undefined}
           onSave={(title) => patch({ title })}
         />
-        <JiraIcon task={task} />
+        <ReportBadge task={task} />
         {hasDetails(task) && (
           <button
             type="button"
             tabIndex={-1}
             className="details flex-none text-muted-foreground hover:text-foreground"
-            title="Détails : notes, lien (o)"
+            title="Voir le contenu (o ou Maj+Entrée)"
             aria-label="Voir les détails"
             onClick={() => openTask(task, 'notes')}
           >
@@ -125,10 +125,10 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
         </span>
       ) : (
         <span className="actions invisible flex gap-0.5 group-hover:visible group-focus-within:visible">
-          <Button variant="ghost" size="xs" className="text-muted-foreground" title="Suivi Jira : à reporter → reportée → rien (J)" onClick={cycleJira}>
-            {{ none: 'jira', wanted: 'reportée', done: 'retirer jira' }[jiraState(task)]}
+          <Button variant="ghost" size="xs" className="text-muted-foreground" title="Report : à reporter → reporté → rien (J)" onClick={cycleJira}>
+            {{ none: 'à reporter', wanted: 'reporté', done: 'ne plus reporter' }[jiraState(task)]}
           </Button>
-          <Button variant="ghost" size="xs" className="text-muted-foreground" title="Notes, lien, ticket Jira (o)" onClick={() => openTask(task, 'notes')}>
+          <Button variant="ghost" size="xs" className="text-muted-foreground" title="Contenu et ticket (o ou Maj+Entrée)" onClick={() => openTask(task, 'notes')}>
             détails
           </Button>
           {done &&

@@ -200,7 +200,7 @@ test('j / k naviguent comme ↓ / ↑, mais s’écrivent dans un champ', async 
 test('raccourcis actifs même quand le focus est sur la case à cocher', async ({ page, store }) => {
   await page.locator('#projects li.task').first().getByRole('checkbox').focus();
   await page.keyboard.press('Shift+J');
-  await expect(page.locator('#projects li.task').first().locator('svg.jira-wanted')).toBeVisible();
+  await expect(page.locator('#projects li.task').first().locator('.report-wanted')).toBeVisible();
   expect(store.state().projects[0].tasks[0].jira_wanted_at).toBeTruthy();
 });
 
@@ -230,20 +230,20 @@ test('J en édition : saisi comme une lettre, pas de bascule', async ({ page, st
   expect(await current(page)).toBe(`task:${data.tasks.une.id}`);
 });
 
-test('icône Jira conservée dans le journal, et J y fonctionne aussi', async ({ page, store, data }) => {
+test('badge « reporté » conservé dans le journal, et J y fonctionne aussi', async ({ page, store, data }) => {
   store.updateTask(data.tasks.trois.id, { jira: 'done' });
   await page.reload();
   const row = page.locator(`li.task:has([data-nav-key="task:${data.tasks.trois.id}"])`);
-  await expect(row.locator('svg.jira')).toBeVisible();
+  await expect(row.locator('.report')).toBeVisible();
   await pressDown(page, 6);
   await page.keyboard.press(' ');
-  await expect(page.locator(`#journal li.task:has([data-nav-key="task:${data.tasks.trois.id}"]) svg.jira`)).toBeVisible();
+  await expect(page.locator(`#journal li.task:has([data-nav-key="task:${data.tasks.trois.id}"]) .report-done`)).toBeVisible();
 
   // Focus resté à la même place (champ d'ajout de Beta) : descendre jusqu'au journal.
   await pressDown(page, 2);
   expect(await current(page)).toBe(`task:${data.tasks.trois.id}`);
   await page.keyboard.press('Shift+J');
-  await expect(row.locator('svg.jira')).toHaveCount(0);
+  await expect(row.locator('.report')).toHaveCount(0);
   expect(store.journal({ projectId: data.beta.id }).days[0].tasks[0].jira_at).toBeNull();
 });
 
@@ -305,20 +305,20 @@ test('J fait tourner : à reporter (contour) → reportée (plein, fiche propos�
   const une = row(page, data.tasks.une.id);
   await pressDown(page, 2);
   await page.keyboard.press('Shift+J');
-  await expect(une.locator('svg.jira-wanted')).toBeVisible();
+  await expect(une.locator('.report-wanted')).toBeVisible();
   expect(store.state().jiraPending).toBe(1);
 
   await page.keyboard.press('Shift+J');
-  await expect(une.locator('svg.jira-done')).toBeVisible();
+  await expect(une.locator('.report-done')).toBeVisible();
   // Fiche proposée sur le champ du ticket ; Échap la ferme et rend le focus à la tâche.
   const dialog = page.getByRole('dialog', { name: 'Une' });
-  await expect(dialog.getByLabel('Ticket Jira')).toBeFocused();
+  await expect(dialog.getByLabel('Ticket', { exact: true })).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
   await expect.poll(() => current(page)).toBe(`task:${data.tasks.une.id}`);
 
   await page.keyboard.press('Shift+J');
-  await expect(une.locator('svg.jira')).toHaveCount(0);
+  await expect(une.locator('.report')).toHaveCount(0);
   expect(store.state().projects[0].tasks[0]).toMatchObject({ jira_wanted_at: null, jira_at: null, jira_key: null });
 });
 
@@ -329,78 +329,107 @@ test('fiche : L sur le ticket, clé + URL Jira d’entreprise = lien cliquable',
   await page.keyboard.press('Shift+L');
   const dialog = page.getByRole('dialog', { name: 'Une' });
   await expect(dialog).toHaveAccessibleDescription(/Alpha · à faire/);
-  await expect(dialog.getByLabel('Ticket Jira')).toBeFocused();
+  await expect(dialog.getByLabel('Ticket', { exact: true })).toBeFocused();
   await page.keyboard.type('proj-7');
-  await expect(dialog.locator('.jira-hint')).toHaveText('Lien : https://entreprise.atlassian.net/browse/PROJ-7');
+  await expect(dialog).not.toContainText('https://entreprise.atlassian.net'); // lien non répété dans la fiche
   await page.keyboard.press('Enter');
 
   await expect(dialog).toHaveCount(0);
-  const link = row(page, data.tasks.une.id).locator('a.jira-link');
+  const link = row(page, data.tasks.une.id).locator('a.report-link');
   await expect(link).toHaveAttribute('href', 'https://entreprise.atlassian.net/browse/PROJ-7');
   await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
-  await expect(link.locator('.jira-key')).toHaveText('PROJ-7');
-  await expect(row(page, data.tasks.une.id).locator('svg.jira-done')).toBeVisible(); // ticket = reportée
+  await expect(link).toHaveText('reporté · PROJ-7');
+  await expect(row(page, data.tasks.une.id).locator('.report-done')).toBeVisible(); // ticket = reportée
   expect(await current(page)).toBe(`task:${data.tasks.une.id}`);
 });
 
-test('fiche : erreurs annoncées, rien n’est enregistré', async ({ page, store }) => {
+test('fiche : identifiant invalide annoncé, la fiche reste ouverte', async ({ page, store }) => {
   await pressDown(page, 2);
-  await page.keyboard.press('o');
+  await page.keyboard.press('Shift+L');
   const dialog = page.getByRole('dialog', { name: 'Une' });
-  await dialog.getByLabel('Lien').fill('javascript:alert(1)');
-  await dialog.getByLabel('Ticket Jira').fill('pas un ticket');
-  await dialog.getByRole('button', { name: 'Enregistrer' }).click();
-  await expect(dialog.getByRole('alert')).toHaveText([/Adresse http\(s\) attendue/, /Clé \(ex\. PROJ-123\)/]);
-  await expect(dialog.getByLabel('Lien')).toHaveAttribute('aria-invalid', 'true');
-  expect(store.state().projects[0].tasks[0]).toMatchObject({ link: null, jira_key: null, jira_url: null });
+  await page.keyboard.type('pas un ticket');
+  await page.keyboard.press('Escape');
+  await expect(dialog.getByRole('alert')).toHaveText('Identifiant attendu, ex. PROJ-123');
+  await expect(dialog.getByLabel('Ticket', { exact: true })).toHaveAttribute('aria-invalid', 'true');
+  await expect(dialog).toBeVisible();
+  expect(store.state().projects[0].tasks[0]).toMatchObject({ jira_key: null, jira_url: null });
 });
 
-test('o ouvre la fiche : notes et lien enregistrés, icône « détails » affichée', async ({ page, store, data }) => {
+test('fiche Markdown : Entrée édite, Ctrl+Entrée aperçu puis fermeture ; icône « détails »', async ({ page, store, data }) => {
   await pressDown(page, 3); // « Deux »
-  await page.keyboard.press('o');
+  await page.keyboard.press('Shift+Enter');
   const dialog = page.getByRole('dialog', { name: 'Deux' });
-  await expect(dialog.getByLabel('Notes')).toBeFocused();
-  // Les raccourcis de la liste ne s'appliquent pas dans la fiche (x, J, Espace…).
-  await page.keyboard.type('Voir x et J avec Paul');
-  await dialog.getByLabel('Lien').fill('https://docs.exemple.fr/specs');
-  await dialog.getByLabel('Notes').press('ControlOrMeta+Enter');
+  const preview = dialog.locator('.notes-preview');
+  await expect(preview).toBeFocused();
+  await expect(preview).toHaveText('Aucun contenu.');
 
+  await page.keyboard.press('Enter'); // édition
+  const editor = dialog.getByLabel('Contenu');
+  await expect(editor).toBeFocused();
+  // Les raccourcis de la liste ne s'appliquent pas dans la fiche (x, J, Espace…).
+  await page.keyboard.type('## Contexte\nVoir x et J avec **Paul** : [spec](https://docs.exemple.fr/specs)');
+  await page.keyboard.press('ControlOrMeta+Enter'); // aperçu (et enregistrement)
+  await expect(preview).toBeFocused();
+  await expect(preview.getByRole('heading', { name: 'Contexte' })).toBeVisible();
+  await expect(preview.locator('strong')).toHaveText('Paul');
+  const specLink = preview.getByRole('link', { name: 'spec' });
+  await expect(specLink).toHaveAttribute('href', 'https://docs.exemple.fr/specs');
+  await expect(specLink).toHaveAttribute('target', '_blank');
+  await expect(specLink).toHaveAttribute('rel', 'noopener noreferrer');
+  expect(store.state().projects[0].tasks[1].notes).toContain('## Contexte');
+
+  await page.keyboard.press('ControlOrMeta+Enter'); // fermeture
   await expect(dialog).toHaveCount(0);
   const deux = row(page, data.tasks.deux.id);
   await expect(deux.locator('.confirm-delete')).toHaveCount(0);
   await expect(deux.getByRole('button', { name: 'Voir les détails' })).toBeVisible();
-  expect(store.state().projects[0].tasks[1]).toMatchObject({
-    notes: 'Voir x et J avec Paul',
-    link: 'https://docs.exemple.fr/specs',
-    jira_wanted_at: null,
-  });
+  await expect.poll(() => current(page)).toBe(`task:${data.tasks.deux.id}`);
 
-  // Clic sur l'icône : la fiche se rouvre avec les valeurs enregistrées.
+  // Double-clic sur l'aperçu : édition ; Échap ferme en enregistrant.
   await deux.getByRole('button', { name: 'Voir les détails' }).click();
-  await expect(page.getByRole('dialog', { name: 'Deux' }).getByLabel('Notes')).toHaveValue('Voir x et J avec Paul');
+  await page.getByRole('dialog', { name: 'Deux' }).locator('.notes-preview').dblclick();
+  await page.getByRole('dialog', { name: 'Deux' }).getByLabel('Contenu').press('ControlOrMeta+End');
+  await page.keyboard.type(' (fin)');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  expect(store.state().projects[0].tasks[1].notes).toMatch(/\(fin\)$/);
+});
+
+test('fiche Markdown : HTML dangereux neutralisé', async ({ page, store, data }) => {
+  store.updateTask(data.tasks.une.id, {
+    notes: '<img src=x onerror="window.pwned=1"> <script>window.pwned=1</script> [clic](javascript:window.pwned=1)',
+  });
+  await page.reload();
+  await pressDown(page, 2);
+  await page.keyboard.press('o');
+  const preview = page.getByRole('dialog', { name: 'Une' }).locator('.notes-preview');
+  await expect(preview).toBeVisible();
+  await expect(preview.locator('script, [onerror]')).toHaveCount(0);
+  await expect(preview.locator('a[href^="javascript"]')).toHaveCount(0);
+  expect(await page.evaluate(() => (window as unknown as { pwned?: number }).pwned)).toBeUndefined();
 });
 
 test('réglages (/admin) : URL Jira conservée en base, lien depuis la fiche', async ({ page, store, data }) => {
   store.updateTask(data.tasks.une.id, { jira: 'done', jiraKey: 'PROJ-1' });
   await page.reload();
   // Sans URL d'entreprise : la clé s'affiche, sans lien.
-  await expect(row(page, data.tasks.une.id).locator('.jira-key')).toHaveText('PROJ-1');
-  await expect(row(page, data.tasks.une.id).locator('a.jira-link')).toHaveCount(0);
+  await expect(row(page, data.tasks.une.id).locator('.report-done')).toHaveText('reporté · PROJ-1');
+  await expect(row(page, data.tasks.une.id).locator('a.report-link')).toHaveCount(0);
 
   await page.getByRole('link', { name: 'Réglages' }).click();
   await expect(page).toHaveURL(/\/admin$/);
   await expect(page.getByRole('heading', { name: 'Réglages' })).toBeVisible();
-  await page.getByLabel('URL du Jira de l’entreprise').fill('https://entreprise.atlassian.net/');
+  await page.getByLabel('URL de base des tickets').fill('https://entreprise.atlassian.net/');
   await page.getByRole('button', { name: 'Enregistrer' }).click();
   await expect(page.getByRole('status')).toHaveText('Réglages enregistrés.');
   expect(store.settings().jira_base_url).toBe('https://entreprise.atlassian.net');
 
   // Rechargement direct de /admin : valeur relue en base.
   await page.reload();
-  await expect(page.getByLabel('URL du Jira de l’entreprise')).toHaveValue('https://entreprise.atlassian.net');
+  await expect(page.getByLabel('URL de base des tickets')).toHaveValue('https://entreprise.atlassian.net');
 
   await page.getByRole('link', { name: 'Retour aux tâches' }).click();
-  await expect(row(page, data.tasks.une.id).locator('a.jira-link')).toHaveAttribute(
+  await expect(row(page, data.tasks.une.id).locator('a.report-link')).toHaveAttribute(
     'href',
     'https://entreprise.atlassian.net/browse/PROJ-1',
   );
@@ -414,7 +443,7 @@ test('compteur « à reporter » : filtre la liste et le journal (r ou clic)', a
   await page.reload();
 
   const counter = page.locator('#jira-pending');
-  await expect(counter).toHaveText('Jira : 2 à reporter');
+  await expect(counter).toHaveText('2 tâches à reporter');
   await page.keyboard.press('r');
   await expect(counter).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#projects .name')).toHaveText(['Alpha', 'Deux']);
@@ -425,15 +454,27 @@ test('compteur « à reporter » : filtre la liste et le journal (r ou clic)', a
   await expect(page.locator('#journal .name')).toHaveText(['Trois']);
 });
 
-test('fiche rouverte : formulaire relu depuis les données à jour', async ({ page, data }) => {
+test('fiche rouverte : contenu relu depuis les données à jour', async ({ page, data }) => {
   await pressDown(page, 2);
   await page.keyboard.press('o');
-  await page.getByRole('dialog', { name: 'Une' }).getByLabel('Notes').fill('brouillon non enregistré');
-  await page.keyboard.press('Escape');
+  await page.keyboard.press('Enter');
+  await page.getByRole('dialog', { name: 'Une' }).getByLabel('Contenu').fill('premier jet');
+  await page.keyboard.press('Escape'); // enregistré à la fermeture
   await expect.poll(() => current(page)).toBe(`task:${data.tasks.une.id}`);
   await page.keyboard.press('Shift+J'); // à reporter
   await page.keyboard.press('Shift+J'); // reportée : la fiche s'ouvre sur le ticket
   const dialog = page.getByRole('dialog', { name: 'Une' });
-  await expect(dialog.getByLabel('Ticket Jira')).toBeFocused();
-  await expect(dialog.getByLabel('Notes')).toHaveValue(''); // le brouillon abandonné n'est pas resté
+  await expect(dialog.getByLabel('Ticket', { exact: true })).toBeFocused();
+  await expect(dialog.locator('.notes-preview')).toHaveText('premier jet'); // relu depuis la base
+});
+
+test('bouton « tâches à reporter » : place réservée, rien ne bouge quand il apparaît', async ({ page, data }) => {
+  const top = () => page.locator('#projects').evaluate((el) => el.getBoundingClientRect().top);
+  await expect(page.locator('#jira-pending')).toHaveCount(0);
+  const before = await top();
+  await pressDown(page, 2);
+  await page.keyboard.press('Shift+J');
+  await expect(page.locator('#jira-pending')).toHaveText('1 tâche à reporter');
+  expect(await top()).toBe(before);
+  await expect(row(page, data.tasks.une.id).locator('.report-wanted')).toHaveText('à reporter');
 });

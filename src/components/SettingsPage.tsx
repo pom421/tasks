@@ -46,10 +46,10 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
 
       <section aria-labelledby={`${id}-jira`} className="mt-6">
         <h2 id={`${id}-jira`} className="font-semibold">
-          Jira
+          Tickets
         </h2>
         <form className="mt-3 grid max-w-lg gap-2" onSubmit={save} noValidate>
-          <Label htmlFor={`${id}-url`}>URL du Jira de l’entreprise</Label>
+          <Label htmlFor={`${id}-url`}>URL de base des tickets</Label>
           <Input
             id={`${id}-url`}
             type="url"
@@ -61,8 +61,8 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
             aria-invalid={Boolean(status.error)}
           />
           <p id={`${id}-hint`} className="text-xs text-muted-foreground">
-            Une clé de ticket saisie sur une tâche (ex. PROJ-123) devient un lien vers {jiraBaseUrl.trim() || 'cette URL'}
-            /browse/PROJ-123.
+            Ex. https://entreprise.atlassian.net. Un identifiant saisi sur une tâche (PROJ-123) devient un lien vers{' '}
+            {jiraBaseUrl.trim() || 'cette URL'}/browse/PROJ-123.
           </p>
           <div className="mt-2 flex items-center gap-3">
             <Button type="submit">Enregistrer</Button>
