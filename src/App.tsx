@@ -225,6 +225,8 @@ export function App() {
         />
         <main className="lg:grid lg:grid-cols-2 lg:items-start">
           <div className="min-w-0 lg:pr-8 lg:pb-16">
+            {/* Écran large : titre de colonne, sur la ligne de celui du Log (même hauteur). */}
+            <h2 className="hidden h-[26px] items-center font-semibold lg:mt-5 lg:flex">Projets</h2>
             <ProjectList projects={data.projects} archivedOnly={archivedOnly} jiraOnly={jiraOnly} favoritesOnly={favoritesOnly} />
           </div>
           <Journal days={data.days} dates={data.dates} projects={data.projects} filter={filter} onFilter={changeFilter} />

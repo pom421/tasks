@@ -52,9 +52,9 @@ Chaque session démarre dans un conteneur neuf : les dépendances doivent y êtr
 
 ## Utilisation
 
-- Disposition : sur écran large, projets à gauche et Log à droite (toujours visible, il défile seul) ; sur écran étroit, le Log est sous les projets.
-- Cocher une tâche → elle passe dans le Log, datée du jour. La décocher → elle revient dans son projet.
-- Log (en bas, un cadre par jour) : fonctionne seul, les boutons de la zone des projets n'y touchent pas. Par défaut, aujourd'hui (même vide). Sur la ligne du titre, trois filtres :
+- Disposition : sur écran large, deux colonnes titrées « Projets » à gauche et « Log » à droite (Log toujours visible, il défile seul) ; sur écran étroit, le Log est sous les projets.
+- Cocher une tâche → elle passe dans le Log, datée du jour, barrée. La décocher → elle revient dans son projet.
+- Log (un cadre par jour) : fonctionne seul, les boutons de la zone des projets n'y touchent pas. Par défaut, aujourd'hui (même vide). Sur la ligne du titre, trois filtres :
   - recherche (`/`) : toutes les journées contenant une tâche dont le titre, le contenu ou le ticket contient le texte (sans tenir compte des majuscules ni des accents). `Échap` vide le champ ;
   - journée (`d`) : le Log de ce jour. Pendant une recherche, elle la limite à ce jour ; vide = toutes les journées ;
   - projet (`f`).

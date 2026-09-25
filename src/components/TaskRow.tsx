@@ -128,7 +128,7 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
           navKey={navKey}
           // Toute la largeur jusqu'aux icônes : un clic n'importe où sur la ligne
           // passe le titre en édition (et donne le curseur clavier à la tâche).
-          className={cn('flex-1', done && 'text-muted-foreground')}
+          className={cn('flex-1', done && 'text-muted-foreground line-through')}
           truncate
           onSave={rename}
         />

@@ -881,7 +881,10 @@ test('écran large : projets à gauche, Log à droite, toujours visible ; écran
   const projects = (await page.locator('#projects').boundingBox())!;
   const log = (await page.locator('#journal').boundingBox())!;
   expect(log.x).toBeGreaterThan(projects.x + projects.width - 1); // à droite
-  expect(Math.abs(log.y - projects.y)).toBeLessThan(40); // en haut, à la même hauteur
+  // En haut, à la même hauteur : titre « Projets » en face de « Log ».
+  const projectsTitle = (await page.getByRole('heading', { name: 'Projets' }).boundingBox())!;
+  const logTitle = (await page.locator('#journal').getByRole('heading', { name: 'Log' }).boundingBox())!;
+  expect(Math.abs(projectsTitle.y - logTitle.y)).toBeLessThan(2);
 
   // Tâche cochée tout en bas de la liste : elle apparaît dans le Log, visible sans défiler.
   const last = page.locator('#projects .task .name', { hasText: 'Tâche 29' });
@@ -894,6 +897,20 @@ test('écran large : projets à gauche, Log à droite, toujours visible ; écran
   const narrowLog = (await page.locator('#journal').boundingBox())!;
   expect(narrowLog.y).toBeGreaterThan(narrowProjects.y + narrowProjects.height); // dessous
   expect(Math.abs(narrowLog.x - narrowProjects.x)).toBeLessThan(2);
+  await expect(page.getByRole('heading', { name: 'Projets' })).toBeHidden(); // écran étroit : pas de colonnes
+});
+
+test('Log : une tâche cochée est barrée ; décochée, elle ne l’est plus', async ({ page }) => {
+  await reload(page);
+  const inProjects = page.locator('#projects .task .name', { hasText: /^Une$/ });
+  await expect(inProjects).not.toHaveCSS('text-decoration-line', 'line-through');
+  await inProjects.focus();
+  await page.keyboard.press(' ');
+  const inLog = page.locator('#journal .task .name', { hasText: /^Une$/ });
+  await expect(inLog).toHaveCSS('text-decoration-line', 'line-through');
+  await inLog.focus();
+  await page.keyboard.press(' ');
+  await expect(page.locator('#projects .task .name', { hasText: /^Une$/ })).not.toHaveCSS('text-decoration-line', 'line-through');
 });
 
 test('zone « Log » : un cadre par jour', async ({ page, store, data }) => {
