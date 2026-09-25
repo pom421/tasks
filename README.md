@@ -74,7 +74,7 @@ Clavier (`?` affiche l'aide) :
 
 | Touche | Action |
 |---|---|
-| `↑` `↓` ou `j` `k` | Passer d'un projet, d'une tâche ou d'un champ « + Ajouter » à l'autre (`Début` / `Fin` : premier / dernier) |
+| `↑` `↓` ou `j` `k` | Passer d'un projet, d'une tâche ou d'un champ « + Ajouter » à l'autre (`Début` / `Fin` ou `g` `g` / `G` : premier / dernier) |
 | `Entrée` | Modifier le nom sélectionné, puis `Entrée` pour enregistrer |
 | `Échap` | Quitter l'édition sans enregistrer, retour à la navigation ; dans un champ « + Ajouter » : le vide et en sort (curseur sur l'élément au-dessus, `p` / `n` utilisables) |
 | `Espace` | Cocher / décocher la tâche |

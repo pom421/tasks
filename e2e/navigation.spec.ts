@@ -70,6 +70,24 @@ test('↑/↓ parcourent projets, tâches et champs d’ajout ; Début/Fin', asy
   expect(await current(page)).toBe(`project:${alpha.id}`);
 });
 
+test('gg / G à la manière de vim : premier / dernier élément ; un seul g ne fait rien', async ({ page, data }) => {
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown'); // sur « Une »
+  await page.keyboard.press('G');
+  expect(await current(page)).toBe('new-project');
+  await page.keyboard.press('ArrowUp'); // champ d'ajout de Beta
+  await page.keyboard.press('ArrowUp'); // « Trois » (hors champ : g navigue)
+  await page.keyboard.press('g');
+  expect(await current(page)).toBe(`task:${data.tasks.trois.id}`);
+  await page.keyboard.press('g');
+  expect(await current(page)).toBe(`project:${data.alpha.id}`);
+
+  // Dans un champ de saisie, g et G s'écrivent.
+  await page.keyboard.press('n');
+  await page.keyboard.type('ggG');
+  await expect(page.locator(`[data-nav-key="add:${data.alpha.id}"]`)).toHaveValue('ggG');
+});
+
 test('Entrée sur un projet : édition, Entrée enregistre et rend la navigation', async ({ page, store, data }) => {
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');

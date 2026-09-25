@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 
 const SHORTCUTS: [string, string][] = [
-  ['↑ ↓  j k', 'Se déplacer (Début / Fin : premier / dernier)'],
+  ['↑ ↓  j k', 'Se déplacer (Début / Fin ou g g / G : premier / dernier)'],
   ['Maj+Entrée  o', 'Ouvrir la fiche ; e : tout modifier (Tab : champ suivant), Ctrl+Entrée : lecture'],
   ['e', 'Ouvrir la fiche directement en édition'],
   ['Entrée', 'Modifier le nom sélectionné / valider'],

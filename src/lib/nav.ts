@@ -78,15 +78,27 @@ function ownsArrows(el: Element) {
   return el.matches('input.edit, select, textarea, input[type="date"]');
 }
 
+// Instant du dernier g seul : un 2e g rapproché (gg) va au premier élément.
+let lastG = 0;
+
 export function handleNavKey(e: KeyboardEvent) {
-  if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+  if (e.ctrlKey || e.metaKey || e.altKey || (e.shiftKey && e.key !== 'G')) return;
   const target = e.target as Element;
   if (document.querySelector('[role="dialog"]') || ownsArrows(target)) return;
   const moves: Record<string, number> = { ArrowDown: 1, ArrowUp: -1 };
   // Hors champ texte seulement (où ces touches servent à écrire ou déplacer
-  // le curseur) : Début / Fin, et j / k à la manière de vim.
+  // le curseur) : Début / Fin, et à la manière de vim j / k, gg / G.
   if (!target.matches('input:not([type="checkbox"]), textarea')) {
-    Object.assign(moves, { Home: -Infinity, End: Infinity, j: 1, k: -1 });
+    Object.assign(moves, { Home: -Infinity, End: Infinity, j: 1, k: -1, G: Infinity });
+    if (e.key === 'g') {
+      e.preventDefault();
+      const now = Date.now();
+      if (now - lastG < 800) {
+        lastG = 0;
+        move(-Infinity);
+      } else lastG = now;
+      return;
+    }
   }
   if (e.key in moves) {
     e.preventDefault();
