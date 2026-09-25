@@ -179,7 +179,16 @@ export class Store {
   // Période [from, to] incluse, bornes facultatives ('YYYY-MM-DD').
   // done_at n'a pas d'heure : from = to couvre toute la journée.
   // Sans aucun filtre : la dernière journée travaillée.
+  // dates : tous les jours ayant des tâches faites (du projet filtré s'il y en
+  // a un), pour naviguer d'un jour à l'autre.
   journal({ from, to, projectId, jiraPending }: JournalFilter = {}): Journal {
+    const dates = (
+      this.db
+        .prepare(
+          `SELECT DISTINCT done_at AS d FROM task WHERE done_at IS NOT NULL ${projectId ? 'AND project_id = ?' : ''} ORDER BY d`,
+        )
+        .all(...(projectId ? [projectId] : [])) as { d: string }[]
+    ).map((r) => r.d);
     const where = ['t.done_at IS NOT NULL'];
     const params: (string | number)[] = [];
     if (from) {
@@ -197,7 +206,7 @@ export class Store {
     if (jiraPending) where.push(JIRA_PENDING.replaceAll('jira_', 't.jira_'));
     if (!from && !to && !projectId && !jiraPending) {
       const last = (this.db.prepare('SELECT MAX(done_at) AS d FROM task').get() as { d: string | null }).d;
-      if (!last) return { days: [] };
+      if (!last) return { days: [], dates };
       where.push('t.done_at = ?');
       params.push(last);
     }
@@ -216,7 +225,7 @@ export class Store {
       if (day?.date !== r.done_at) days.push((day = { date: r.done_at, tasks: [] }));
       day.tasks.push({ ...r });
     }
-    return { days };
+    return { days, dates };
   }
 
   // --- Projets -------------------------------------------------------------

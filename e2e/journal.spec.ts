@@ -7,8 +7,9 @@ test.beforeEach(async ({ page, store }) => {
   const done = [['Vingt', '2026-09-20'], ['Vingt et un A', '2026-09-21'], ['Vingt et un B', '2026-09-21'], ['Vingt-trois', '2026-09-23']];
   for (const [title, doneAt] of done) store.updateTask(store.createTask(p.id, title).id, { doneAt });
   await page.goto('/');
-  // Sans filtre : la dernière journée seulement.
-  await expect(page.locator('#journal .day h3')).toHaveText(['mercredi 23 septembre 2026']);
+  // Sans filtre : aujourd'hui (date figée au vendredi 25), même vide.
+  await expect(page.locator('#journal .day h3')).toHaveText(['vendredi 25 septembre 2026']);
+  await expect(page.locator('#journal .day .empty')).toHaveText('Rien de fait ce jour-là.');
 });
 
 // textContent : la majuscule initiale est ajoutée en CSS.
@@ -47,11 +48,53 @@ test('saisie au clavier : le focus ne part qu’une fois l’année complète', 
   await expect(days(page)).toHaveText(['dimanche 20 septembre 2026']);
 });
 
-test('Réinitialiser : retour à la dernière journée', async ({ page }) => {
+test('Réinitialiser : retour à aujourd’hui', async ({ page }) => {
   await page.locator('#filter-from').fill('2026-09-20');
   await expect(days(page)).toHaveText(['dimanche 20 septembre 2026']);
   await page.locator('#filter-reset').click();
-  await expect(days(page)).toHaveText(['mercredi 23 septembre 2026']);
+  await expect(days(page)).toHaveText(['vendredi 25 septembre 2026']);
   await expect(page.locator('#filter-from')).toHaveValue('');
   await expect(page.locator('#filter-to')).toHaveValue('');
+});
+
+test('< et > : jour précédent / suivant ayant des entrées, désactivés en bout de liste', async ({ page }) => {
+  const prev = page.getByRole('button', { name: 'Jour précédent' });
+  const next = page.getByRole('button', { name: 'Jour suivant' });
+  // Aujourd'hui : rien après.
+  await expect(next).toBeDisabled();
+  await expect(prev).toBeEnabled();
+
+  await prev.click(); // 23 (le 24 n'a rien : sauté)
+  await expect(days(page)).toHaveText(['mercredi 23 septembre 2026']);
+  await expect(page.locator('#journal .name')).toHaveText(['Vingt-trois']);
+  await prev.click();
+  await expect(days(page)).toHaveText(['lundi 21 septembre 2026']);
+  await expect(page.locator('#journal .name')).toHaveText(['Vingt et un A', 'Vingt et un B']);
+  await prev.click();
+  await expect(days(page)).toHaveText(['dimanche 20 septembre 2026']);
+  await expect(prev).toBeDisabled(); // plus rien avant
+  await expect(next).toBeEnabled();
+
+  await next.click();
+  await expect(days(page)).toHaveText(['lundi 21 septembre 2026']);
+  // Retour direct à aujourd'hui.
+  await page.getByRole('button', { name: 'Aujourd’hui' }).click();
+  await expect(days(page)).toHaveText(['vendredi 25 septembre 2026']);
+  await expect(page.getByRole('button', { name: 'Aujourd’hui' })).toHaveCount(0);
+});
+
+test('navigation par jour : limitée au projet filtré, désactivée pendant une période', async ({ page, store }) => {
+  const beta = store.createProject('Beta');
+  store.updateTask(store.createTask(beta.id, 'Beta le 22').id, { doneAt: '2026-09-22' });
+  await page.reload();
+  await page.locator('#filter-project').selectOption({ label: 'Beta' });
+  const prev = page.getByRole('button', { name: 'Jour précédent' });
+  await prev.click();
+  await expect(days(page)).toHaveText(['mardi 22 septembre 2026']);
+  await expect(prev).toBeDisabled(); // Beta n'a rien avant le 22
+
+  await page.locator('#filter-from').fill('2026-09-20');
+  await page.locator('#filter-to').fill('2026-09-23');
+  await expect(prev).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Jour suivant' })).toBeDisabled();
 });

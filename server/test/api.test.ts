@@ -394,3 +394,16 @@ test('suppression annulable : DELETE renvoie la tâche, restore la réinsère à
   }
   assert.equal((await call('POST', '/api/tasks/restore', { ...deleted, project_id: 99999 })).status, 400);
 });
+
+test('journal : liste des jours ayant des entrées, filtrée par projet', async () => {
+  const { body: a } = await call('POST', '/api/projects', { name: 'Jours A' });
+  const { body: b } = await call('POST', '/api/projects', { name: 'Jours B' });
+  for (const [p, d] of [[a.id, '2019-03-01'], [a.id, '2019-03-03'], [b.id, '2019-03-02']]) {
+    const { body: t } = await call('POST', '/api/tasks', { project_id: p, title: `t ${d}` });
+    await call('PATCH', `/api/tasks/${t.id}`, { done: true, done_at: d });
+  }
+  const { body: all } = await call('GET', '/api/journal?from=2019-03-01&to=2019-03-01');
+  assert.ok(['2019-03-01', '2019-03-02', '2019-03-03'].every((d) => all.dates.includes(d)));
+  const { body: onlyA } = await call('GET', `/api/journal?project=${a.id}`);
+  assert.deepEqual(onlyA.dates, ['2019-03-01', '2019-03-03']);
+});

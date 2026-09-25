@@ -19,6 +19,12 @@ export const test = base.extend<{ store: Store }>({
     store.close();
     fs.rmSync(dir, { recursive: true, force: true });
   },
+  // Date du jour figée (vendredi 25/09/2026) : le Log affiche « aujourd'hui »,
+  // les tests ne doivent pas dépendre du jour où ils tournent.
+  page: async ({ page }, use) => {
+    await page.clock.setFixedTime(new Date('2026-09-25T10:00:00'));
+    await use(page);
+  },
   baseURL: async ({ store }, use) => {
     const server = http.createServer(createApp(store, { staticDir: DIST }));
     await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));

@@ -5,7 +5,7 @@ import { ActionsContext, type Actions, type TaskField, type Undo } from '@/lib/a
 import { focusByKey, handleNavKey, restore, snapshot, type FocusSnapshot } from '@/lib/nav';
 import { Toolbar } from '@/components/Toolbar';
 import { ProjectList } from '@/components/ProjectList';
-import { Journal, NO_FILTER, type Filter } from '@/components/Journal';
+import { Journal, NO_FILTER, journalQuery, type Filter } from '@/components/Journal';
 import { TaskDialog } from '@/components/TaskDialog';
 import { SettingsPage } from '@/components/SettingsPage';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -15,6 +15,7 @@ interface Data {
   days: JournalDay[];
   jiraPending: number;
   settings: Settings;
+  dates: string[]; // jours du Log ayant des entrées
 }
 
 // Focus à appliquer une fois les nouvelles données affichées.
@@ -26,7 +27,7 @@ interface PendingFocus {
 }
 
 export function App() {
-  const [data, setData] = useState<Data>({ projects: [], days: [], jiraPending: 0, settings: { jira_base_url: null } });
+  const [data, setData] = useState<Data>({ projects: [], days: [], jiraPending: 0, settings: { jira_base_url: null }, dates: [] });
   // Deux « pages » seulement : la liste (/) et les réglages (/admin), sans routeur.
   const [path, setPath] = useState(window.location.pathname);
   // Fiche d'une tâche : id, champ focalisé, open à false pendant l'animation de
@@ -53,9 +54,15 @@ export function App() {
   const load = useCallback(async (f: Filter = filterRef.current) => {
     const [state, journal] = await Promise.all([
       api.state(),
-      api.journal({ from: f.from, to: f.to, projectId: Number(f.project) || undefined, jiraPending: f.jira }),
+      api.journal(journalQuery(f)),
     ]);
-    setData({ projects: state.projects, days: journal.days, jiraPending: state.jiraPending, settings: state.settings });
+    setData({
+      projects: state.projects,
+      days: journal.days,
+      jiraPending: state.jiraPending,
+      settings: state.settings,
+      dates: journal.dates,
+    });
   }, []);
 
   // Rechargé à chaque retour sur la liste (les réglages ont pu changer).
@@ -208,7 +215,7 @@ export function App() {
         />
         <main>
           <ProjectList projects={data.projects} showArchived={showArchived} jiraOnly={filter.jira} />
-          <Journal days={data.days} projects={data.projects} filter={filter} onFilter={changeFilter} />
+          <Journal days={data.days} dates={data.dates} projects={data.projects} filter={filter} onFilter={changeFilter} />
         </main>
       </div>
       {message && (

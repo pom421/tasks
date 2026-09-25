@@ -59,6 +59,7 @@ export interface State {
 
 export interface Journal {
   days: JournalDay[];
+  dates: string[]; // jours ayant des tâches faites (du projet filtré), triés
 }
 
 export interface JournalFilter {

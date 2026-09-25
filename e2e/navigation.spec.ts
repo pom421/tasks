@@ -128,7 +128,7 @@ test('Espace coche la tâche ; le focus reste à la même place', async ({ page,
 });
 
 test('Espace dans le journal décoche la tâche', async ({ page, store, data }) => {
-  store.updateTask(data.tasks.trois.id, { doneAt: '2026-09-20' });
+  store.updateTask(data.tasks.trois.id, { doneAt: '2026-09-25' });
   await reload(page);
   await expect(page.locator('#journal .name', { hasText: 'Trois' })).toBeVisible();
   await page.keyboard.press('End');
@@ -452,7 +452,7 @@ test('compteur « à reporter » : filtre la liste et le journal (r ou clic)', a
   store.updateTask(data.tasks.deux.id, { jira: 'wanted' });
   const faite = store.createTask(data.beta.id, 'Faite à reporter');
   store.updateTask(faite.id, { doneAt: '2020-01-01', jira: 'wanted' }); // vieille date : hors « dernière journée »
-  store.updateTask(data.tasks.trois.id, { doneAt: '2026-09-20' });
+  store.updateTask(data.tasks.trois.id, { doneAt: '2026-09-25' });
   await reload(page);
 
   const counter = page.locator('#jira-pending');
@@ -642,6 +642,8 @@ test('u après une suppression : la tâche revient avec son contenu, sélectionn
 test('u dans le Log : décocher puis annuler remet la tâche au même jour', async ({ page, store, data }) => {
   store.updateTask(data.tasks.trois.id, { doneAt: '2026-09-20' });
   await reload(page);
+  await page.getByRole('button', { name: 'Jour précédent' }).click(); // Log sur le 20
+  await expect(page.locator('#journal .name', { hasText: 'Trois' })).toBeVisible();
   await page.keyboard.press('End');
   await page.keyboard.press(' ');
   await expect(page.locator('#projects .name', { hasText: 'Trois' })).toBeVisible();
