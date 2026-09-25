@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { type ProjectPatch, type Store, type TaskPatch, type TaskRow, isDate, today } from './db.ts';
+import { type DeletedProject, type ProjectPatch, type ProjectRow, type Store, type TaskPatch, type TaskRow, isDate, today } from './db.ts';
 import { JIRA_KEY_RE, type JiraState, type Settings } from '../shared/types.ts';
 import { parseMarkdown } from './markdown.ts';
 
@@ -107,17 +107,19 @@ function jiraTicket(value: unknown): { jiraKey: string | null; jiraUrl: string |
 
 const TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}:\d{2})?$/;
 
+function int(v: unknown, label: string): number {
+  if (!Number.isInteger(v) || (v as number) < 0) throw new HttpError(400, `${label} invalide`);
+  return v as number;
+}
+
+function timestamp(v: unknown, label: string): string | null {
+  if (v === null || v === undefined) return null;
+  if (typeof v !== 'string' || !TIMESTAMP_RE.test(v)) throw new HttpError(400, `${label} invalide`);
+  return v;
+}
+
 // Tâche à restaurer : chaque colonne est revérifiée (le corps vient du client).
 function restoredTask(body: Body): TaskRow {
-  const int = (v: unknown, label: string) => {
-    if (!Number.isInteger(v) || (v as number) < 0) throw new HttpError(400, `${label} invalide`);
-    return v as number;
-  };
-  const timestamp = (v: unknown, label: string) => {
-    if (v === null || v === undefined) return null;
-    if (typeof v !== 'string' || !TIMESTAMP_RE.test(v)) throw new HttpError(400, `${label} invalide`);
-    return v;
-  };
   const doneAt = body.done_at ?? null;
   if (doneAt !== null && !isDate(doneAt)) throw new HttpError(400, 'Date invalide');
   const key = body.jira_key ?? null;
@@ -135,6 +137,23 @@ function restoredTask(body: Body): TaskRow {
     jira_key: key as string | null,
     jira_url: httpUrl(body.jira_url ?? null),
   };
+}
+
+// Projet à restaurer, avec ses tâches : tout est revérifié.
+function restoredProject(body: Body): DeletedProject {
+  const p = (body.project ?? {}) as Body;
+  if (!Array.isArray(body.tasks) || body.tasks.length > 100_000) throw new HttpError(400, 'Tâches invalides');
+  const project: ProjectRow = {
+    id: int(p.id, 'Identifiant'),
+    name: requireText(p.name, 'Nom'),
+    created_at: timestamp(p.created_at, 'Date de création') ?? today(),
+    archived_at: timestamp(p.archived_at, "Date d'archivage"),
+    favorite_at: timestamp(p.favorite_at, 'Date de favori'),
+    position: int(p.position ?? 0, 'Position'),
+  };
+  const tasks = body.tasks.map((t) => restoredTask((t ?? {}) as Body));
+  if (tasks.some((t) => t.project_id !== project.id)) throw new HttpError(400, 'Tâche d’un autre projet');
+  return { project, tasks };
 }
 
 function optionalText(value: unknown, label: string, max: number): string | null {
@@ -249,9 +268,19 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
       send(res, 200, { ok: true });
     }],
 
+    // Renvoie le projet supprimé et ses tâches : le front les garde pour pouvoir annuler (u).
     ['DELETE', /^\/api\/projects\/(\d+)$/, (_req, res, _url, id) => {
-      if (!store.deleteProject(Number(id))) throw new HttpError(404, 'Projet introuvable');
-      send(res, 200, { ok: true });
+      const deleted = store.deleteProject(Number(id));
+      if (!deleted) throw new HttpError(404, 'Projet introuvable');
+      send(res, 200, deleted);
+    }],
+
+    // Annulation d'une suppression de projet : réinsertion telle quelle.
+    ['POST', /^\/api\/projects\/restore$/, async (req, res) => {
+      const deleted = restoredProject(await readJson(req));
+      if (store.hasProject(deleted.project.id)) throw new HttpError(409, 'Projet déjà présent');
+      if (deleted.tasks.some((t) => store.hasTask(t.id))) throw new HttpError(409, 'Tâche déjà présente');
+      send(res, 201, store.restoreProject(deleted));
     }],
 
     ['POST', /^\/api\/tasks$/, async (req, res) => {

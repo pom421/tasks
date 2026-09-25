@@ -214,8 +214,9 @@ export function App() {
           favorites={data.projects.filter((p) => p.favorite_at && (showArchived || !p.archived_at)).length}
           favoritesOnly={favoritesOnly}
           onFavoritesOnly={() => setFavoritesOnly((v) => !v)}
+          archived={data.projects.filter((p) => p.archived_at).length}
           showArchived={showArchived}
-          onShowArchived={setShowArchived}
+          onShowArchived={() => setShowArchived((v) => !v)}
           helpOpen={helpOpen}
           onHelpOpen={setHelpOpen}
         />

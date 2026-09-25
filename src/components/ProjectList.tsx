@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState, type FocusEvent, type KeyboardEvent } from 'react';
 import { Archive, ArchiveRestore, Heart, Trash2 } from 'lucide-react';
 import { jiraState, type Project, type Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
@@ -17,15 +17,74 @@ interface ProjectCardProps {
   onMoveProject: (direction: -1 | 1) => void;
 }
 
+// Clavier, sur l'en-tête du projet (hors champ de saisie) : f favori,
+// a archiver / désarchiver, x ou Suppr demande la suppression, un second
+// appui la confirme ; Alt+↑ / Alt+↓ déplacent le projet. Tout est annulable (u).
 function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
-  const { act, setLastProject } = useActions();
+  const { act, setLastProject, setUndo } = useActions();
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const archived = Boolean(p.archived_at);
   const favorite = Boolean(p.favorite_at);
+  const navKey = `project:${p.id}`;
 
+  // L'annulation n'est mémorisée qu'une fois l'action réussie.
+  const undoable = (label: string, run: () => Promise<unknown>, undo: () => Promise<unknown>) =>
+    act(async () => {
+      await run();
+      setUndo({ label, run: undo, focus: navKey });
+    });
+  const toggleFavorite = () =>
+    undoable(
+      favorite ? 'retrait des favoris' : 'ajout aux favoris',
+      () => api.updateProject(p.id, { favorite: !favorite }),
+      () => api.updateProject(p.id, { favorite }),
+    );
+  const toggleArchived = () =>
+    undoable(
+      archived ? 'désarchivage' : 'archivage',
+      () => api.updateProject(p.id, { archived: !archived }),
+      () => api.updateProject(p.id, { archived }),
+    );
   const remove = () => {
-    if (confirm(`Supprimer le projet « ${p.name} » et toutes ses tâches (y compris l'historique) ?`)) {
-      act(() => api.deleteProject(p.id));
+    let deleted: Record<string, unknown> | undefined;
+    return undoable(
+      'suppression du projet',
+      async () => (deleted = await api.deleteProject(p.id)),
+      () => api.restoreProject(deleted!),
+    );
+  };
+
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const direction = moveDirection(e);
+    if (direction) {
+      e.preventDefault();
+      setConfirmDelete(false);
+      onMoveProject(direction);
+      return;
     }
+    if ((e.target as HTMLElement).matches('input') || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === 'x' || e.key === 'Delete') {
+      e.preventDefault();
+      if (confirmDelete) remove();
+      else setConfirmDelete(true);
+      return;
+    }
+    if (confirmDelete && e.key === 'Escape') e.stopPropagation();
+    setConfirmDelete(false); // toute autre touche annule la demande
+    // preventDefault : f n'ouvre pas en plus le filtre du Log (raccourci global).
+    if (e.key === 'f') {
+      e.preventDefault();
+      toggleFavorite();
+    }
+    if (e.key === 'a') {
+      e.preventDefault();
+      toggleArchived();
+    }
+  };
+
+  // Le focus quitte l'en-tête : la demande de suppression est abandonnée.
+  const onBlur = (e: FocusEvent<HTMLDivElement>) => {
+    if (!e.currentTarget.contains(e.relatedTarget)) setConfirmDelete(false);
   };
 
   const addTask = async (title: string) => {
@@ -40,16 +99,16 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
   return (
     <div id={`project-${p.id}`} className={cn('project mt-5', archived && 'opacity-55')}>
       <div
-        onKeyDown={(e) => {
-          const direction = moveDirection(e);
-          if (!direction) return;
-          e.preventDefault();
-          onMoveProject(direction);
-        }}
-        className="project-head group flex items-baseline gap-2 border-b pb-0.5 has-[.name:focus]:bg-accent has-[.name:focus]:pl-1.5 has-[.name:focus]:shadow-[inset_3px_0_var(--color-primary)]">
+        onKeyDown={onKeyDown}
+        onBlur={onBlur}
+        className={cn(
+          'project-head group flex items-baseline gap-2 border-b pb-0.5 has-[.name:focus]:bg-accent has-[.name:focus]:pl-1.5 has-[.name:focus]:shadow-[inset_3px_0_var(--color-primary)]',
+          confirmDelete && 'bg-destructive/10 has-[.name:focus]:bg-destructive/10 has-[.name:focus]:shadow-[inset_3px_0_var(--color-destructive)]',
+        )}
+      >
         <EditableName
           value={p.name}
-          navKey={`project:${p.id}`}
+          navKey={navKey}
           className="font-semibold"
           onSave={(name) => act(() => api.updateProject(p.id, { name }))}
         />
@@ -61,33 +120,39 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
           className={cn('favorite self-center', favorite ? 'text-red-600' : 'text-muted-foreground')}
           aria-label="Favori"
           aria-pressed={favorite}
-          title={favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-          onClick={() => act(() => api.updateProject(p.id, { favorite: !favorite }))}
+          title={favorite ? 'Retirer des favoris (f)' : 'Ajouter aux favoris (f)'}
+          onClick={toggleFavorite}
         >
           <Heart aria-hidden fill={favorite ? 'currentColor' : 'none'} />
         </Button>
-        <span className="actions invisible ml-auto flex gap-0.5 self-center group-hover:visible group-focus-within:visible">
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            className="archive text-muted-foreground"
-            aria-label={archived ? 'Désarchiver le projet' : 'Archiver le projet'}
-            title={archived ? 'Désarchiver le projet' : 'Archiver le projet'}
-            onClick={() => act(() => api.updateProject(p.id, { archived: !archived }))}
-          >
-            {archived ? <ArchiveRestore aria-hidden /> : <Archive aria-hidden />}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            className="delete text-muted-foreground hover:text-destructive"
-            aria-label="Supprimer le projet"
-            title="Supprimer le projet"
-            onClick={remove}
-          >
-            <Trash2 aria-hidden />
-          </Button>
-        </span>
+        {confirmDelete ? (
+          <span className="confirm-delete ml-auto self-center text-xs text-destructive" role="alert">
+            x pour supprimer le projet et toutes ses tâches (Log compris) · Échap pour annuler
+          </span>
+        ) : (
+          <span className="actions invisible ml-auto flex gap-0.5 self-center group-hover:visible group-focus-within:visible">
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              className="archive text-muted-foreground"
+              aria-label={archived ? 'Désarchiver le projet' : 'Archiver le projet'}
+              title={archived ? 'Désarchiver le projet (a)' : 'Archiver le projet (a)'}
+              onClick={toggleArchived}
+            >
+              {archived ? <ArchiveRestore aria-hidden /> : <Archive aria-hidden />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              className="delete text-muted-foreground hover:text-destructive"
+              aria-label="Supprimer le projet"
+              title="Supprimer le projet (x x)"
+              onClick={() => confirm(`Supprimer le projet « ${p.name} » et toutes ses tâches (y compris l'historique) ?`) && remove()}
+            >
+              <Trash2 aria-hidden />
+            </Button>
+          </span>
+        )}
       </div>
       <ul>
         {p.tasks.map((t) => (

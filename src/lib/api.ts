@@ -45,7 +45,9 @@ export const api = {
   createProject: (name: string) => request<{ id: number }>('POST', '/api/projects', { name }),
   updateProject: (id: number, patch: { name?: string; archived?: boolean; favorite?: boolean }) =>
     request('PATCH', `/api/projects/${id}`, patch),
-  deleteProject: (id: number) => request('DELETE', `/api/projects/${id}`),
+  // Renvoie le projet supprimé et ses tâches, à passer à restoreProject pour annuler.
+  deleteProject: (id: number) => request<Record<string, unknown>>('DELETE', `/api/projects/${id}`),
+  restoreProject: (deleted: Record<string, unknown>) => request('POST', '/api/projects/restore', deleted),
   createTask: (projectId: number, title: string) => request('POST', '/api/tasks', { project_id: projectId, title }),
   updateTask: (id: number, patch: TaskPatch) => request('PATCH', `/api/tasks/${id}`, patch),
   moveProject: (id: number, index: number) => request('POST', `/api/projects/${id}/move`, { index }),

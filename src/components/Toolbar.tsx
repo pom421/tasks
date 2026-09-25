@@ -1,9 +1,8 @@
 import { useRef, type ChangeEvent } from 'react';
-import { Heart, Settings as SettingsIcon } from 'lucide-react';
+import { Archive, Heart, Settings as SettingsIcon } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useActions } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 
 const SHORTCUTS: [string, string][] = [
@@ -18,12 +17,14 @@ const SHORTCUTS: [string, string][] = [
   ['L', 'Ouvrir la fiche sur l’identifiant du ticket (majuscule)'],
   ['r', 'Afficher seulement les tâches à reporter'],
   ['*', 'Afficher seulement les projets favoris'],
-  ['x x', 'Supprimer la tâche (x une 2e fois pour confirmer)'],
-  ['u', 'Annuler la dernière action (cocher, renommer, supprimer)'],
+  ['x x', 'Supprimer la tâche ou le projet (x une 2e fois pour confirmer)'],
+  ['f', 'Sur un projet : favori / plus favori'],
+  ['a', 'Sur un projet : archiver / désarchiver'],
+  ['u', 'Annuler la dernière action (cocher, renommer, supprimer, favori, archivage)'],
   ['p', 'Nouveau projet'],
   ['n', 'Nouvelle tâche (dernier projet utilisé)'],
   ['d', 'Filtrer le log par période (début, puis fin)'],
-  ['f', 'Filtrer le log par projet'],
+  ['f', 'Ailleurs que sur un projet : filtrer le log par projet'],
   ['/', 'Rechercher dans le log (titre, contenu, ticket)'],
   ['?', 'Cette aide'],
 ];
@@ -35,13 +36,14 @@ interface ToolbarProps {
   favorites: number;
   favoritesOnly: boolean;
   onFavoritesOnly: () => void;
+  archived: number; // nombre de projets archivés
   showArchived: boolean;
-  onShowArchived: (value: boolean) => void;
+  onShowArchived: () => void;
   helpOpen: boolean;
   onHelpOpen: (open: boolean) => void;
 }
 
-export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, favorites, favoritesOnly, onFavoritesOnly, showArchived, onShowArchived, helpOpen, onHelpOpen }: ToolbarProps) {
+export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, favorites, favoritesOnly, onFavoritesOnly, archived, showArchived, onShowArchived, helpOpen, onHelpOpen }: ToolbarProps) {
   const { act, toast, navigate } = useActions();
   const dbInput = useRef<HTMLInputElement>(null);
   const mdInput = useRef<HTMLInputElement>(null);
@@ -71,9 +73,6 @@ export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, favorites, favo
     <header className="flex flex-wrap items-center justify-between gap-2 pt-6 pb-2">
       <h1 className="text-2xl font-bold">Tâches</h1>
       <nav className="flex flex-wrap items-center gap-1.5">
-        <label className="flex items-center gap-1 text-sm text-muted-foreground">
-          <Checkbox id="show-archived" checked={showArchived} onCheckedChange={(v) => onShowArchived(v === true)} /> Archivés
-        </label>
         <Button variant="outline" size="sm" asChild>
           <a href="/api/export">Exporter</a>
         </Button>
@@ -104,20 +103,10 @@ export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, favorites, favo
         <input ref={mdInput} type="file" accept=".md,.markdown,.txt" hidden onChange={pick(importMd)} />
       </nav>
 
-      {/* Ligne réservée (hauteur fixe) : le bouton apparaît sans rien décaler. */}
+      {/* Ligne réservée (hauteur fixe) : les boutons apparaissent sans rien décaler.
+          Chacun n'est affiché que s'il a un effet (ou s'il est actif, pour pouvoir le couper).
+          Boutons bascule : plein quand actif, état annoncé par aria-pressed. */}
       <div className="flex h-8 w-full justify-end gap-1.5">
-        {(favorites > 0 || favoritesOnly) && (
-          <Button
-            id="favorites-only"
-            variant={favoritesOnly ? 'default' : 'outline'}
-            size="sm"
-            aria-pressed={favoritesOnly}
-            title="Afficher seulement les projets favoris (*)"
-            onClick={onFavoritesOnly}
-          >
-            <Heart aria-hidden className="text-red-600" fill="currentColor" /> Favoris
-          </Button>
-        )}
         {(jiraPending > 0 || jiraFilter) && (
           <Button
             id="jira-pending"
@@ -130,6 +119,30 @@ export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, favorites, favo
             {jiraPending} {jiraPending > 1 ? 'tâches' : 'tâche'} à reporter
           </Button>
         )}
+        {(archived > 0 || showArchived) && (
+          <Button
+            id="show-archived"
+            variant={showArchived ? 'default' : 'outline'}
+            size="sm"
+            aria-pressed={showArchived}
+            title="Afficher aussi les projets archivés"
+            onClick={onShowArchived}
+          >
+            <Archive aria-hidden /> Archivés
+          </Button>
+        )}
+        {(favorites > 0 || favoritesOnly) && (
+          <Button
+            id="favorites-only"
+            variant={favoritesOnly ? 'default' : 'outline'}
+            size="sm"
+            aria-pressed={favoritesOnly}
+            title="Afficher seulement les projets favoris (*)"
+            onClick={onFavoritesOnly}
+          >
+            <Heart aria-hidden className="text-red-600" fill="currentColor" /> Favoris
+          </Button>
+        )}
       </div>
 
       <Dialog open={helpOpen} onOpenChange={onHelpOpen}>
@@ -138,7 +151,7 @@ export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, favorites, favo
           <DialogDescription>À la souris : clic sur un nom pour le modifier.</DialogDescription>
           <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
             {SHORTCUTS.map(([key, label]) => (
-              <div key={key} className="contents">
+              <div key={label} className="contents">
                 <dt>
                   <kbd className="rounded border px-1 font-mono text-xs">{key}</kbd>
                 </dt>

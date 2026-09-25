@@ -309,10 +309,10 @@ test('cœur : projet favori (plein, rouge) ; bouton Favoris et * filtrent', asyn
   await expect(page.locator('#favorites-only')).toHaveCount(0); // aucun favori : pas de bouton
   const heart = page.locator(`#project-${data.beta.id}`).getByRole('button', { name: 'Favori' });
   await expect(heart).toHaveAttribute('aria-pressed', 'false');
-  await expect(heart).toHaveAttribute('title', 'Ajouter aux favoris');
+  await expect(heart).toHaveAttribute('title', 'Ajouter aux favoris (f)');
   await heart.click();
   await expect(heart).toHaveAttribute('aria-pressed', 'true');
-  await expect(heart).toHaveAttribute('title', 'Retirer des favoris');
+  await expect(heart).toHaveAttribute('title', 'Retirer des favoris (f)');
   await expect(heart.locator('svg')).toHaveAttribute('fill', 'currentColor');
   expect(store.state().projects.find((p) => p.id === data.beta.id)!.favorite_at).toBeTruthy();
 
@@ -334,7 +334,7 @@ test('archiver et supprimer : boutons icônes nommés, titre au survol', async (
   // Boutons visibles au survol (ou au focus du projet) seulement.
   await alpha.locator('.project-head').hover();
   const archive = alpha.getByRole('button', { name: 'Archiver le projet' });
-  await expect(archive).toHaveAttribute('title', 'Archiver le projet');
+  await expect(archive).toHaveAttribute('title', 'Archiver le projet (a)');
   await archive.click();
   await expect(page.locator('.project')).toHaveCount(1);
   expect(store.state().projects.find((p) => p.id === data.alpha.id)!.archived_at).toBeTruthy();
@@ -349,6 +349,65 @@ test('archiver et supprimer : boutons icônes nommés, titre au survol', async (
   await beta.getByRole('button', { name: 'Supprimer le projet' }).click();
   await expect(beta).toHaveCount(0);
   expect(store.state().projects.map((p) => p.name)).toEqual(['Alpha']);
+});
+
+test('boutons de filtre : à reporter, Archivés, Favoris, dans cet ordre, seulement si utiles', async ({ page, store, data }) => {
+  const row = page.locator('#jira-pending, #show-archived, #favorites-only');
+  await expect(row).toHaveCount(0); // rien à reporter, ni archivé, ni favori
+  store.updateTask(data.tasks.une.id, { jira: 'wanted' });
+  store.updateProject(data.alpha.id, { archived: true });
+  store.updateProject(data.beta.id, { favorite: true });
+  await reload(page);
+  expect(await row.evaluateAll((els) => els.map((e) => e.id))).toEqual(['jira-pending', 'show-archived', 'favorites-only']);
+
+  // Archivés : bouton bascule, plein quand actif.
+  const archived = page.locator('#show-archived');
+  await expect(archived).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('.project')).toHaveCount(1);
+  await archived.click();
+  await expect(archived).toHaveAttribute('aria-pressed', 'true');
+  await expect(archived).toHaveClass(/bg-primary/);
+  await expect(page.locator('.project')).toHaveCount(2);
+});
+
+test('clavier sur un projet : f favori, a archiver, x x supprimer, u annule tout', async ({ page, store, data }) => {
+  const beta = () => store.state().projects.find((p) => p.id === data.beta.id);
+  store.updateTask(data.tasks.trois.id, { doneAt: '2026-09-20', notes: 'historique' });
+  store.createTask(data.beta.id, 'Quatre');
+  await reload(page);
+  await pressDown(page, 5); // Beta
+  expect(await current(page)).toBe(`project:${data.beta.id}`);
+
+  await page.keyboard.press('f');
+  await expect.poll(() => Boolean(beta()?.favorite_at)).toBe(true);
+  await expect(page.locator('#filter-project')).not.toBeFocused(); // pas le raccourci global
+  await page.keyboard.press('u');
+  await expect.poll(() => Boolean(beta()?.favorite_at)).toBe(false);
+
+  await page.keyboard.press('a');
+  await expect(page.locator(`#project-${data.beta.id}`)).toHaveCount(0);
+  expect(beta()!.archived_at).toBeTruthy();
+  await page.keyboard.press('u');
+  await expect(page.locator(`#project-${data.beta.id}`)).toHaveCount(1);
+  expect(await current(page)).toBe(`project:${data.beta.id}`);
+
+  // x : message de confirmation ; Échap annule ; x x supprime.
+  await page.keyboard.press('x');
+  await expect(page.locator(`#project-${data.beta.id} .confirm-delete`)).toContainText('x pour supprimer le projet');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.confirm-delete')).toHaveCount(0);
+  await page.keyboard.press('x');
+  await page.keyboard.press('x');
+  await expect(page.locator(`#project-${data.beta.id}`)).toHaveCount(0);
+  expect(beta()).toBeUndefined();
+
+  // u : projet, tâches à faire et tâche faite (Log) reviennent à l'identique.
+  await page.keyboard.press('u');
+  await expect(page.locator('#toast')).toHaveText('Annulé : suppression du projet');
+  await expect(page.locator(`#project-${data.beta.id} .task .name`)).toHaveText(['Quatre']);
+  expect(await current(page)).toBe(`project:${data.beta.id}`);
+  const trois = store.journal({ from: '2026-09-20', to: '2026-09-20' }).days[0].tasks[0];
+  expect([trois.title, trois.notes]).toEqual(['Trois', 'historique']);
 });
 
 // --- Suivi Jira ------------------------------------------------------------
@@ -489,7 +548,9 @@ test('réglages (/admin) : URL Jira conservée en base, lien depuis la fiche', a
   await page.reload();
   await expect(page.getByLabel('URL de base des tickets')).toHaveValue('https://entreprise.atlassian.net');
 
-  await page.getByRole('link', { name: 'Retour aux tâches' }).click();
+  // Échap : retour à la page principale.
+  await page.keyboard.press('Escape');
+  await expect(page).toHaveURL(/\/$/);
   await expect(row(page, data.tasks.une.id).locator('a.report-link')).toHaveAttribute(
     'href',
     'https://entreprise.atlassian.net/browse/PROJ-1',

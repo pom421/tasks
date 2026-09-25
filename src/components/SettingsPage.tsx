@@ -11,6 +11,17 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
   const [jiraBaseUrl, setJiraBaseUrl] = useState('');
   const [status, setStatus] = useState<{ ok?: string; error?: string }>({});
 
+  // Échap : retour à la page principale (où que soit le focus).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      e.preventDefault();
+      onBack();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onBack]);
+
   useEffect(() => {
     api
       .settings()
@@ -40,7 +51,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
           onBack();
         }}
       >
-        <ArrowLeft className="size-4" aria-hidden /> Retour aux tâches
+        <ArrowLeft className="size-4" aria-hidden /> Retour aux tâches (Échap)
       </a>
       <h1 className="mt-4 text-2xl font-bold">Réglages</h1>
 

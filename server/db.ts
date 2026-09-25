@@ -35,6 +35,13 @@ export interface ProjectRow {
   created_at: string;
   archived_at: string | null;
   favorite_at: string | null;
+  position: number;
+}
+
+// Projet supprimé avec toutes ses tâches (faites comprises), pour pouvoir l'annuler.
+export interface DeletedProject {
+  project: ProjectRow;
+  tasks: TaskRow[];
 }
 
 export interface ProjectPatch {
@@ -234,8 +241,30 @@ export class Store {
     return this.project(id);
   }
 
-  deleteProject(id: number): boolean {
-    return this.db.prepare('DELETE FROM project WHERE id = ?').run(id).changes > 0;
+  // Renvoie le projet supprimé et ses tâches, pour pouvoir l'annuler.
+  deleteProject(id: number): DeletedProject | undefined {
+    const project = this.project(id);
+    if (!project) return undefined;
+    const tasks = this.db.prepare('SELECT * FROM task WHERE project_id = ? ORDER BY id').all(id) as unknown as TaskRow[];
+    this.db.prepare('DELETE FROM project WHERE id = ?').run(id);
+    return { project, tasks };
+  }
+
+  // Annulation d'une suppression : réinsère le projet et ses tâches à
+  // l'identique (mêmes id), tout ou rien.
+  restoreProject({ project: p, tasks }: DeletedProject): DeletedProject {
+    this.db.exec('BEGIN');
+    try {
+      this.db
+        .prepare('INSERT INTO project (id, name, created_at, archived_at, favorite_at, position) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(p.id, p.name, p.created_at, p.archived_at, p.favorite_at, p.position);
+      for (const t of tasks) this.restoreTask(t);
+      this.db.exec('COMMIT');
+    } catch (err) {
+      this.db.exec('ROLLBACK');
+      throw err;
+    }
+    return { project: this.project(p.id)!, tasks: tasks.map((t) => this.task(t.id)!) };
   }
 
   // --- Tâches --------------------------------------------------------------

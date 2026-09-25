@@ -406,6 +406,35 @@ test('suppression annulable : DELETE renvoie la tâche, restore la réinsère à
   assert.equal((await call('POST', '/api/tasks/restore', { ...deleted, project_id: 99999 })).status, 400);
 });
 
+test('suppression de projet annulable : DELETE renvoie projet et tâches, restore les réinsère', async () => {
+  const { body: p } = await call('POST', '/api/projects', { name: 'Projet à restaurer' });
+  await call('PATCH', `/api/projects/${p.id}`, { favorite: true });
+  const { body: t1 } = await call('POST', '/api/tasks', { project_id: p.id, title: 'À faire' });
+  const { body: t2 } = await call('POST', '/api/tasks', { project_id: p.id, title: 'Faite' });
+  await call('PATCH', `/api/tasks/${t2.id}`, { done: true, done_at: '2026-09-02', notes: 'n' });
+
+  const { status, body: deleted } = await call('DELETE', `/api/projects/${p.id}`);
+  assert.equal(status, 200);
+  assert.equal(deleted.project.name, 'Projet à restaurer');
+  assert.deepEqual(deleted.tasks.map((t: { id: number }) => t.id), [t1.id, t2.id]);
+  assert.equal((await call('GET', '/api/state')).body.projects.some((x: { id: number }) => x.id === p.id), false);
+
+  const { status: restored, body: back } = await call('POST', '/api/projects/restore', deleted);
+  assert.equal(restored, 201);
+  assert.deepEqual(back, deleted); // mêmes id, mêmes colonnes (favori, tâche faite, notes)
+  assert.equal((await call('POST', '/api/projects/restore', deleted)).status, 409);
+
+  await call('DELETE', `/api/projects/${p.id}`);
+  for (const bad of [
+    { ...deleted, project: { ...deleted.project, name: '' } },
+    { ...deleted, tasks: [{ ...deleted.tasks[0], project_id: p.id + 1 }] },
+    { ...deleted, tasks: [{ ...deleted.tasks[0], jira_url: 'javascript:alert(1)' }] },
+    { project: deleted.project },
+  ]) {
+    assert.equal((await call('POST', '/api/projects/restore', bad)).status, 400, JSON.stringify(bad).slice(0, 80));
+  }
+});
+
 test('journal : liste des jours ayant des entrées, filtrée par projet', async () => {
   const { body: a } = await call('POST', '/api/projects', { name: 'Jours A' });
   const { body: b } = await call('POST', '/api/projects', { name: 'Jours B' });
