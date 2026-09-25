@@ -151,3 +151,18 @@ test('Suppr supprime la tâche après confirmation', async ({ page, store, data 
   expect(store.state().projects[0].tasks.map((t) => t.title)).toEqual(['Deux']);
   expect(await current(page)).toBe(`task:${data.tasks.deux.id}`);
 });
+
+test('nouveau projet : le focus va sur la saisie de sa première tâche', async ({ page, store, data: _ }) => {
+  await page.keyboard.press('p');
+  await page.keyboard.type('Gamma');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.project-head .name', { hasText: 'Gamma' })).toBeVisible();
+  const gamma = store.state().projects.find((p) => p.name === 'Gamma');
+  await expect(page.locator(`[data-nav-key="add:${gamma.id}"]`)).toBeFocused();
+
+  await page.keyboard.type('Première tâche');
+  await page.keyboard.press('Enter');
+  await expect(page.locator(`#project-${gamma.id} .name`, { hasText: 'Première tâche' })).toBeVisible();
+  expect(store.state().projects.find((p) => p.id === gamma.id).tasks.map((t) => t.title)).toEqual(['Première tâche']);
+  await expect(page.locator(`[data-nav-key="add:${gamma.id}"]`)).toBeFocused();
+});

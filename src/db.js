@@ -112,19 +112,25 @@ export class Store {
     return { projects: [...byProject.values()] };
   }
 
-  // Sans filtre : la dernière journée travaillée.
-  journal({ date, projectId } = {}) {
+  // Période [from, to] incluse, bornes facultatives ('YYYY-MM-DD').
+  // done_at n'a pas d'heure : from = to couvre toute la journée.
+  // Sans aucun filtre : la dernière journée travaillée.
+  journal({ from, to, projectId } = {}) {
     const where = ['t.done_at IS NOT NULL'];
     const params = [];
-    if (date) {
-      where.push('t.done_at = ?');
-      params.push(date);
+    if (from) {
+      where.push('t.done_at >= ?');
+      params.push(from);
+    }
+    if (to) {
+      where.push('t.done_at <= ?');
+      params.push(to);
     }
     if (projectId) {
       where.push('t.project_id = ?');
       params.push(projectId);
     }
-    if (!date && !projectId) {
+    if (!from && !to && !projectId) {
       const last = this.db.prepare('SELECT MAX(done_at) AS d FROM task').get().d;
       if (!last) return { days: [] };
       where.push('t.done_at = ?');

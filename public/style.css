@@ -66,6 +66,8 @@ nav, .filters { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 }
 .btn:hover { color: var(--fg); background: var(--hover); }
 
+.range { font-size: 0.85rem; color: var(--muted); display: flex; gap: 4px; align-items: center; }
+
 .toggle { font-size: 0.85rem; color: var(--muted); display: flex; gap: 4px; align-items: center; }
 
 input, select { font: inherit; color: inherit; }

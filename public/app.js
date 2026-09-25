@@ -1,13 +1,13 @@
 import { api } from './api.js';
 import { h, editable, addInput } from './dom.js';
-import { installNav, snapshot, restore } from './nav.js';
+import { installNav, snapshot, restore, focusByKey } from './nav.js';
 
 const $ = (sel) => document.querySelector(sel);
 
 const state = {
   projects: [],
   showArchived: false,
-  filter: { date: '', project: '' },
+  filter: { from: '', to: '', project: '' },
   lastProjectId: null, // pour le raccourci "n"
 };
 
@@ -36,9 +36,11 @@ function toast(msg) {
 
 // Exécute une action serveur, affiche l'erreur éventuelle, puis rafraîchit
 // l'affichage en conservant le focus clavier (voir nav.js).
+// fn peut renvoyer { focus: clé } pour placer le focus sur un autre élément.
 async function act(fn, { stay = false } = {}) {
+  let result;
   try {
-    await fn();
+    result = await fn();
   } catch (err) {
     toast(err.message);
   }
@@ -49,7 +51,8 @@ async function act(fn, { stay = false } = {}) {
   } catch (err) {
     toast(err.message);
   }
-  restore(snap, { stay });
+  if (result?.focus) focusByKey(result.focus);
+  else restore(snap, { stay });
 }
 
 const patchTask = (id, body, opts) => act(() => api('PATCH', `/api/tasks/${id}`, body), opts);
@@ -194,12 +197,16 @@ function renderDay(day, showProjects) {
 
 async function renderJournal() {
   const params = new URLSearchParams();
-  if (state.filter.date) params.set('date', state.filter.date);
-  if (state.filter.project) params.set('project', state.filter.project);
+  const { from, to, project } = state.filter;
+  if (from) params.set('from', from);
+  if (to) params.set('to', to);
+  if (project) params.set('project', project);
   const { days } = await api('GET', `/api/journal?${params}`);
-  const filtered = Boolean(state.filter.date || state.filter.project);
+  const filtered = Boolean(from || to || project);
   $('#filter-reset').hidden = !filtered;
-  $('#filter-date').value = state.filter.date;
+  $('#filter-from').value = from;
+  $('#filter-to').value = to;
+  $('#filter-to').min = from;
   const empty = filtered ? 'Aucune tâche faite pour ce filtre.' : 'Aucune tâche faite pour l’instant.';
   $('#journal-days').replaceChildren(...days.map((d) => renderDay(d, !state.filter.project)));
   if (!days.length) $('#journal-days').append(h('p.empty', { textContent: empty }));
@@ -220,8 +227,10 @@ $('#new-project').replaceWith(
     'new-project',
     (name, clear) =>
       act(async () => {
-        await api('POST', '/api/projects', { name });
+        const project = await api('POST', '/api/projects', { name });
         clear();
+        // Projet neuf, sans tâche : on enchaîne sur la saisie de la première.
+        return { focus: `add:${project.id}` };
       }),
     { id: 'new-project' },
   ),
@@ -232,18 +241,47 @@ $('#show-archived').addEventListener('change', (e) => {
   renderProjects();
 });
 
-$('#filter-date').addEventListener('change', (e) => {
-  state.filter.date = e.target.value;
-  renderJournal().catch((err) => toast(err.message));
+// Saisie clavier d'une date : le navigateur émet « change » dès que la valeur
+// est valide, y compris pendant la frappe de l'année (0002, 0020, 0202…).
+// On attend une année à 4 chiffres avant d'agir.
+const isComplete = (value) => value === '' || Number(value.slice(0, 4)) >= 1000;
+
+const showJournal = () => renderJournal().catch((err) => toast(err.message));
+
+// Date de début renseignée : la date de fin prend la même valeur (une journée)
+// et reçoit le focus pour être ajustée si besoin.
+$('#filter-from').addEventListener('change', (e) => {
+  const from = e.target.value;
+  if (!isComplete(from)) return;
+  state.filter.from = from;
+  if (from) {
+    state.filter.to = from;
+    $('#filter-to').value = from;
+    $('#filter-to').focus();
+  }
+  showJournal();
 });
+
+$('#filter-to').addEventListener('change', (e) => {
+  const to = e.target.value;
+  if (!isComplete(to)) return;
+  if (to && state.filter.from && to < state.filter.from) {
+    toast('La date de fin doit être après la date de début');
+    e.target.value = state.filter.to;
+    return;
+  }
+  state.filter.to = to;
+  showJournal();
+});
+
 $('#filter-project').addEventListener('change', (e) => {
   state.filter.project = e.target.value;
-  renderJournal().catch((err) => toast(err.message));
+  showJournal();
 });
 function resetFilters() {
-  state.filter = { date: '', project: '' };
+  state.filter = { from: '', to: '', project: '' };
   $('#filter-project').value = '';
-  renderJournal().catch((err) => toast(err.message));
+  showJournal();
 }
 $('#filter-reset').addEventListener('click', resetFilters);
 
@@ -285,7 +323,7 @@ document.addEventListener('keydown', (e) => {
   const keys = {
     p: () => $('#new-project').focus(),
     n: focusAdd,
-    d: () => $('#filter-date').focus(),
+    d: () => $('#filter-from').focus(),
     f: () => $('#filter-project').focus(),
     '?': () => $('#help').showModal(),
     // Échap sur un élément de la liste : ne rien faire (on reste en navigation).

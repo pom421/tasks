@@ -67,8 +67,18 @@ test('projets et tâches : création, édition, complétion, journal', async () 
   ({ body: j } = await call('GET', `/api/journal?project=${p.id}`));
   assert.deepEqual(j.days.map((d) => d.date), ['2026-09-22', '2026-09-20']);
 
-  ({ body: j } = await call('GET', '/api/journal?date=2026-09-20'));
+  // Même date de début et de fin : toute la journée.
+  ({ body: j } = await call('GET', '/api/journal?from=2026-09-20&to=2026-09-20'));
+  assert.deepEqual(j.days.map((d) => d.date), ['2026-09-20']);
   assert.equal(j.days[0].tasks[0].title, 'Une bis');
+
+  // Période : bornes incluses.
+  ({ body: j } = await call('GET', '/api/journal?from=2026-09-20&to=2026-09-22'));
+  assert.deepEqual(j.days.map((d) => d.date), ['2026-09-22', '2026-09-20']);
+  ({ body: j } = await call('GET', '/api/journal?from=2026-09-21&to=2026-09-21'));
+  assert.deepEqual(j.days, []);
+  ({ body: j } = await call('GET', '/api/journal?from=2026-09-21'));
+  assert.deepEqual(j.days.map((d) => d.date), ['2026-09-22']);
 
   // Décocher : retour dans le projet.
   await call('PATCH', `/api/tasks/${t1.id}`, { done: false });
@@ -80,7 +90,8 @@ test('validations', async () => {
   assert.equal((await call('POST', '/api/projects', { name: '  ' })).status, 400);
   assert.equal((await call('POST', '/api/tasks', { project_id: 9999, title: 'x' })).status, 400);
   assert.equal((await call('PATCH', '/api/tasks/9999', { title: 'x' })).status, 404);
-  assert.equal((await call('GET', '/api/journal?date=hier')).status, 400);
+  assert.equal((await call('GET', '/api/journal?from=hier')).status, 400);
+  assert.equal((await call('GET', '/api/journal?from=2026-09-22&to=2026-09-20')).status, 400);
 });
 
 test('archivage et suppression en cascade', async () => {
@@ -121,7 +132,7 @@ test('import markdown', async () => {
   ].join('\n');
   const { body } = await call('POST', '/api/import-markdown', md);
   assert.deepEqual(body, { projects: 3, tasks: 4 });
-  const { body: j } = await call('GET', '/api/journal?date=2026-09-24');
+  const { body: j } = await call('GET', '/api/journal?from=2026-09-24&to=2026-09-24');
   assert.deepEqual(
     j.days[0].tasks.map((t) => [t.project_name, t.title]),
     [['Maison', 'Acheter peinture'], ['Sans projet', 'Tâche isolée']],

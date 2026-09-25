@@ -33,7 +33,8 @@ Tests :
 ## Utilisation
 
 - Cocher une tâche → elle passe dans le journal, datée du jour. La décocher → elle revient dans son projet.
-- Journal : par défaut, la dernière journée. Filtres par date ou par projet.
+- Journal : par défaut, la dernière journée. Filtres par période (du… au…, bornes incluses) et par projet. Renseigner le début met la même date en fin : une journée entière.
+- Nouveau projet → curseur directement sur la saisie de sa première tâche.
 - Souris : clic sur un nom pour le modifier.
 
 Clavier (`?` affiche l'aide) :
@@ -46,7 +47,7 @@ Clavier (`?` affiche l'aide) :
 | `Espace` | Cocher / décocher la tâche |
 | `Suppr` | Supprimer la tâche |
 | `p` / `n` | Nouveau projet / nouvelle tâche |
-| `d` / `f` | Filtre du journal par date / par projet |
+| `d` / `f` | Filtre du journal par période / par projet |
 - **Exporter** télécharge la base `.sqlite`. **Importer .sqlite** remplace toute la base.
 - **Importer .md** ajoute des projets et tâches depuis un markdown : puce = projet, sous-puce = tâche, une ligne avec une date (`## 24/09/2026`) ouvre une journée de tâches faites.
 

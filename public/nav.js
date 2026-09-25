@@ -30,6 +30,10 @@ export function move(delta) {
   focusItem(items[next]);
 }
 
+export function focusByKey(key) {
+  focusItem(navItems().find((item) => item.dataset.navKey === key));
+}
+
 // Photographie du focus avant un re-rendu : clé, position et saisie en cours.
 export function snapshot() {
   const el = document.activeElement;

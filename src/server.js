@@ -126,10 +126,12 @@ export function createApp(store, { allowedHosts = DEFAULT_ALLOWED_HOSTS } = {}) 
     ['GET', /^\/api\/state$/, (req, res) => send(res, 200, store.state())],
 
     ['GET', /^\/api\/journal$/, (req, res, url) => {
-      const date = url.searchParams.get('date') || undefined;
+      const from = url.searchParams.get('from') || undefined;
+      const to = url.searchParams.get('to') || undefined;
       const projectId = Number(url.searchParams.get('project')) || undefined;
-      if (date && !isDate(date)) throw new HttpError(400, 'Date invalide');
-      send(res, 200, store.journal({ date, projectId }));
+      if ((from && !isDate(from)) || (to && !isDate(to))) throw new HttpError(400, 'Date invalide');
+      if (from && to && from > to) throw new HttpError(400, 'La date de début est après la date de fin');
+      send(res, 200, store.journal({ from, to, projectId }));
     }],
 
     ['POST', /^\/api\/projects$/, async (req, res) => {

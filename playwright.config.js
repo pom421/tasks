@@ -4,7 +4,8 @@ export default defineConfig({
   testDir: 'e2e',
   forbidOnly: Boolean(process.env.CI),
   reporter: process.env.CI ? 'github' : 'list',
-  use: { trace: 'retain-on-failure' },
+  // Locale fixe : format des dates (mm/jj/aaaa) et textes identiques partout.
+  use: { trace: 'retain-on-failure', locale: 'en-US', timezoneId: 'Europe/Paris' },
   projects: [
     {
       name: 'chromium',

@@ -28,7 +28,8 @@
       <div class="journal-head">
         <h2>Fait</h2>
         <div class="filters">
-          <input type="date" id="filter-date" aria-label="Filtrer par date">
+          <label class="range">Du <input type="date" id="filter-from" aria-label="Date de début"></label>
+          <label class="range">au <input type="date" id="filter-to" aria-label="Date de fin"></label>
           <select id="filter-project" aria-label="Filtrer par projet"></select>
           <button type="button" class="btn" id="filter-reset" hidden>Réinitialiser</button>
         </div>
@@ -47,7 +48,7 @@
       <dt><kbd>Suppr</kbd></dt><dd>Supprimer la tâche</dd>
       <dt><kbd>p</kbd></dt><dd>Nouveau projet</dd>
       <dt><kbd>n</kbd></dt><dd>Nouvelle tâche (dernier projet utilisé)</dd>
-      <dt><kbd>d</kbd></dt><dd>Filtrer le journal par date</dd>
+      <dt><kbd>d</kbd></dt><dd>Filtrer le journal par période (début, puis fin)</dd>
       <dt><kbd>f</kbd></dt><dd>Filtrer le journal par projet</dd>
       <dt><kbd>?</kbd></dt><dd>Cette aide</dd>
     </dl>
