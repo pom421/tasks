@@ -52,6 +52,9 @@ Clavier (`?` affiche l'aide) :
 | `x` puis `x` | Supprimer la tâche : le 1er appui demande confirmation, le 2e supprime (`Échap` annule). `Suppr` marche aussi |
 | `p` / `n` | Nouveau projet / nouvelle tâche |
 | `d` / `f` | Filtre du journal par période / par projet |
+
+Import / export :
+
 - **Exporter** télécharge la base `.sqlite`. **Importer .sqlite** remplace toute la base.
 - **Importer .md** ajoute des projets et tâches depuis un markdown : puce = projet, sous-puce = tâche, une ligne avec une date (`## 24/09/2026`) ouvre une journée de tâches faites.
 
