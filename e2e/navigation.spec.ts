@@ -646,7 +646,8 @@ test('fiche Markdown : e édite (titre → Tab → ticket → Tab → contenu), 
   await deux.getByRole('button', { name: 'Voir les détails' }).click();
   await page.getByRole('dialog', { name: 'Deux' }).locator('.notes-preview').dblclick();
   await expect(page.getByRole('dialog', { name: 'Deux' }).getByLabel('Contenu')).toBeFocused();
-  await page.keyboard.press('ControlOrMeta+End');
+  // Fin du texte : Ctrl+Fin sous Linux / Windows, Cmd+↓ sur macOS (Cmd+Fin n'y fait rien).
+  await page.keyboard.press(process.platform === 'darwin' ? 'Meta+ArrowDown' : 'Control+End');
   await page.keyboard.type(' (fin)');
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);

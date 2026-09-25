@@ -25,7 +25,8 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
   useEffect(() => {
     api
       .settings()
-      .then((s) => setJiraBaseUrl(s.jira_base_url ?? ''))
+      // Saisie déjà commencée pendant le chargement : on ne l'écrase pas.
+      .then((s) => setJiraBaseUrl((v) => v || (s.jira_base_url ?? '')))
       .catch((err) => setStatus({ error: err.message }));
   }, []);
 
