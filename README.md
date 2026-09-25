@@ -39,7 +39,9 @@ Vérifications :
 - Journal : par défaut, la dernière journée. Filtres par période (du… au…, bornes incluses) et par projet. Renseigner le début met la même date en fin : une journée entière.
 - Nouveau projet → curseur directement sur la saisie de sa première tâche.
 - Souris : clic sur un nom pour le modifier.
-- Jira : marquer une tâche « à reporter », puis « reportée » avec le lien du ticket. Le compteur en haut indique ce qu'il reste à reporter (tâches à faire et faites).
+- Fiche d'une tâche (`o`, bouton « détails » ou icône 🗒) : notes, lien, ticket Jira. L'icône 🗒 signale une tâche qui a des notes ou un lien.
+- Jira : marquer une tâche « à reporter », puis « reportée » en saisissant le ticket (clé `PROJ-123` ou lien complet). Le compteur en haut indique ce qu'il reste à reporter (tâches à faire et faites).
+- Réglages (icône ⚙, page `/admin`) : URL du Jira de l'entreprise, qui transforme les clés en liens (`URL/browse/PROJ-123`). Conservée en base.
 
 Clavier (`?` affiche l'aide) :
 
@@ -50,8 +52,9 @@ Clavier (`?` affiche l'aide) :
 | `Échap` | Quitter l'édition sans enregistrer, retour à la navigation |
 | `Espace` | Cocher / décocher la tâche |
 | `Alt+↑` `Alt+↓` (ou `Alt+k` `Alt+j`) | Monter / descendre la tâche (priorité). En bord de projet, elle passe dans le projet voisin |
-| `J` (majuscule) | Suivi Jira : à reporter (icône en contour) → reportée (icône pleine, lien proposé) → rien |
-| `L` (majuscule) | Ajouter / modifier le lien du ticket Jira : l'icône devient cliquable |
+| `J` (majuscule) | Suivi Jira : à reporter (icône en contour) → reportée (icône pleine, fiche proposée pour le ticket) → rien |
+| `o` | Ouvrir la fiche de la tâche (notes, lien, ticket Jira) ; `Ctrl+Entrée` enregistre depuis les notes |
+| `L` (majuscule) | Ouvrir la fiche sur le champ « Ticket Jira » |
 | `r` | Afficher seulement les tâches à reporter dans Jira (ou clic sur « Jira : N à reporter ») |
 | `x` puis `x` | Supprimer la tâche : le 1er appui demande confirmation, le 2e supprime (`Échap` annule). `Suppr` marche aussi |
 | `p` / `n` | Nouveau projet / nouvelle tâche |
@@ -82,7 +85,7 @@ server/           Node exécute le TypeScript tel quel (pas d'étape de build)
 shared/types.ts   types échangés entre serveur et front
 src/              front React (Vite)
   App.tsx         état, chargement des données, raccourcis globaux
-  components/     Toolbar, ProjectList, TaskRow, Journal, Editable…
+  components/     Toolbar, ProjectList, TaskRow, TaskDialog, Journal, SettingsPage…
   components/ui/  composants shadcn/ui (copiés dans le projet, modifiables)
   lib/nav.ts      navigation clavier (focus, ↑/↓, restauration après re-rendu)
   lib/api.ts      appels au serveur, typés
@@ -93,7 +96,8 @@ En dev, l'API est branchée dans le serveur Vite (`vite.config.ts`) : une seule 
 
 ## Modèle de données
 
-`project` (id, name, created_at, archived_at) : 1 projet a 0..n `task` (id, project_id, title, created_at, done_at, position, jira_wanted_at, jira_at, jira_url).
+`project` (id, name, created_at, archived_at) : 1 projet a 0..n `task` (id, project_id, title, created_at, done_at, position, notes, link, jira_wanted_at, jira_at, jira_key, jira_url).
+`setting` (key, value) : réglages de l'application (ex. `jira_base_url`).
 `position` = ordre (priorité) des tâches dans leur projet.
-Une tâche est faite quand `done_at` est rempli (le journal, ce sont ces tâches-là), à reporter dans Jira quand `jira_wanted_at` l'est et pas `jira_at`, reportée quand `jira_at` l'est (`jira_url` : lien du ticket, http(s) uniquement).
+Une tâche est faite quand `done_at` est rempli (le journal, ce sont ces tâches-là), à reporter dans Jira quand `jira_wanted_at` l'est et pas `jira_at`, reportée quand `jira_at` l'est. Ticket : `jira_key` (lien construit avec `jira_base_url`, qui peut donc changer) ou `jira_url` (lien complet). Liens en http(s) uniquement.
 Le schéma est versionné (`PRAGMA user_version`) : une base plus ancienne, importée ou non, est mise à niveau à l'ouverture.

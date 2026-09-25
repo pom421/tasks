@@ -218,7 +218,7 @@ test('migration : une base v1 (sans jira_at) est mise à niveau à l’ouverture
            PRAGMA user_version = 1;`);
   v1.close();
   const old = new Store(file);
-  assert.deepEqual(old.state().projects[0].tasks[0], { id: 1, project_id: 1, title: 'Tâche v1', jira_wanted_at: null, jira_at: null, jira_url: null });
+  assert.deepEqual(old.state().projects[0].tasks[0], { id: 1, project_id: 1, title: 'Tâche v1', jira_wanted_at: null, jira_at: null, jira_key: null, jira_url: null, notes: null, link: null });
   assert.ok(old.updateTask(1, { jira: 'done' })?.jira_at);
   old.close();
 });
@@ -273,7 +273,7 @@ test('Jira : à reporter puis reportée, lien, compteur et filtre du journal', a
 
   const { body: done } = await call('PATCH', `/api/tasks/${t.id}`, {
     jira: 'done',
-    jira_url: 'https://exemple.atlassian.net/browse/PROJ-123',
+    jira_ticket: 'https://exemple.atlassian.net/browse/PROJ-123',
   });
   assert.ok(done.jira_at);
   assert.equal(done.jira_wanted_at, wanted.jira_wanted_at); // date de demande conservée
@@ -283,16 +283,16 @@ test('Jira : à reporter puis reportée, lien, compteur et filtre du journal', a
   assert.ok(!j2.days.some((d: any) => d.tasks.some((x: any) => x.id === t.id)));
 
   // Liens refusés : autre protocole (XSS via javascript:), texte libre.
-  for (const bad of ['javascript:alert(1)', 'data:text/html,x', 'PROJ-123', 42]) {
-    assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { jira_url: bad })).status, 400, String(bad));
+  for (const bad of ['javascript:alert(1)', 'data:text/html,x', 'pas un ticket', 42]) {
+    assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { jira_ticket: bad })).status, 400, String(bad));
   }
   assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { jira: 'oui' })).status, 400);
 
   // Lien vidé ; retour à « rien » efface tout.
-  assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { jira_url: '' })).body.jira_url, null);
-  await call('PATCH', `/api/tasks/${t.id}`, { jira_url: 'https://exemple.atlassian.net/browse/PROJ-9' });
+  assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { jira_ticket: '' })).body.jira_url, null);
+  await call('PATCH', `/api/tasks/${t.id}`, { jira_ticket: 'proj-9' });
   const { body: none } = await call('PATCH', `/api/tasks/${t.id}`, { jira: 'none' });
-  assert.deepEqual([none.jira_wanted_at, none.jira_at, none.jira_url], [null, null, null]);
+  assert.deepEqual([none.jira_wanted_at, none.jira_at, none.jira_key, none.jira_url], [null, null, null, null]);
 });
 
 test('migration 4 : une tâche déjà « reportée » (v3) garde son état', async () => {
@@ -313,4 +313,36 @@ test('migration 4 : une tâche déjà « reportée » (v3) garde son état', asy
   assert.equal(task.jira_at, '2026-09-01 10:00:00');
   assert.equal(task.jira_wanted_at, '2026-09-01 10:00:00');
   store3.close();
+});
+
+test('réglages : URL Jira d’entreprise conservée en base, validée', async () => {
+  assert.deepEqual((await call('GET', '/api/settings')).body, { jira_base_url: null });
+  const { body } = await call('PUT', '/api/settings', { jira_base_url: 'https://entreprise.atlassian.net/' });
+  assert.equal(body.jira_base_url, 'https://entreprise.atlassian.net'); // sans « / » final
+  assert.equal((await call('GET', '/api/state')).body.settings.jira_base_url, 'https://entreprise.atlassian.net');
+  assert.equal((await call('PUT', '/api/settings', { jira_base_url: 'javascript:alert(1)' })).status, 400);
+  assert.equal((await call('PUT', '/api/settings', { jira_base_url: '' })).body.jira_base_url, null);
+  // Formulaire d'un autre site : refusé comme le reste de l'API.
+  assert.equal((await call('PUT', '/api/settings', { jira_base_url: 'https://x.io' }, { Origin: 'https://evil.example' })).status, 403);
+});
+
+test('détails de la tâche : notes, lien, ticket Jira par sa clé', async () => {
+  const { body: p } = await call('POST', '/api/projects', { name: 'Détails' });
+  const { body: t } = await call('POST', '/api/tasks', { project_id: p.id, title: 'Avec détails' });
+
+  const { body: d } = await call('PATCH', `/api/tasks/${t.id}`, {
+    notes: '  Contexte : voir la réunion du 12.  ',
+    link: 'https://docs.exemple.fr/specs',
+    jira_ticket: 'abc-42',
+  });
+  assert.equal(d.notes, 'Contexte : voir la réunion du 12.');
+  assert.equal(d.link, 'https://docs.exemple.fr/specs');
+  assert.equal(d.jira_key, 'ABC-42'); // clé normalisée en majuscules
+  assert.equal(d.jira_url, null);
+  assert.ok(d.jira_at); // un ticket renseigné vaut « reportée »
+
+  assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { link: 'javascript:alert(1)' })).status, 400);
+  assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { notes: 'x'.repeat(20_001) })).status, 400);
+  const { body: cleared } = await call('PATCH', `/api/tasks/${t.id}`, { notes: '', link: null });
+  assert.deepEqual([cleared.notes, cleared.link], [null, null]);
 });

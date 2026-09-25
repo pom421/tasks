@@ -301,7 +301,7 @@ test('vers un projet vide ; les projets archivés masqués sont sautés', async 
 
 const row = (page: Page, taskId: number) => page.locator(`li.task:has([data-nav-key="task:${taskId}"])`);
 
-test('J fait tourner : à reporter (contour) → reportée (plein, lien proposé) → rien', async ({ page, store, data }) => {
+test('J fait tourner : à reporter (contour) → reportée (plein, fiche proposée) → rien', async ({ page, store, data }) => {
   const une = row(page, data.tasks.une.id);
   await pressDown(page, 2);
   await page.keyboard.press('Shift+J');
@@ -310,52 +310,100 @@ test('J fait tourner : à reporter (contour) → reportée (plein, lien proposé
 
   await page.keyboard.press('Shift+J');
   await expect(une.locator('svg.jira-done')).toBeVisible();
-  // Champ de lien proposé ; Échap passe et rend le focus à la tâche.
-  await expect(une.locator('input.jira-url')).toBeFocused();
+  // Fiche proposée sur le champ du ticket ; Échap la ferme et rend le focus à la tâche.
+  const dialog = page.getByRole('dialog', { name: 'Une' });
+  await expect(dialog.getByLabel('Ticket Jira')).toBeFocused();
   await page.keyboard.press('Escape');
-  await expect(une.locator('input.jira-url')).toHaveCount(0);
-  expect(await current(page)).toBe(`task:${data.tasks.une.id}`);
+  await expect(dialog).toHaveCount(0);
+  await expect.poll(() => current(page)).toBe(`task:${data.tasks.une.id}`);
 
   await page.keyboard.press('Shift+J');
   await expect(une.locator('svg.jira')).toHaveCount(0);
-  expect(store.state().projects[0].tasks[0]).toMatchObject({ jira_wanted_at: null, jira_at: null, jira_url: null });
+  expect(store.state().projects[0].tasks[0]).toMatchObject({ jira_wanted_at: null, jira_at: null, jira_key: null });
 });
 
-test('lien Jira : saisi après le report, icône cliquable ; L pour modifier', async ({ page, store, data }) => {
-  const une = row(page, data.tasks.une.id);
+test('fiche : L sur le ticket, clé + URL Jira d’entreprise = lien cliquable', async ({ page, store, data }) => {
+  store.updateSettings({ jira_base_url: 'https://entreprise.atlassian.net' });
+  await page.reload();
   await pressDown(page, 2);
-  await page.keyboard.press('Shift+J');
-  await page.keyboard.press('Shift+J');
-  await expect(une.locator('input.jira-url')).toBeFocused();
-  await page.keyboard.type('https://exemple.atlassian.net/browse/PROJ-1');
-  await page.keyboard.press('Enter');
-
-  const link = une.locator('a.jira-link');
-  await expect(link).toHaveAttribute('href', 'https://exemple.atlassian.net/browse/PROJ-1');
-  await expect(link).toHaveAttribute('target', '_blank');
-  await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
-  expect(await current(page)).toBe(`task:${data.tasks.une.id}`);
-
-  // L : modifier ; un lien invalide est refusé.
   await page.keyboard.press('Shift+L');
-  await page.keyboard.press('ControlOrMeta+a');
-  await page.keyboard.type('javascript:alert(1)');
+  const dialog = page.getByRole('dialog', { name: 'Une' });
+  await expect(dialog).toHaveAccessibleDescription(/Alpha · à faire/);
+  await expect(dialog.getByLabel('Ticket Jira')).toBeFocused();
+  await page.keyboard.type('proj-7');
+  await expect(dialog.locator('.jira-hint')).toHaveText('Lien : https://entreprise.atlassian.net/browse/PROJ-7');
   await page.keyboard.press('Enter');
-  await expect(page.locator('#toast')).toContainText('Lien invalide');
-  await page.keyboard.press('ControlOrMeta+a');
-  await page.keyboard.type('https://exemple.atlassian.net/browse/PROJ-2');
-  await page.keyboard.press('Enter');
-  await expect(link).toHaveAttribute('href', 'https://exemple.atlassian.net/browse/PROJ-2');
-  expect(store.state().projects[0].tasks[0].jira_url).toBe('https://exemple.atlassian.net/browse/PROJ-2');
+
+  await expect(dialog).toHaveCount(0);
+  const link = row(page, data.tasks.une.id).locator('a.jira-link');
+  await expect(link).toHaveAttribute('href', 'https://entreprise.atlassian.net/browse/PROJ-7');
+  await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  await expect(link.locator('.jira-key')).toHaveText('PROJ-7');
+  await expect(row(page, data.tasks.une.id).locator('svg.jira-done')).toBeVisible(); // ticket = reportée
+  expect(await current(page)).toBe(`task:${data.tasks.une.id}`);
 });
 
-test('L sur une tâche sans suivi : le lien la marque reportée', async ({ page, store, data }) => {
+test('fiche : erreurs annoncées, rien n’est enregistré', async ({ page, store }) => {
+  await pressDown(page, 2);
+  await page.keyboard.press('o');
+  const dialog = page.getByRole('dialog', { name: 'Une' });
+  await dialog.getByLabel('Lien').fill('javascript:alert(1)');
+  await dialog.getByLabel('Ticket Jira').fill('pas un ticket');
+  await dialog.getByRole('button', { name: 'Enregistrer' }).click();
+  await expect(dialog.getByRole('alert')).toHaveText([/Adresse http\(s\) attendue/, /Clé \(ex\. PROJ-123\)/]);
+  await expect(dialog.getByLabel('Lien')).toHaveAttribute('aria-invalid', 'true');
+  expect(store.state().projects[0].tasks[0]).toMatchObject({ link: null, jira_key: null, jira_url: null });
+});
+
+test('o ouvre la fiche : notes et lien enregistrés, icône « détails » affichée', async ({ page, store, data }) => {
   await pressDown(page, 3); // « Deux »
-  await page.keyboard.press('Shift+L');
-  await page.keyboard.type('https://exemple.atlassian.net/browse/PROJ-3');
-  await page.keyboard.press('Enter');
-  await expect(row(page, data.tasks.deux.id).locator('svg.jira-done')).toBeVisible();
-  expect(store.state().projects[0].tasks[1].jira_at).toBeTruthy();
+  await page.keyboard.press('o');
+  const dialog = page.getByRole('dialog', { name: 'Deux' });
+  await expect(dialog.getByLabel('Notes')).toBeFocused();
+  // Les raccourcis de la liste ne s'appliquent pas dans la fiche (x, J, Espace…).
+  await page.keyboard.type('Voir x et J avec Paul');
+  await dialog.getByLabel('Lien').fill('https://docs.exemple.fr/specs');
+  await dialog.getByLabel('Notes').press('ControlOrMeta+Enter');
+
+  await expect(dialog).toHaveCount(0);
+  const deux = row(page, data.tasks.deux.id);
+  await expect(deux.locator('.confirm-delete')).toHaveCount(0);
+  await expect(deux.getByRole('button', { name: 'Voir les détails' })).toBeVisible();
+  expect(store.state().projects[0].tasks[1]).toMatchObject({
+    notes: 'Voir x et J avec Paul',
+    link: 'https://docs.exemple.fr/specs',
+    jira_wanted_at: null,
+  });
+
+  // Clic sur l'icône : la fiche se rouvre avec les valeurs enregistrées.
+  await deux.getByRole('button', { name: 'Voir les détails' }).click();
+  await expect(page.getByRole('dialog', { name: 'Deux' }).getByLabel('Notes')).toHaveValue('Voir x et J avec Paul');
+});
+
+test('réglages (/admin) : URL Jira conservée en base, lien depuis la fiche', async ({ page, store, data }) => {
+  store.updateTask(data.tasks.une.id, { jira: 'done', jiraKey: 'PROJ-1' });
+  await page.reload();
+  // Sans URL d'entreprise : la clé s'affiche, sans lien.
+  await expect(row(page, data.tasks.une.id).locator('.jira-key')).toHaveText('PROJ-1');
+  await expect(row(page, data.tasks.une.id).locator('a.jira-link')).toHaveCount(0);
+
+  await page.getByRole('link', { name: 'Réglages' }).click();
+  await expect(page).toHaveURL(/\/admin$/);
+  await expect(page.getByRole('heading', { name: 'Réglages' })).toBeVisible();
+  await page.getByLabel('URL du Jira de l’entreprise').fill('https://entreprise.atlassian.net/');
+  await page.getByRole('button', { name: 'Enregistrer' }).click();
+  await expect(page.getByRole('status')).toHaveText('Réglages enregistrés.');
+  expect(store.settings().jira_base_url).toBe('https://entreprise.atlassian.net');
+
+  // Rechargement direct de /admin : valeur relue en base.
+  await page.reload();
+  await expect(page.getByLabel('URL du Jira de l’entreprise')).toHaveValue('https://entreprise.atlassian.net');
+
+  await page.getByRole('link', { name: 'Retour aux tâches' }).click();
+  await expect(row(page, data.tasks.une.id).locator('a.jira-link')).toHaveAttribute(
+    'href',
+    'https://entreprise.atlassian.net/browse/PROJ-1',
+  );
 });
 
 test('compteur « à reporter » : filtre la liste et le journal (r ou clic)', async ({ page, store, data }) => {
@@ -375,4 +423,17 @@ test('compteur « à reporter » : filtre la liste et le journal (r ou clic)', a
   await counter.click();
   await expect(page.locator('#projects .name')).toHaveText(['Alpha', 'Une', 'Deux', 'Beta']);
   await expect(page.locator('#journal .name')).toHaveText(['Trois']);
+});
+
+test('fiche rouverte : formulaire relu depuis les données à jour', async ({ page, data }) => {
+  await pressDown(page, 2);
+  await page.keyboard.press('o');
+  await page.getByRole('dialog', { name: 'Une' }).getByLabel('Notes').fill('brouillon non enregistré');
+  await page.keyboard.press('Escape');
+  await expect.poll(() => current(page)).toBe(`task:${data.tasks.une.id}`);
+  await page.keyboard.press('Shift+J'); // à reporter
+  await page.keyboard.press('Shift+J'); // reportée : la fiche s'ouvre sur le ticket
+  const dialog = page.getByRole('dialog', { name: 'Une' });
+  await expect(dialog.getByLabel('Ticket Jira')).toBeFocused();
+  await expect(dialog.getByLabel('Notes')).toHaveValue(''); // le brouillon abandonné n'est pas resté
 });

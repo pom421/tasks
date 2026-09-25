@@ -1,4 +1,5 @@
 import { useRef, type ChangeEvent } from 'react';
+import { Settings as SettingsIcon } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useActions } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,8 @@ const SHORTCUTS: [string, string][] = [
   ['Espace', 'Cocher / décocher la tâche'],
   ['Alt+↑ Alt+↓', 'Monter / descendre la tâche, jusque dans le projet voisin (Alt+k / Alt+j)'],
   ['J', 'Suivi Jira : à reporter → reportée → rien (majuscule)'],
-  ['L', 'Lien du ticket Jira (majuscule)'],
+  ['o', 'Ouvrir la fiche de la tâche : notes, lien, ticket Jira'],
+  ['L', 'Ouvrir la fiche sur le ticket Jira (majuscule)'],
   ['r', 'Afficher seulement les tâches à reporter dans Jira'],
   ['x x', 'Supprimer la tâche (x une 2e fois pour confirmer)'],
   ['p', 'Nouveau projet'],
@@ -33,7 +35,7 @@ interface ToolbarProps {
 }
 
 export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, showArchived, onShowArchived, helpOpen, onHelpOpen }: ToolbarProps) {
-  const { act, toast } = useActions();
+  const { act, toast, navigate } = useActions();
   const dbInput = useRef<HTMLInputElement>(null);
   const mdInput = useRef<HTMLInputElement>(null);
 
@@ -88,6 +90,20 @@ export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, showArchived, o
         </Button>
         <Button variant="outline" size="sm" title="Raccourcis (?)" onClick={() => onHelpOpen(true)}>
           ?
+        </Button>
+        <Button variant="outline" size="sm" asChild>
+          <a
+            href="/admin"
+            id="settings-link"
+            title="Réglages"
+            aria-label="Réglages"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate('/admin');
+            }}
+          >
+            <SettingsIcon aria-hidden />
+          </a>
         </Button>
         <input ref={dbInput} type="file" accept=".sqlite,.db,.sqlite3" hidden onChange={pick(importDb)} />
         <input ref={mdInput} type="file" accept=".md,.markdown,.txt" hidden onChange={pick(importMd)} />

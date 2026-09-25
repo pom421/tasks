@@ -1,5 +1,5 @@
-import type { Task } from '../../shared/types.ts';
-import { jiraState } from '../../shared/types.ts';
+import { jiraLink, jiraState, type Task } from '../../shared/types.ts';
+import { useActions } from '@/lib/actions';
 import { cn } from '@/lib/utils';
 
 const LOGO =
@@ -9,12 +9,15 @@ const day = (ts: string) => ts.slice(0, 10).split('-').reverse().join('/');
 
 // Logo Jira (Simple Icons, CC0) : contour gris = à reporter, plein bleu = reportée.
 // La forme distingue les deux états, pas seulement la couleur.
-// Avec un lien, l'icône ouvre le ticket dans un nouvel onglet.
+// Avec un ticket, sa clé s'affiche à côté ; avec un lien (clé + URL Jira
+// d'entreprise, ou lien complet), l'ensemble ouvre le ticket dans un nouvel onglet.
 export function JiraIcon({ task }: { task: Task }) {
+  const { settings } = useActions();
   const state = jiraState(task);
+  const href = jiraLink(task, settings);
   if (state === 'none') return null;
   const label =
-    state === 'wanted' ? 'À reporter dans Jira' : `Reportée dans Jira le ${day(task.jira_at!)}${task.jira_url ? ' — ouvrir le ticket' : ''}`;
+    state === 'wanted' ? 'À reporter dans Jira' : `Reportée dans Jira le ${day(task.jira_at!)}${href ? ' — ouvrir le ticket' : ''}`;
   const icon = (
     <svg
       viewBox="0 0 24 24"
@@ -29,10 +32,18 @@ export function JiraIcon({ task }: { task: Task }) {
       <path d={LOGO} />
     </svg>
   );
-  if (!task.jira_url) return icon;
+  const key = task.jira_key && <span className="jira-key font-mono text-[11px] text-muted-foreground">{task.jira_key}</span>;
+  if (!href) return key ? <span className="flex flex-none items-center gap-1">{icon}{key}</span> : icon;
   return (
-    <a className="jira-link flex-none" href={task.jira_url} target="_blank" rel="noopener noreferrer" tabIndex={-1}>
+    <a
+      className="jira-link flex flex-none items-center gap-1 hover:underline"
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      tabIndex={-1}
+    >
       {icon}
+      {key}
     </a>
   );
 }

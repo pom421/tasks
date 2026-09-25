@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { JournalDay, Project } from '../shared/types.ts';
+import type { JournalDay, Project, Settings, Task } from '../shared/types.ts';
 import { api } from '@/lib/api';
-import { ActionsContext, type Actions } from '@/lib/actions';
+import { ActionsContext, type Actions, type TaskField } from '@/lib/actions';
 import { focusByKey, handleNavKey, restore, snapshot, type FocusSnapshot } from '@/lib/nav';
 import { Toolbar } from '@/components/Toolbar';
 import { ProjectList } from '@/components/ProjectList';
 import { Journal, NO_FILTER, type Filter } from '@/components/Journal';
+import { TaskDialog } from '@/components/TaskDialog';
+import { SettingsPage } from '@/components/SettingsPage';
 
 interface Data {
   projects: Project[];
   days: JournalDay[];
   jiraPending: number;
+  settings: Settings;
 }
 
 // Focus à appliquer une fois les nouvelles données affichées.
@@ -22,7 +25,12 @@ interface PendingFocus {
 }
 
 export function App() {
-  const [data, setData] = useState<Data>({ projects: [], days: [], jiraPending: 0 });
+  const [data, setData] = useState<Data>({ projects: [], days: [], jiraPending: 0, settings: { jira_base_url: null } });
+  // Deux « pages » seulement : la liste (/) et les réglages (/admin), sans routeur.
+  const [path, setPath] = useState(window.location.pathname);
+  // Fiche d'une tâche : id, champ focalisé, open à false pendant l'animation de
+  // fermeture ; opening numérote les ouvertures (formulaire neuf à chaque fois).
+  const [openTask, setOpenTask] = useState<{ id: number; field: TaskField; open: boolean; opening: number } | null>(null);
   const [filter, setFilter] = useState<Filter>(NO_FILTER);
   const [showArchived, setShowArchived] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -43,15 +51,31 @@ export function App() {
       api.state(),
       api.journal({ from: f.from, to: f.to, projectId: Number(f.project) || undefined, jiraPending: f.jira }),
     ]);
-    setData({ projects: state.projects, days: journal.days, jiraPending: state.jiraPending });
+    setData({ projects: state.projects, days: journal.days, jiraPending: state.jiraPending, settings: state.settings });
   }, []);
 
+  // Rechargé à chaque retour sur la liste (les réglages ont pu changer).
   useEffect(() => {
+    if (path === '/admin') return;
     load().catch((err) => toast(err.message));
-  }, [load, toast]);
+  }, [load, toast, path]);
+
+  const navigate = useCallback((to: string) => {
+    window.history.pushState(null, '', to);
+    setPath(to);
+  }, []);
+  useEffect(() => {
+    const onPop = () => setPath(window.location.pathname);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
 
   const actions: Actions = {
     toast,
+    settings: data.settings,
+    navigate,
+    openTask: (task, field = 'notes') =>
+      setOpenTask((o) => ({ id: task.id, field, open: true, opening: (o?.opening ?? 0) + 1 })),
     setLastProject: (id) => (lastProject.current = id),
     act: async (fn, { stay = false } = {}) => {
       let result: unknown;
@@ -93,6 +117,7 @@ export function App() {
 
   // Navigation (↑/↓…) et raccourcis globaux, hors champs de saisie.
   useEffect(() => {
+    if (path === '/admin') return;
     const onKey = (e: KeyboardEvent) => {
       handleNavKey(e);
       if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -121,14 +146,50 @@ export function App() {
     return () => document.removeEventListener('keydown', onKey);
   });
 
+  // Tâche ouverte dans la fiche : relue dans les données à jour (liste ou journal).
+  const allTasks: (Task & { project_name?: string })[] = [
+    ...data.projects.flatMap((p) => p.tasks),
+    ...data.days.flatMap((d) => d.tasks),
+  ];
+  const current = openTask && allTasks.find((t) => t.id === openTask.id);
+  const projectName = (t: Task & { project_name?: string }) =>
+    t.project_name ?? data.projects.find((p) => p.id === t.project_id)?.name ?? '';
+
+  if (path === '/admin') {
+    return <SettingsPage onBack={() => navigate('/')} />;
+  }
+
   return (
     <ActionsContext.Provider value={actions}>
+      {current && (
+        <TaskDialog
+          key={openTask.opening}
+          task={current}
+          projectName={projectName(current)}
+          field={openTask.field}
+          settings={data.settings}
+          open={openTask.open}
+          onClose={() => setOpenTask({ ...openTask, open: false })}
+          onSaved={() => {
+            setOpenTask({ ...openTask, open: false });
+            actions.act(async () => ({ focus: `task:${current.id}` }));
+          }}
+          onOpenSettings={() => {
+            setOpenTask(null);
+            navigate('/admin');
+          }}
+        />
+      )}
       <div className="mx-auto max-w-2xl px-4">
         <Toolbar
           jiraPending={data.jiraPending}
           jiraFilter={filter.jira}
           onJiraFilter={() => changeFilter({ ...filter, jira: !filter.jira })}
-          showArchived={showArchived} onShowArchived={setShowArchived} helpOpen={helpOpen} onHelpOpen={setHelpOpen} />
+          showArchived={showArchived}
+          onShowArchived={setShowArchived}
+          helpOpen={helpOpen}
+          onHelpOpen={setHelpOpen}
+        />
         <main>
           <ProjectList projects={data.projects} showArchived={showArchived} jiraOnly={filter.jira} />
           <Journal days={data.days} projects={data.projects} filter={filter} onFilter={changeFilter} />

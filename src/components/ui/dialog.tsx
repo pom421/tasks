@@ -33,8 +33,12 @@ function DialogTitle({ className, ...props }: React.ComponentProps<typeof Dialog
   return <DialogPrimitive.Title className={cn('text-lg leading-none font-semibold', className)} {...props} />;
 }
 
+function DialogFooter({ className, ...props }: React.ComponentProps<'div'>) {
+  return <div className={cn('flex flex-col-reverse gap-2 sm:flex-row sm:justify-end', className)} {...props} />;
+}
+
 function DialogDescription({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Description>) {
   return <DialogPrimitive.Description className={cn('text-muted-foreground text-sm', className)} {...props} />;
 }
 
-export { Dialog, DialogContent, DialogTitle, DialogDescription };
+export { Dialog, DialogContent, DialogTitle, DialogDescription, DialogFooter };

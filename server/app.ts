@@ -3,8 +3,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { type Store, isDate, today } from './db.ts';
-import type { JiraState } from '../shared/types.ts';
+import { type Store, type TaskPatch, isDate, today } from './db.ts';
+import { JIRA_KEY_RE, type JiraState, type Settings } from '../shared/types.ts';
 import { parseMarkdown } from './markdown.ts';
 
 type Req = IncomingMessage;
@@ -85,15 +85,30 @@ async function readJson(req: Req): Promise<Body> {
   return body as Body;
 }
 
-// Lien Jira : http(s) uniquement. Un lien « javascript: » placé dans un href
+// Liens : http(s) uniquement. Un lien « javascript: » placé dans un href
 // exécuterait du code au clic (XSS).
-function jiraUrl(value: unknown): string | null {
+function httpUrl(value: unknown): string | null {
   if (value === null || value === '') return null;
   const url = typeof value === 'string' && value.length <= 2000 ? URL.parse(value.trim()) : null;
   if (!url || (url.protocol !== 'https:' && url.protocol !== 'http:')) {
     throw new HttpError(400, 'Lien invalide : adresse http(s) attendue');
   }
   return url.href;
+}
+
+// Ticket Jira saisi : clé (PROJ-123) ou lien complet ; vide = aucun ticket.
+function jiraTicket(value: unknown): { jiraKey: string | null; jiraUrl: string | null } {
+  if (value === null || value === '') return { jiraKey: null, jiraUrl: null };
+  const text = typeof value === 'string' ? value.trim() : '';
+  if (JIRA_KEY_RE.test(text.toUpperCase())) return { jiraKey: text.toUpperCase(), jiraUrl: null };
+  if (/^https?:/i.test(text)) return { jiraKey: null, jiraUrl: httpUrl(text) };
+  throw new HttpError(400, 'Ticket invalide : clé (ex. PROJ-123) ou lien http(s) attendu');
+}
+
+function optionalText(value: unknown, label: string, max: number): string | null {
+  if (value === null || value === '') return null;
+  if (typeof value !== 'string' || value.length > max) throw new HttpError(400, `${label} invalide`);
+  return value.trim() || null;
 }
 
 function requireText(value: unknown, label: string): string {
@@ -167,6 +182,16 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
       send(res, 200, store.journal({ from, to, projectId, jiraPending }));
     }],
 
+    ['GET', /^\/api\/settings$/, (_req, res) => send(res, 200, store.settings())],
+
+    ['PUT', /^\/api\/settings$/, async (req, res) => {
+      const body = await readJson(req);
+      const patch: Partial<Settings> = {};
+      // URL Jira d'entreprise, sans « / » final (on y ajoute /browse/CLÉ).
+      if ('jira_base_url' in body) patch.jira_base_url = httpUrl(body.jira_base_url)?.replace(/\/+$/, '') ?? null;
+      send(res, 200, store.updateSettings(patch));
+    }],
+
     ['POST', /^\/api\/projects$/, async (req, res) => {
       const { name } = await readJson(req);
       send(res, 201, store.createProject(requireText(name, 'Nom')));
@@ -199,7 +224,7 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
 
     ['PATCH', /^\/api\/tasks\/(\d+)$/, async (req, res, _url, id) => {
       const body = await readJson(req);
-      const patch: { title?: string; doneAt?: string | null; jira?: JiraState; jiraUrl?: string | null } = {};
+      const patch: TaskPatch = {};
       if ('title' in body) patch.title = requireText(body.title, 'Titre');
       // done: true -> faite (à done_at ou aujourd'hui), false -> à faire.
       const doneAt = body.done_at ?? (body.done ? today() : null);
@@ -212,7 +237,13 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
         if (!['none', 'wanted', 'done'].includes(body.jira as string)) throw new HttpError(400, 'État Jira invalide');
         patch.jira = body.jira as JiraState;
       }
-      if ('jira_url' in body) patch.jiraUrl = jiraUrl(body.jira_url);
+      if ('jira_ticket' in body) {
+        Object.assign(patch, jiraTicket(body.jira_ticket));
+        // Un ticket renseigné vaut « reportée ».
+        if ((patch.jiraKey || patch.jiraUrl) && !('jira' in body)) patch.jira = 'done';
+      }
+      if ('notes' in body) patch.notes = optionalText(body.notes, 'Notes', 20_000);
+      if ('link' in body) patch.link = httpUrl(body.link);
       const task = store.updateTask(Number(id), patch);
       if (!task) throw new HttpError(404, 'Tâche introuvable');
       send(res, 200, task);

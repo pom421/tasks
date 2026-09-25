@@ -1,8 +1,8 @@
 import { useRef, useState, type FocusEvent, type KeyboardEvent } from 'react';
-import { jiraState, type DoneTask, type JiraState, type Task } from '../../shared/types.ts';
+import { hasDetails, jiraState, type DoneTask, type JiraState, type Task } from '../../shared/types.ts';
+import { NotebookText } from 'lucide-react';
 import { api, type TaskPatch } from '@/lib/api';
 import { useActions } from '@/lib/actions';
-import { focusByKey } from '@/lib/nav';
 import { localToday } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -13,15 +13,15 @@ import { JiraIcon } from './JiraIcon';
 // Ligne de tâche, à faire (liste des projets) ou faite (journal).
 // Clavier, où que soit le focus dans la ligne (hors champ de saisie) :
 // Espace coche / décoche, J (majuscule) fait tourner le suivi Jira
-// (rien -> à reporter -> reportée -> rien), L saisit le lien du ticket,
+// (rien -> à reporter -> reportée -> rien), L ouvre la fiche sur le ticket
+// Jira, o ouvre la fiche (notes, lien),
 // x ou Suppr demande la suppression, un second appui la confirme,
 // Alt+↑ / Alt+↓ (ou Alt+k / Alt+j) déplacent la tâche (onMove, tâches à faire).
 export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (direction: -1 | 1) => void }) {
-  const { act, toast } = useActions();
+  const { act, openTask } = useActions();
   const done = 'done_at' in task;
   const [editingDate, setEditingDate] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [editingLink, setEditingLink] = useState(false);
   const navKey = `task:${task.id}`;
 
   const patch = (body: TaskPatch, stay = false) => act(() => api.updateTask(task.id, body), { stay });
@@ -39,35 +39,17 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
     j.queue = j.queue.then(async () => {
       await patch({ jira: next });
       j.pending--;
-      // Tout juste reportée (dernier appui) : on propose de coller le lien du ticket.
-      if (next === 'done' && !j.pending && !task.jira_url) setEditingLink(true);
+      // Tout juste reportée (dernier appui) : on propose de renseigner le ticket.
+      if (next === 'done' && !j.pending && !task.jira_key && !task.jira_url) openTask(task, 'jira');
     });
   };
 
-  // Lien vide = supprimé. Un lien renseigné vaut « reportée ».
-  const saveLink = (value: string) => {
-    if (value && !/^https?:\/\//i.test(value)) {
-      toast('Lien invalide : adresse http(s) attendue');
-      return;
-    }
-    setEditingLink(false);
-    act(
-      async () => {
-        await api.updateTask(task.id, value ? { jira: 'done', jira_url: value } : { jira_url: null });
-        return { focus: navKey };
-      },
-    );
-  };
-  // Le nom reste affiché à côté du champ : on peut lui rendre le focus tout de suite.
-  const closeLink = () => {
-    focusByKey(navKey);
-    setEditingLink(false);
-  };
   const remove = () => act(() => api.deleteTask(task.id), { stay: true });
 
   const onKeyDown = (e: KeyboardEvent<HTMLLIElement>) => {
     const target = e.target as HTMLElement;
-    if (target.matches('input') || e.ctrlKey || e.metaKey) return;
+    // Hors de la ligne (fiche ouverte dans une modale, rendue ailleurs dans le DOM) ou dans un champ : rien.
+    if (!e.currentTarget.contains(target) || target.matches('input, textarea') || e.ctrlKey || e.metaKey) return;
     if (e.altKey) {
       // e.code : sur macOS, Alt+j produit « ∆ » dans e.key.
       const direction = { ArrowUp: -1, KeyK: -1, ArrowDown: 1, KeyJ: 1 }[e.code] as -1 | 1 | undefined;
@@ -95,9 +77,9 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
       e.preventDefault();
       cycleJira();
     }
-    if (e.key === 'L') {
+    if (e.key === 'L' || e.key === 'o') {
       e.preventDefault();
-      setEditingLink(true);
+      openTask(task, e.key === 'L' ? 'jira' : 'notes');
     }
   };
 
@@ -124,22 +106,17 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
           onSave={(title) => patch({ title })}
         />
         <JiraIcon task={task} />
-        {editingLink && (
-          <input
-            className="edit jira-url min-w-0 flex-1 bg-transparent text-sm shadow-[0_1px_0_var(--color-primary)] outline-none placeholder:text-muted-foreground"
-            placeholder="Lien Jira (https://…) · Entrée : enregistrer · Échap : passer"
-            defaultValue={task.jira_url ?? ''}
-            autoFocus
-            autoComplete="off"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') saveLink(e.currentTarget.value.trim());
-              if (e.key === 'Escape') {
-                e.stopPropagation();
-                closeLink();
-              }
-            }}
-            onBlur={() => setEditingLink(false)}
-          />
+        {hasDetails(task) && (
+          <button
+            type="button"
+            tabIndex={-1}
+            className="details flex-none text-muted-foreground hover:text-foreground"
+            title="Détails : notes, lien (o)"
+            aria-label="Voir les détails"
+            onClick={() => openTask(task, 'notes')}
+          >
+            <NotebookText className="size-3.5" aria-hidden />
+          </button>
         )}
       </span>
       {confirmDelete ? (
@@ -151,8 +128,8 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
           <Button variant="ghost" size="xs" className="text-muted-foreground" title="Suivi Jira : à reporter → reportée → rien (J)" onClick={cycleJira}>
             {{ none: 'jira', wanted: 'reportée', done: 'retirer jira' }[jiraState(task)]}
           </Button>
-          <Button variant="ghost" size="xs" className="text-muted-foreground" title="Lien du ticket Jira (L)" onClick={() => setEditingLink(true)}>
-            lien
+          <Button variant="ghost" size="xs" className="text-muted-foreground" title="Notes, lien, ticket Jira (o)" onClick={() => openTask(task, 'notes')}>
+            détails
           </Button>
           {done &&
             (editingDate ? (
