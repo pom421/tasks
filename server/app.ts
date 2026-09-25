@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { type Store, type TaskPatch, type TaskRow, isDate, today } from './db.ts';
+import { type ProjectPatch, type Store, type TaskPatch, type TaskRow, isDate, today } from './db.ts';
 import { JIRA_KEY_RE, type JiraState, type Settings } from '../shared/types.ts';
 import { parseMarkdown } from './markdown.ts';
 
@@ -232,9 +232,10 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
 
     ['PATCH', /^\/api\/projects\/(\d+)$/, async (req, res, _url, id) => {
       const body = await readJson(req);
-      const patch: { name?: string; archived?: boolean } = {};
+      const patch: ProjectPatch = {};
       if ('name' in body) patch.name = requireText(body.name, 'Nom');
       if ('archived' in body) patch.archived = Boolean(body.archived);
+      if ('favorite' in body) patch.favorite = Boolean(body.favorite);
       const project = store.updateProject(Number(id), patch);
       if (!project) throw new HttpError(404, 'Projet introuvable');
       send(res, 200, project);

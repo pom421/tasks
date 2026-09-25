@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { Archive, ArchiveRestore, Heart, Trash2 } from 'lucide-react';
 import { jiraState, type Project, type Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
 import { useActions } from '@/lib/actions';
@@ -19,6 +20,7 @@ interface ProjectCardProps {
 function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
   const { act, setLastProject } = useActions();
   const archived = Boolean(p.archived_at);
+  const favorite = Boolean(p.favorite_at);
 
   const remove = () => {
     if (confirm(`Supprimer le projet « ${p.name} » et toutes ses tâches (y compris l'historique) ?`)) {
@@ -52,17 +54,38 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
           onSave={(name) => act(() => api.updateProject(p.id, { name }))}
         />
         <span className="count text-xs text-muted-foreground">{p.tasks.length || ''}</span>
-        <span className="actions invisible ml-auto flex gap-0.5 group-hover:visible group-focus-within:visible">
+        {/* Bouton bascule : nom fixe (« Favori »), état annoncé par aria-pressed. */}
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          className={cn('favorite self-center', favorite ? 'text-red-600' : 'text-muted-foreground')}
+          aria-label="Favori"
+          aria-pressed={favorite}
+          title={favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+          onClick={() => act(() => api.updateProject(p.id, { favorite: !favorite }))}
+        >
+          <Heart aria-hidden fill={favorite ? 'currentColor' : 'none'} />
+        </Button>
+        <span className="actions invisible ml-auto flex gap-0.5 self-center group-hover:visible group-focus-within:visible">
           <Button
             variant="ghost"
-            size="xs"
-            className="text-muted-foreground"
+            size="icon-xs"
+            className="archive text-muted-foreground"
+            aria-label={archived ? 'Désarchiver le projet' : 'Archiver le projet'}
+            title={archived ? 'Désarchiver le projet' : 'Archiver le projet'}
             onClick={() => act(() => api.updateProject(p.id, { archived: !archived }))}
           >
-            {archived ? 'désarchiver' : 'archiver'}
+            {archived ? <ArchiveRestore aria-hidden /> : <Archive aria-hidden />}
           </Button>
-          <Button variant="ghost" size="xs" className="text-muted-foreground hover:text-destructive" onClick={remove}>
-            supprimer
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            className="delete text-muted-foreground hover:text-destructive"
+            aria-label="Supprimer le projet"
+            title="Supprimer le projet"
+            onClick={remove}
+          >
+            <Trash2 aria-hidden />
           </Button>
         </span>
       </div>
@@ -85,12 +108,14 @@ interface ProjectListProps {
   projects: Project[];
   showArchived: boolean;
   jiraOnly: boolean; // filtre « à reporter dans Jira »
+  favoritesOnly: boolean;
 }
 
-export function ProjectList({ projects, showArchived, jiraOnly }: ProjectListProps) {
+export function ProjectList({ projects, showArchived, jiraOnly, favoritesOnly }: ProjectListProps) {
   const { act } = useActions();
   const visible = projects
     .filter((p) => showArchived || !p.archived_at)
+    .filter((p) => !favoritesOnly || p.favorite_at)
     .map((p) => (jiraOnly ? { ...p, tasks: p.tasks.filter((t) => jiraState(t) === 'wanted') } : p))
     .filter((p) => !jiraOnly || p.tasks.length > 0);
 
@@ -155,7 +180,11 @@ export function ProjectList({ projects, showArchived, jiraOnly }: ProjectListPro
         ))}
         {!visible.length && (
           <p className="empty mt-3 italic text-muted-foreground">
-            {jiraOnly ? 'Aucune tâche à faire à reporter.' : 'Aucun projet. Créez-en un ci-dessous.'}
+            {jiraOnly
+              ? 'Aucune tâche à faire à reporter.'
+              : favoritesOnly
+                ? 'Aucun projet favori : cliquez sur le cœur d’un projet.'
+                : 'Aucun projet. Créez-en un ci-dessous.'}
           </p>
         )}
       </section>

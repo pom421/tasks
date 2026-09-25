@@ -43,7 +43,7 @@ export const api = {
     return request<Journal>('GET', `/api/journal?${params}`);
   },
   createProject: (name: string) => request<{ id: number }>('POST', '/api/projects', { name }),
-  updateProject: (id: number, patch: { name?: string; archived?: boolean }) =>
+  updateProject: (id: number, patch: { name?: string; archived?: boolean; favorite?: boolean }) =>
     request('PATCH', `/api/projects/${id}`, patch),
   deleteProject: (id: number) => request('DELETE', `/api/projects/${id}`),
   createTask: (projectId: number, title: string) => request('POST', '/api/tasks', { project_id: projectId, title }),

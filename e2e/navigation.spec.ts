@@ -303,6 +303,54 @@ test('vers un projet vide ; les projets archivés masqués sont sautés', async 
   expect(store.state().projects.find((p) => p.id === gamma.id)!.tasks.map((t) => t.title)).toEqual(['Deux']);
 });
 
+// --- Favoris, archive, suppression ---------------------------------------
+
+test('cœur : projet favori (plein, rouge) ; bouton Favoris et * filtrent', async ({ page, store, data }) => {
+  await expect(page.locator('#favorites-only')).toHaveCount(0); // aucun favori : pas de bouton
+  const heart = page.locator(`#project-${data.beta.id}`).getByRole('button', { name: 'Favori' });
+  await expect(heart).toHaveAttribute('aria-pressed', 'false');
+  await expect(heart).toHaveAttribute('title', 'Ajouter aux favoris');
+  await heart.click();
+  await expect(heart).toHaveAttribute('aria-pressed', 'true');
+  await expect(heart).toHaveAttribute('title', 'Retirer des favoris');
+  await expect(heart.locator('svg')).toHaveAttribute('fill', 'currentColor');
+  expect(store.state().projects.find((p) => p.id === data.beta.id)!.favorite_at).toBeTruthy();
+
+  const filter = page.locator('#favorites-only');
+  await filter.click();
+  await expect(filter).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.project')).toHaveCount(1);
+  await expect(page.locator('.project .name').first()).toHaveText('Beta');
+
+  // * au clavier : bascule le filtre.
+  await page.keyboard.press('*');
+  await expect(page.locator('.project')).toHaveCount(2);
+  await page.keyboard.press('*');
+  await expect(page.locator('.project')).toHaveCount(1);
+});
+
+test('archiver et supprimer : boutons icônes nommés, titre au survol', async ({ page, store, data }) => {
+  const alpha = page.locator(`#project-${data.alpha.id}`);
+  // Boutons visibles au survol (ou au focus du projet) seulement.
+  await alpha.locator('.project-head').hover();
+  const archive = alpha.getByRole('button', { name: 'Archiver le projet' });
+  await expect(archive).toHaveAttribute('title', 'Archiver le projet');
+  await archive.click();
+  await expect(page.locator('.project')).toHaveCount(1);
+  expect(store.state().projects.find((p) => p.id === data.alpha.id)!.archived_at).toBeTruthy();
+
+  await page.locator('#show-archived').click();
+  await alpha.locator('.project-head').hover();
+  await expect(alpha.getByRole('button', { name: 'Désarchiver le projet' })).toBeVisible();
+
+  const beta = page.locator(`#project-${data.beta.id}`);
+  page.once('dialog', (d) => d.accept());
+  await beta.locator('.project-head').hover();
+  await beta.getByRole('button', { name: 'Supprimer le projet' }).click();
+  await expect(beta).toHaveCount(0);
+  expect(store.state().projects.map((p) => p.name)).toEqual(['Alpha']);
+});
+
 // --- Suivi Jira ------------------------------------------------------------
 
 const row = (page: Page, taskId: number) => page.locator(`li.task:has([data-nav-key="task:${taskId}"])`);

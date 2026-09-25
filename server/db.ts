@@ -34,6 +34,13 @@ export interface ProjectRow {
   name: string;
   created_at: string;
   archived_at: string | null;
+  favorite_at: string | null;
+}
+
+export interface ProjectPatch {
+  name?: string;
+  archived?: boolean;
+  favorite?: boolean;
 }
 
 export interface TaskRow extends Task {
@@ -120,7 +127,7 @@ export class Store {
   // --- Lecture -------------------------------------------------------------
 
   state(): State {
-    const projects = this.db.prepare('SELECT id, name, archived_at FROM project ORDER BY position, id').all() as Omit<
+    const projects = this.db.prepare('SELECT id, name, archived_at, favorite_at FROM project ORDER BY position, id').all() as Omit<
       Project,
       'tasks'
     >[];
@@ -212,11 +219,16 @@ export class Store {
     return this.project(lastInsertRowid)!;
   }
 
-  updateProject(id: number, { name, archived }: { name?: string; archived?: boolean }) {
+  updateProject(id: number, { name, archived, favorite }: ProjectPatch) {
     if (name !== undefined) this.db.prepare('UPDATE project SET name = ? WHERE id = ?').run(name, id);
     if (archived !== undefined) {
       this.db
         .prepare(`UPDATE project SET archived_at = ${archived ? "datetime('now')" : 'NULL'} WHERE id = ?`)
+        .run(id);
+    }
+    if (favorite !== undefined) {
+      this.db
+        .prepare(`UPDATE project SET favorite_at = ${favorite ? "datetime('now')" : 'NULL'} WHERE id = ?`)
         .run(id);
     }
     return this.project(id);

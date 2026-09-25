@@ -35,6 +35,7 @@ export function App() {
   const [openTask, setOpenTask] = useState<{ id: number; field: TaskField; open: boolean; opening: number } | null>(null);
   const [filter, setFilter] = useState<Filter>(NO_FILTER);
   const [showArchived, setShowArchived] = useState(false);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const filterRef = useRef(filter);
@@ -161,6 +162,7 @@ export function App() {
         f: () => document.getElementById('filter-project')?.focus(),
         '/': () => document.getElementById('log-search')?.focus(),
         r: () => changeFilter({ ...filterRef.current, jira: !filterRef.current.jira }),
+        '*': () => setFavoritesOnly((v) => !v),
         u: undo,
         '?': () => setHelpOpen(true),
         // Échap sur un élément de la liste : on reste en navigation.
@@ -209,13 +211,16 @@ export function App() {
           jiraPending={data.jiraPending}
           jiraFilter={filter.jira}
           onJiraFilter={() => changeFilter({ ...filter, jira: !filter.jira })}
+          favorites={data.projects.filter((p) => p.favorite_at && (showArchived || !p.archived_at)).length}
+          favoritesOnly={favoritesOnly}
+          onFavoritesOnly={() => setFavoritesOnly((v) => !v)}
           showArchived={showArchived}
           onShowArchived={setShowArchived}
           helpOpen={helpOpen}
           onHelpOpen={setHelpOpen}
         />
         <main>
-          <ProjectList projects={data.projects} showArchived={showArchived} jiraOnly={filter.jira} />
+          <ProjectList projects={data.projects} showArchived={showArchived} jiraOnly={filter.jira} favoritesOnly={favoritesOnly} />
           <Journal days={data.days} dates={data.dates} projects={data.projects} filter={filter} onFilter={changeFilter} />
         </main>
       </div>

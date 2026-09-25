@@ -84,6 +84,11 @@ export const MIGRATIONS: Migration[] = [
       ALTER TABLE project ADD COLUMN position INTEGER NOT NULL DEFAULT 0;
       UPDATE project SET position = id;`,
   },
+  {
+    version: 8,
+    name: 'projets favoris',
+    sql: `ALTER TABLE project ADD COLUMN favorite_at TEXT;`,
+  },
 ];
 
 export const LATEST_VERSION = MIGRATIONS.at(-1)!.version;

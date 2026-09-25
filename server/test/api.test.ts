@@ -109,6 +109,17 @@ test('archivage et suppression en cascade', async () => {
   assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { title: 'y' })).status, 404);
 });
 
+test('projet favori', async () => {
+  const { body: p } = await call('POST', '/api/projects', { name: 'Préféré' });
+  assert.equal(p.favorite_at, null);
+  const { body: fav } = await call('PATCH', `/api/projects/${p.id}`, { favorite: true });
+  assert.ok(fav.favorite_at);
+  const { body: state } = await call('GET', '/api/state');
+  assert.ok(state.projects.find((x: { id: number }) => x.id === p.id).favorite_at);
+  const { body: off } = await call('PATCH', `/api/projects/${p.id}`, { favorite: false });
+  assert.equal(off.favorite_at, null);
+});
+
 test('export puis import restaure la base', async () => {
   const before = (await call('GET', '/api/state')).body;
   const { status, body: file } = await call('GET', '/api/export');

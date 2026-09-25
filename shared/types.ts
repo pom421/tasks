@@ -38,6 +38,7 @@ export interface Project {
   id: number;
   name: string;
   archived_at: string | null;
+  favorite_at: string | null;
   tasks: Task[]; // tâches à faire uniquement
 }
 

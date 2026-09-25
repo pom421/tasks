@@ -39,6 +39,7 @@ Vérifications :
 - Log (en bas, un cadre par jour) : par défaut, aujourd'hui (même vide). `<` / `>` passent au jour précédent / suivant qui a des entrées (désactivés en bout de liste) ; le bouton « Aujourd’hui », tout à droite, y ramène (désactivé si on y est déjà). Filtres par période (du… au…, bornes incluses) et par projet. Renseigner le début met la même date en fin : une journée entière.
 - Recherche dans le Log (`/`) : toutes les journées contenant une tâche dont le titre, le contenu ou le ticket contient le texte (sans tenir compte des majuscules ni des accents). Le nombre de résultats s'affiche au centre : « 5 tâches trouvées dans 2 journées ». `Échap` vide le champ.
 - Nouveau projet → curseur directement sur la saisie de sa première tâche.
+- Projet : cœur ♡ = favori (plein et rouge quand actif). Le bouton « Favoris », sous la barre d'outils (visible dès qu'il y a un favori), n'affiche que ceux-là (`*`). Au survol d'un projet : icônes archive (archiver / désarchiver) et corbeille (supprimer), avec leur nom en info-bulle.
 - Souris : clic sur un nom pour le modifier. Titre trop long : coupé par « … », affiché en entier au survol (ou au focus clavier).
 - Fiche d'une tâche (`Maj+Entrée`, `o` ou icône 🗒) : titre complet, identifiant du ticket (`PROJ-123`), puis contenu en Markdown. L'icône 🗒 signale une tâche qui a du contenu.
   - Lecture seule par défaut. `e` (comme GitLab) passe tout en édition : titre, puis `Tab` → ticket, puis `Tab` → contenu. Double-clic sur le contenu : édition directement dedans.
@@ -62,6 +63,7 @@ Clavier (`?` affiche l'aide) :
 | `J` (majuscule) | Report : à reporter → reporté (fiche proposée pour le ticket) → rien |
 | `L` (majuscule) | Ouvrir la fiche sur le champ « Ticket » |
 | `r` | Afficher seulement les tâches à reporter (ou clic sur « N tâches à reporter ») |
+| `*` | Afficher seulement les projets favoris (ou clic sur « Favoris ») |
 | `x` puis `x` | Supprimer la tâche : le 1er appui demande confirmation, le 2e supprime (`Échap` annule). `Suppr` marche aussi |
 | `u` | Annuler la dernière action sur une tâche : cocher / décocher, renommer, supprimer (une seule, pas les modifications faites dans la fiche). Le curseur revient sur la tâche |
 | `p` / `n` | Nouveau projet / nouvelle tâche |
@@ -108,7 +110,7 @@ En dev, l'API est branchée dans le serveur Vite (`vite.config.ts`) : une seule 
 
 ## Modèle de données
 
-`project` (id, name, created_at, archived_at, position) : 1 projet a 0..n `task` (id, project_id, title, created_at, done_at, position, notes, jira_wanted_at, jira_at, jira_key, jira_url).
+`project` (id, name, created_at, archived_at, favorite_at, position) : 1 projet a 0..n `task` (id, project_id, title, created_at, done_at, position, notes, jira_wanted_at, jira_at, jira_key, jira_url).
 `setting` (key, value) : réglages de l'application (ex. `jira_base_url`).
 `position` = ordre des projets, et ordre (priorité) des tâches dans leur projet.
 `notes` = contenu en Markdown. Une tâche est faite quand `done_at` est rempli (le journal, ce sont ces tâches-là), à reporter quand `jira_wanted_at` l'est et pas `jira_at`, reportée quand `jira_at` l'est. Ticket : `jira_key` (lien construit avec `jira_base_url`, qui peut donc changer) ou `jira_url` (lien complet). Liens en http(s) uniquement.

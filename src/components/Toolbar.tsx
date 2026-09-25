@@ -1,5 +1,5 @@
 import { useRef, type ChangeEvent } from 'react';
-import { Settings as SettingsIcon } from 'lucide-react';
+import { Heart, Settings as SettingsIcon } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useActions } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ const SHORTCUTS: [string, string][] = [
   ['J', 'Report : à reporter → reporté → rien (majuscule)'],
   ['L', 'Ouvrir la fiche sur l’identifiant du ticket (majuscule)'],
   ['r', 'Afficher seulement les tâches à reporter'],
+  ['*', 'Afficher seulement les projets favoris'],
   ['x x', 'Supprimer la tâche (x une 2e fois pour confirmer)'],
   ['u', 'Annuler la dernière action (cocher, renommer, supprimer)'],
   ['p', 'Nouveau projet'],
@@ -31,13 +32,16 @@ interface ToolbarProps {
   jiraPending: number;
   jiraFilter: boolean;
   onJiraFilter: () => void;
+  favorites: number;
+  favoritesOnly: boolean;
+  onFavoritesOnly: () => void;
   showArchived: boolean;
   onShowArchived: (value: boolean) => void;
   helpOpen: boolean;
   onHelpOpen: (open: boolean) => void;
 }
 
-export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, showArchived, onShowArchived, helpOpen, onHelpOpen }: ToolbarProps) {
+export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, favorites, favoritesOnly, onFavoritesOnly, showArchived, onShowArchived, helpOpen, onHelpOpen }: ToolbarProps) {
   const { act, toast, navigate } = useActions();
   const dbInput = useRef<HTMLInputElement>(null);
   const mdInput = useRef<HTMLInputElement>(null);
@@ -101,7 +105,19 @@ export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, showArchived, o
       </nav>
 
       {/* Ligne réservée (hauteur fixe) : le bouton apparaît sans rien décaler. */}
-      <div className="flex h-8 w-full justify-end">
+      <div className="flex h-8 w-full justify-end gap-1.5">
+        {(favorites > 0 || favoritesOnly) && (
+          <Button
+            id="favorites-only"
+            variant={favoritesOnly ? 'default' : 'outline'}
+            size="sm"
+            aria-pressed={favoritesOnly}
+            title="Afficher seulement les projets favoris (*)"
+            onClick={onFavoritesOnly}
+          >
+            <Heart aria-hidden className="text-red-600" fill="currentColor" /> Favoris
+          </Button>
+        )}
         {(jiraPending > 0 || jiraFilter) && (
           <Button
             id="jira-pending"
