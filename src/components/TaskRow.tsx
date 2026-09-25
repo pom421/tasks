@@ -126,7 +126,9 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
         <EditableName
           value={task.title}
           navKey={navKey}
-          className={done ? 'text-muted-foreground' : undefined}
+          // Toute la largeur jusqu'aux icônes : un clic n'importe où sur la ligne
+          // passe le titre en édition (et donne le curseur clavier à la tâche).
+          className={cn('flex-1', done && 'text-muted-foreground')}
           truncate
           onSave={rename}
         />
@@ -149,9 +151,9 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
           x pour supprimer · Échap pour annuler
         </span>
       ) : (
-        <span className="actions invisible flex flex-none gap-0.5 group-hover:visible group-focus-within:visible">
-          {done &&
-            (editingDate ? (
+        done && (
+          <span className="actions invisible flex flex-none gap-0.5 group-hover:visible group-focus-within:visible">
+            {editingDate ? (
               <input
                 type="date"
                 className="text-xs"
@@ -165,8 +167,9 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
               <Button variant="ghost" size="xs" className="text-muted-foreground" title="Changer la date" onClick={() => setEditingDate(true)}>
                 date
               </Button>
-            ))}
-        </span>
+            )}
+          </span>
+        )
       )}
     </li>
   );

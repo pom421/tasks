@@ -186,6 +186,28 @@ test('tâche : pas de bouton de suppression à la souris, seulement x x (ni fen�
   await expect(une.getByText('✕')).toHaveCount(0);
 });
 
+test('ligne de tâche : icônes alignées à droite, clic n’importe où sur la ligne = édition puis flèches', async ({ page, store, data }) => {
+  store.updateTask(data.tasks.une.id, { jira: 'wanted', notes: 'du contenu' });
+  await reload(page);
+  // Première ligne (le titre, porteur de data-nav-key, devient un champ en édition).
+  const une = page.locator('#projects li.task').first();
+  const box = async (sel: string) => (await une.locator(sel).boundingBox())!;
+  const rowBox = (await une.boundingBox())!;
+  // Icônes (report, détails) collées au bord droit de la ligne.
+  const details = await box('.details');
+  expect(rowBox.x + rowBox.width - (details.x + details.width)).toBeLessThan(10);
+  expect((await box('.report')).x).toBeGreaterThan(rowBox.x + rowBox.width / 2);
+
+  // Clic à droite du texte, juste avant les icônes : le titre passe en édition.
+  const report = await box('.report');
+  await page.mouse.click(report.x - 20, report.y + report.height / 2);
+  await expect(une.locator('input.edit')).toBeFocused();
+  await page.keyboard.press('Escape'); // retour au titre, curseur sur la tâche
+  expect(await current(page)).toBe(`task:${data.tasks.une.id}`);
+  await page.keyboard.press('ArrowDown');
+  expect(await current(page)).toBe(`task:${data.tasks.deux.id}`);
+});
+
 test('Suppr fonctionne comme x (double appui)', async ({ page, store }) => {
   await pressDown(page, 2);
   await page.keyboard.press('Delete');
