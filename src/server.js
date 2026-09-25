@@ -16,6 +16,22 @@ const MIME = {
 };
 const MAX_BODY = 50 * 1024 * 1024;
 
+// En-têtes de sécurité sur toutes les réponses. Le front n'a ni script
+// inline ni ressource externe : 'self' suffit partout.
+const SECURITY_HEADERS = {
+  'Content-Security-Policy':
+    "default-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'",
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'no-referrer',
+  'Cross-Origin-Opener-Policy': 'same-origin',
+  'Cross-Origin-Resource-Policy': 'same-origin',
+  'X-Frame-Options': 'DENY',
+};
+
+// Noms d'hôte acceptés dans l'en-tête Host : bloque le DNS rebinding
+// (un site malveillant dont le domaine pointe vers 127.0.0.1).
+const DEFAULT_ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
+
 class HttpError extends Error {
   constructor(status, message) {
     super(message);
@@ -29,15 +45,25 @@ function readBody(req) {
     let size = 0;
     req.on('data', (c) => {
       size += c.length;
-      if (size > MAX_BODY) reject(new HttpError(413, 'Fichier trop volumineux'));
-      else chunks.push(c);
+      if (size > MAX_BODY) {
+        reject(new HttpError(413, 'Fichier trop volumineux'));
+        req.destroy();
+      } else chunks.push(c);
     });
     req.on('end', () => resolve(Buffer.concat(chunks)));
     req.on('error', reject);
   });
 }
 
+// Exiger un Content-Type « non simple » force le navigateur à faire un
+// preflight CORS pour toute requête venue d'un autre site : elle échoue.
+function requireType(req, type) {
+  const actual = (req.headers['content-type'] ?? '').split(';')[0].trim().toLowerCase();
+  if (actual !== type) throw new HttpError(415, `Content-Type attendu : ${type}`);
+}
+
 async function readJson(req) {
+  requireType(req, 'application/json');
   const buf = await readBody(req);
   try {
     return buf.length ? JSON.parse(buf) : {};
@@ -56,12 +82,35 @@ function tmpFile(ext) {
 }
 
 function send(res, status, body) {
-  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
+  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
   res.end(JSON.stringify(body));
 }
 
+// Anti-CSRF : toute requête qui modifie des données doit venir de la page elle-même.
+function checkOrigin(req) {
+  if (req.method === 'GET' || req.method === 'HEAD') return;
+  if (req.headers['sec-fetch-site'] && req.headers['sec-fetch-site'] !== 'same-origin') {
+    throw new HttpError(403, 'Requête inter-sites refusée');
+  }
+  const origin = req.headers.origin;
+  if (origin && URL.parse(origin)?.host !== req.headers.host) {
+    throw new HttpError(403, 'Origine refusée');
+  }
+}
+
+function checkHost(req, allowedHosts) {
+  const host = (req.headers.host ?? '').replace(/:\d+$/, '').toLowerCase();
+  if (!allowedHosts.includes(host)) throw new HttpError(421, 'Hôte non autorisé');
+}
+
 function serveStatic(req, res) {
-  const urlPath = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+  if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, { error: 'Méthode non autorisée' });
+  let urlPath;
+  try {
+    urlPath = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+  } catch {
+    return send(res, 400, { error: 'URL invalide' });
+  }
   const file = path.join(PUBLIC_DIR, urlPath === '/' ? 'index.html' : urlPath);
   if (!file.startsWith(PUBLIC_DIR + path.sep)) return send(res, 403, { error: 'Interdit' });
   fs.readFile(file, (err, data) => {
@@ -71,7 +120,7 @@ function serveStatic(req, res) {
   });
 }
 
-export function createApp(store) {
+export function createApp(store, { allowedHosts = DEFAULT_ALLOWED_HOSTS } = {}) {
   // Table de routage : [méthode, regex, handler(req, res, ...params)].
   const routes = [
     ['GET', /^\/api\/state$/, (req, res) => send(res, 200, store.state())],
@@ -148,8 +197,9 @@ export function createApp(store) {
 
     ['POST', /^\/api\/import$/, async (req, res) => {
       const file = tmpFile('.sqlite');
+      requireType(req, 'application/octet-stream');
       try {
-        fs.writeFileSync(file, await readBody(req));
+        fs.writeFileSync(file, await readBody(req), { mode: 0o600 });
         store.replaceWith(file);
       } catch (err) {
         throw err instanceof HttpError ? err : new HttpError(400, err.message);
@@ -160,6 +210,7 @@ export function createApp(store) {
     }],
 
     ['POST', /^\/api\/import-markdown$/, async (req, res) => {
+      requireType(req, 'text/markdown');
       const items = parseMarkdown((await readBody(req)).toString('utf8'));
       if (!items.length) throw new HttpError(400, 'Aucun projet ni tâche trouvé');
       send(res, 200, store.importItems(items));
@@ -167,8 +218,11 @@ export function createApp(store) {
   ];
 
   return async (req, res) => {
-    const url = new URL(req.url, 'http://x');
+    for (const [k, v] of Object.entries(SECURITY_HEADERS)) res.setHeader(k, v);
     try {
+      checkHost(req, allowedHosts);
+      checkOrigin(req);
+      const url = new URL(req.url, 'http://x');
       if (!url.pathname.startsWith('/api/')) return serveStatic(req, res);
       for (const [method, re, handler] of routes) {
         const m = url.pathname.match(re);
@@ -176,16 +230,23 @@ export function createApp(store) {
       }
       throw new HttpError(404, 'Route inconnue');
     } catch (err) {
+      // Ne jamais renvoyer le détail d'une erreur inattendue au client.
       if (!(err instanceof HttpError)) console.error(err);
-      if (!res.headersSent) send(res, err.status ?? 500, { error: err.message });
+      const message = err instanceof HttpError ? err.message : 'Erreur interne';
+      if (!res.headersSent) send(res, err.status ?? 500, { error: message });
     }
   };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const port = Number(process.env.PORT) || 3000;
+  // Écoute sur la boucle locale uniquement : l'app n'a pas d'authentification.
+  const host = process.env.HOST || '127.0.0.1';
+  const allowedHosts = process.env.ALLOWED_HOSTS?.split(',').map((h) => h.trim().toLowerCase());
   const store = new Store(process.env.TASKS_DB || path.join(PUBLIC_DIR, '..', 'data', 'tasks.db'));
-  http.createServer(createApp(store)).listen(port, () => {
+  const server = http.createServer(createApp(store, allowedHosts && { allowedHosts }));
+  server.requestTimeout = 30_000;
+  server.listen(port, host, () => {
     console.log(`Tasks : http://localhost:${port}`);
   });
 }

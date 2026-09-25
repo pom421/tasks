@@ -24,11 +24,18 @@ after(() => {
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
-async function call(method, url, body) {
+function contentType(body) {
+  if (body instanceof Uint8Array) return 'application/octet-stream';
+  if (typeof body === 'string') return 'text/markdown';
+  return 'application/json';
+}
+
+async function call(method, url, body, headers = {}) {
+  const json = body !== undefined && contentType(body) === 'application/json';
   const res = await fetch(base + url, {
     method,
-    headers: body && typeof body !== 'string' && !(body instanceof Uint8Array) ? { 'Content-Type': 'application/json' } : {},
-    body: body && typeof body !== 'string' && !(body instanceof Uint8Array) ? JSON.stringify(body) : body,
+    headers: body === undefined ? headers : { 'Content-Type': contentType(body), ...headers },
+    body: json ? JSON.stringify(body) : body,
   });
   const type = res.headers.get('content-type') ?? '';
   return { status: res.status, body: type.includes('json') ? await res.json() : Buffer.from(await res.arrayBuffer()) };
@@ -95,7 +102,8 @@ test('export puis import restaure la base', async () => {
   assert.equal((await call('POST', '/api/import', new Uint8Array(file))).status, 200);
   assert.deepEqual((await call('GET', '/api/state')).body, before);
 
-  assert.equal((await call('POST', '/api/import', 'pas une base')).status, 400);
+  const garbage = new TextEncoder().encode('pas une base');
+  assert.equal((await call('POST', '/api/import', garbage)).status, 400);
   assert.deepEqual((await call('GET', '/api/state')).body, before);
 });
 
@@ -118,4 +126,44 @@ test('import markdown', async () => {
     j.days[0].tasks.map((t) => [t.project_name, t.title]),
     [['Maison', 'Acheter peinture'], ['Sans projet', 'Tâche isolée']],
   );
+});
+
+test('sécurité : en-têtes, CSRF, DNS rebinding, Content-Type', async () => {
+  const res = await fetch(`${base}/`);
+  assert.match(res.headers.get('content-security-policy'), /default-src 'self'/);
+  assert.equal(res.headers.get('x-content-type-options'), 'nosniff');
+
+  // Formulaire HTML d'un autre site : Content-Type simple -> refusé.
+  const form = await fetch(`${base}/api/projects`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ name: 'pirate' }),
+  });
+  assert.equal(form.status, 415);
+
+  assert.equal((await call('POST', '/api/projects', { name: 'x' }, { Origin: 'https://evil.example' })).status, 403);
+  assert.equal((await call('POST', '/api/projects', { name: 'x' }, { 'Sec-Fetch-Site': 'cross-site' })).status, 403);
+  assert.equal((await call('POST', '/api/projects', { name: 'x' }, { Origin: 'null' })).status, 403);
+
+  // Host forgé (DNS rebinding) : refusé, même en lecture.
+  const rebinding = await new Promise((resolve) => {
+    http.get(`${base}/api/export`, { headers: { Host: 'evil.example' } }, (r) => resolve(r.statusCode));
+  });
+  assert.equal(rebinding, 421);
+
+  assert.equal((await fetch(`${base}/%E0%A4%A`)).status, 400);
+  assert.equal((await fetch(`${base}/../package.json`)).status, 404);
+});
+
+test('import refuse une base contenant un trigger', async () => {
+  const { DatabaseSync } = await import('node:sqlite');
+  const file = path.join(dir, 'evil.sqlite');
+  const evil = new DatabaseSync(file);
+  evil.exec(`CREATE TABLE project (id INTEGER PRIMARY KEY, name TEXT);
+             CREATE TABLE task (id INTEGER PRIMARY KEY, project_id INT, title TEXT);
+             CREATE TRIGGER t AFTER INSERT ON task BEGIN DELETE FROM project; END;`);
+  evil.close();
+  const res = await call('POST', '/api/import', new Uint8Array(fs.readFileSync(file)));
+  assert.equal(res.status, 400);
+  assert.match(res.body.error, /trigger/);
 });

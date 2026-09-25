@@ -53,6 +53,8 @@ function migrate(db) {
 function openDb(file) {
   const db = new DatabaseSync(file);
   db.exec('PRAGMA foreign_keys = ON');
+  // Ne pas exécuter de fonctions SQL appelées depuis le schéma (vues, triggers) d'une base importée.
+  db.exec('PRAGMA trusted_schema = OFF');
   migrate(db);
   return db;
 }
@@ -69,6 +71,12 @@ export function validateDbFile(file) {
     if (!tables.includes('project') || !tables.includes('task')) {
       throw new Error('tables project/task absentes');
     }
+    // Seuls tables et index sont attendus : un trigger ou une vue injecté
+    // s'exécuterait ensuite à chaque écriture.
+    const extra = db.prepare("SELECT count(*) AS n FROM sqlite_master WHERE type IN ('trigger', 'view')").get();
+    if (extra.n) throw new Error('triggers ou vues non autorisés');
+    const { quick_check: check } = db.prepare('PRAGMA quick_check').get();
+    if (check !== 'ok') throw new Error('base corrompue');
     const { user_version: v } = db.prepare('PRAGMA user_version').get();
     if (v > MIGRATIONS.length) throw new Error('base créée par une version plus récente');
   } catch (err) {
@@ -81,8 +89,9 @@ export function validateDbFile(file) {
 export class Store {
   constructor(file) {
     this.file = file;
-    if (file !== ':memory:') fs.mkdirSync(path.dirname(file), { recursive: true });
+    if (file !== ':memory:') fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
     this.db = openDb(file);
+    if (file !== ':memory:') fs.chmodSync(file, 0o600);
   }
 
   close() {
@@ -226,6 +235,7 @@ export class Store {
     this.db.close();
     for (const suffix of ['-wal', '-shm']) fs.rmSync(this.file + suffix, { force: true });
     fs.copyFileSync(file, this.file);
+    fs.chmodSync(this.file, 0o600);
     this.db = openDb(this.file);
   }
 }

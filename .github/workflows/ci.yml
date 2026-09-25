@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Jeton GitHub en lecture seule : la CI n'a rien à écrire.
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      # corepack lit packageManager : même pnpm qu'en local, vérifié par hash.
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
