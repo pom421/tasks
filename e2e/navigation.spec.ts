@@ -518,3 +518,24 @@ test('ligne épurée et fiche ordonnée : titre, ticket, contenu', async ({ page
   const labels = await dialog.locator('label').allTextContents();
   expect(labels).toEqual(['Ticket', 'Contenu']);
 });
+
+test('fiche : e passe en édition (comme GitLab), Ctrl+Entrée repasse en lecture seule', async ({ page, store }) => {
+  await pressDown(page, 2);
+  await page.keyboard.press('Shift+Enter');
+  const dialog = page.getByRole('dialog', { name: 'Une' });
+  await expect(dialog.locator('.notes-preview')).toBeFocused();
+  await page.keyboard.press('e');
+  const editor = dialog.getByLabel('Contenu');
+  await expect(editor).toBeFocused();
+  await expect(editor).toHaveValue(''); // le « e » n'a pas été saisi
+  await page.keyboard.type('Texte avec des e');
+  await page.keyboard.press('ControlOrMeta+Enter');
+  await expect(dialog.locator('.notes-preview')).toHaveText('Texte avec des e');
+  expect(store.state().projects[0].tasks[0].notes).toBe('Texte avec des e');
+
+  // Dans le champ Ticket, e est une lettre comme une autre.
+  await dialog.getByLabel('Ticket', { exact: true }).click();
+  await page.keyboard.type('e');
+  await expect(dialog.getByLabel('Ticket', { exact: true })).toHaveValue('e');
+  await expect(dialog.locator('textarea')).toHaveCount(0); // toujours en lecture seule
+});

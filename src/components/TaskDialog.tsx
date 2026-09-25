@@ -24,7 +24,7 @@ const ticketOf = (t: Task) => t.jira_key ?? t.jira_url ?? '';
 const isValidTicket = (s: string) => !s || JIRA_KEY_RE.test(s.toUpperCase()) || /^https?:\/\/\S+$/i.test(s);
 
 // Fiche d'une tâche : contenu en Markdown et identifiant du ticket.
-// Contenu : aperçu par défaut ; double-clic (ou Entrée) pour éditer ;
+// Contenu : aperçu par défaut ; e (comme GitLab), double-clic ou Entrée pour éditer ;
 // Ctrl+Entrée revient à l'aperçu (et enregistre), un second Ctrl+Entrée ferme.
 // Échap ferme aussi. Tout est enregistré automatiquement, rien n'est perdu.
 // Accessibilité : focus piégé, titre et description annoncés (Radix),
@@ -75,6 +75,13 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    // e : éditer le contenu, depuis n'importe où dans la fiche sauf un champ de saisie.
+    const inField = (e.target as HTMLElement).matches('input, textarea');
+    if (e.key === 'e' && !editing && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      startEditing();
+      return;
+    }
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       if (editing) stopEditing();
@@ -167,7 +174,7 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
           <p id={`${id}-notes-hint`} className="text-xs text-muted-foreground">
             {editing
               ? 'Markdown · Ctrl+Entrée : aperçu'
-              : 'Double-clic ou Entrée : modifier · Ctrl+Entrée ou Échap : fermer'}
+              : 'e : modifier · Ctrl+Entrée ou Échap : fermer'}
           </p>
         </div>
 

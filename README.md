@@ -40,7 +40,7 @@ Vérifications :
 - Nouveau projet → curseur directement sur la saisie de sa première tâche.
 - Souris : clic sur un nom pour le modifier. Titre trop long : coupé par « … », affiché en entier au survol (ou au focus clavier).
 - Fiche d'une tâche (`Maj+Entrée`, `o` ou icône 🗒) : titre complet, identifiant du ticket (`PROJ-123`), puis contenu en Markdown. L'icône 🗒 signale une tâche qui a du contenu.
-  - Aperçu par défaut ; double-clic (ou `Entrée`) pour modifier ; `Ctrl+Entrée` revient à l'aperçu, un second `Ctrl+Entrée` (ou `Échap`) ferme. Enregistrement automatique.
+  - Lecture seule par défaut ; `e` (comme GitLab) ou double-clic pour modifier ; `Ctrl+Entrée` repasse en lecture seule, un second `Ctrl+Entrée` (ou `Échap`) ferme. Enregistrement automatique.
 - Report : une tâche passe « à reporter », puis « reporté » (badge après le titre, avec l'identifiant du ticket). Le bouton « N tâches à reporter », sous la barre d'outils, n'apparaît que s'il en reste et filtre la liste.
 - Réglages (icône ⚙, page `/admin`) : URL de base des tickets (ex. `https://entreprise.atlassian.net`), qui transforme les identifiants en liens (`URL/browse/PROJ-123`). Conservée en base.
 
