@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { leaveField } from '@/lib/nav';
 
 interface EditableNameProps {
   value: string;
@@ -99,7 +100,8 @@ interface AddInputProps {
   className?: string;
 }
 
-// Champ d'ajout, lui aussi étape de navigation. Échap vide la saisie.
+// Champ d'ajout, lui aussi étape de navigation. Échap vide la saisie et sort du
+// champ (retour à la navigation, comme en édition d'un titre).
 export function AddInput({ placeholder, navKey, onAdd, onFocus, id, className }: AddInputProps) {
   const [value, setValue] = useState('');
   return (
@@ -120,6 +122,7 @@ export function AddInput({ placeholder, navKey, onAdd, onFocus, id, className }:
         if (e.key === 'Escape') {
           e.stopPropagation();
           setValue('');
+          leaveField(e.currentTarget);
         }
         if (e.key === 'Enter' && value.trim() && (await onAdd(value.trim()))) setValue('');
       }}

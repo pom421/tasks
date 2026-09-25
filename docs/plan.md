@@ -29,6 +29,7 @@ Rien.
 
 ## Fait (récent)
 
+- [x] `n` ouvre le champ d’ajout du projet où est le curseur (plus le dernier utilisé) ; `Échap` dans un champ « + Ajouter » le vide et en sort (`p` ne s’y écrit plus)
 - [x] Deux colonnes sur écran large : « Projets » à gauche, « Log » à droite (toujours visible) ; tâches cochées barrées dans le Log (`35ce5d4`)
 - [x] Boutons homogènes : à contour et petite taille par défaut ; Réglages : champ à 32 px, Importer .sqlite en deux temps, la valeur chargée n'écrase plus une saisie (`35ce5d4`)
 - [x] Tests e2e verts en local sur Mac (Chromium de Playwright installé, raccourci « fin du texte » selon le système)

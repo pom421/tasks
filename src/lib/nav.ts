@@ -63,6 +63,16 @@ export function restore(snap: FocusSnapshot | null, { stay = false } = {}) {
   focusItem(items[i]);
 }
 
+// Quitte un champ d'ajout (Échap) : curseur sur l'élément non-champ qui le
+// précède (dernière tâche ou projet), pour que les raccourcis (p, n…) marchent.
+export function leaveField(field: HTMLElement) {
+  const items = navItems();
+  let i = items.indexOf(field) - 1;
+  while (i >= 0 && items[i].matches('input')) i--;
+  if (i >= 0) focusItem(items[i]);
+  else field.blur();
+}
+
 // Éléments où ↑/↓ ont déjà un sens (listes, dates, édition) : on n'y touche pas.
 function ownsArrows(el: Element) {
   return el.matches('input.edit, select, textarea, input[type="date"]');

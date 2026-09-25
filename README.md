@@ -76,7 +76,7 @@ Clavier (`?` affiche l'aide) :
 |---|---|
 | `↑` `↓` ou `j` `k` | Passer d'un projet, d'une tâche ou d'un champ « + Ajouter » à l'autre (`Début` / `Fin` : premier / dernier) |
 | `Entrée` | Modifier le nom sélectionné, puis `Entrée` pour enregistrer |
-| `Échap` | Quitter l'édition sans enregistrer, retour à la navigation |
+| `Échap` | Quitter l'édition sans enregistrer, retour à la navigation ; dans un champ « + Ajouter » : le vide et en sort (curseur sur l'élément au-dessus, `p` / `n` utilisables) |
 | `Espace` | Cocher / décocher la tâche |
 | `Alt+↑` `Alt+↓` (ou `Alt+k` `Alt+j`) | Monter / descendre la tâche (priorité). En bord de projet, elle passe dans le projet voisin |
 | `Alt+↑` `Alt+↓` sur un projet | Monter / descendre tout le projet (avant / après le projet voisin) |
@@ -90,7 +90,7 @@ Clavier (`?` affiche l'aide) :
 | `a` sur un projet | Archiver / désarchiver |
 | `x` puis `x` | Supprimer la tâche ou le projet : le 1er appui affiche ce qui va être supprimé, le 2e supprime (`Échap` annule). `Suppr` marche aussi |
 | `u` | Annuler la dernière action : sur une tâche cocher / décocher, renommer, supprimer ; sur un projet favori, archivage, suppression (une seule, pas les modifications faites dans la fiche). Le curseur revient sur l'élément |
-| `p` / `n` | Nouveau projet / nouvelle tâche |
+| `p` / `n` | Nouveau projet / nouvelle tâche (dans le projet où est le curseur, sinon le dernier utilisé) |
 | `d` / `f` | Filtre du Log par journée / par projet (`f` hors projet sélectionné) |
 | `/` | Rechercher dans le Log |
 

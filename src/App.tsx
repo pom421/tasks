@@ -151,9 +151,13 @@ export function App() {
       if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
       const target = e.target as HTMLElement;
       if (target.closest('input, select, textarea, [role="dialog"]')) return;
+      // n : champ d'ajout du projet où est le curseur (projet ou une de ses
+      // tâches), sinon du dernier projet utilisé, sinon du premier.
       const focusAdd = () => {
+        const here = target.closest('#projects .project')?.id.replace('project-', '');
         const inputs = [...document.querySelectorAll<HTMLInputElement>('#projects input.add')];
-        (inputs.find((i) => i.dataset.navKey === `add:${lastProject.current}`) ?? inputs[0])?.focus();
+        const find = (id: unknown) => inputs.find((i) => i.dataset.navKey === `add:${id}`);
+        (find(here) ?? find(lastProject.current) ?? inputs[0])?.focus();
       };
       const keys: Record<string, () => void> = {
         p: () => document.getElementById('new-project')?.focus(),

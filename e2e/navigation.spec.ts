@@ -138,7 +138,7 @@ test('Espace dans le journal décoche la tâche', async ({ page, store, data }) 
   expect(store.state().projects[1].tasks[0].title).toBe('Trois');
 });
 
-test('champ d’ajout : on tape directement, Entrée ajoute, Échap vide', async ({ page, store, data }) => {
+test('champ d’ajout : on tape directement, Entrée ajoute, Échap vide et sort du champ', async ({ page, store, data }) => {
   await pressDown(page, 4);
   expect(await current(page)).toBe(`add:${data.alpha.id}`);
   await page.keyboard.type('Quatre');
@@ -151,8 +151,34 @@ test('champ d’ajout : on tape directement, Entrée ajoute, Échap vide', async
   await page.keyboard.type('brouillon');
   await page.keyboard.press('Escape');
   await expect(page.locator(`[data-nav-key="add:${data.alpha.id}"]`)).toHaveValue('');
-  await page.keyboard.press('ArrowDown');
-  expect(await current(page)).toBe(`project:${data.beta.id}`);
+  // Hors du champ, sur la tâche au-dessus : les raccourcis marchent (p = nouveau projet).
+  const quatre = store.state().projects[0].tasks[2].id;
+  await expect.poll(() => current(page)).toBe(`task:${quatre}`);
+  await page.keyboard.press('p');
+  await expect(page.locator('#new-project')).toBeFocused();
+  await expect(page.locator('#new-project')).toHaveValue('');
+  await expect(page.locator(`[data-nav-key="add:${data.alpha.id}"]`)).toHaveValue('');
+});
+
+test('n : champ d’ajout du projet où est le curseur, pas du dernier utilisé', async ({ page, data }) => {
+  // Alpha utilisé en dernier (champ d'ajout), puis curseur sur Beta.
+  await page.locator(`[data-nav-key="add:${data.alpha.id}"]`).focus();
+  await page.keyboard.press('Escape');
+  await page.locator(`[data-nav-key="project:${data.beta.id}"]`).focus();
+  await page.keyboard.press('n');
+  await expect(page.locator(`[data-nav-key="add:${data.beta.id}"]`)).toBeFocused();
+
+  // Depuis une tâche d'Alpha : le champ d'Alpha.
+  await page.keyboard.press('Escape');
+  await page.locator(`[data-nav-key="task:${data.tasks.une.id}"]`).focus();
+  await page.keyboard.press('n');
+  await expect(page.locator(`[data-nav-key="add:${data.alpha.id}"]`)).toBeFocused();
+
+  // Hors projet (aucun élément courant) : le dernier projet utilisé, Alpha.
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => (document.activeElement as HTMLElement).blur());
+  await page.keyboard.press('n');
+  await expect(page.locator(`[data-nav-key="add:${data.alpha.id}"]`)).toBeFocused();
 });
 
 test('x puis x supprime la tâche ; le focus passe à la suivante', async ({ page, store, data }) => {
