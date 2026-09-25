@@ -35,8 +35,8 @@ Vérifications :
 
 ## Utilisation
 
-- Cocher une tâche → elle passe dans le journal, datée du jour. La décocher → elle revient dans son projet.
-- Journal : par défaut, la dernière journée. Filtres par période (du… au…, bornes incluses) et par projet. Renseigner le début met la même date en fin : une journée entière.
+- Cocher une tâche → elle passe dans le Log, datée du jour. La décocher → elle revient dans son projet.
+- Log (en bas, un cadre par jour) : par défaut, la dernière journée. Filtres par période (du… au…, bornes incluses) et par projet. Renseigner le début met la même date en fin : une journée entière.
 - Nouveau projet → curseur directement sur la saisie de sa première tâche.
 - Souris : clic sur un nom pour le modifier. Titre trop long : coupé par « … », affiché en entier au survol (ou au focus clavier).
 - Fiche d'une tâche (`Maj+Entrée`, `o` ou icône 🗒) : titre complet, identifiant du ticket (`PROJ-123`), puis contenu en Markdown. L'icône 🗒 signale une tâche qui a du contenu.
@@ -56,12 +56,13 @@ Clavier (`?` affiche l'aide) :
 | `Espace` | Cocher / décocher la tâche |
 | `Alt+↑` `Alt+↓` (ou `Alt+k` `Alt+j`) | Monter / descendre la tâche (priorité). En bord de projet, elle passe dans le projet voisin |
 | `Maj+Entrée` ou `o` | Ouvrir la fiche de la tâche (contenu Markdown, ticket) |
+| `e` | Ouvrir la fiche directement en édition (titre, `Tab` → ticket, `Tab` → contenu) |
 | `J` (majuscule) | Report : à reporter → reporté (fiche proposée pour le ticket) → rien |
 | `L` (majuscule) | Ouvrir la fiche sur le champ « Ticket » |
 | `r` | Afficher seulement les tâches à reporter (ou clic sur « N tâches à reporter ») |
 | `x` puis `x` | Supprimer la tâche : le 1er appui demande confirmation, le 2e supprime (`Échap` annule). `Suppr` marche aussi |
 | `p` / `n` | Nouveau projet / nouvelle tâche |
-| `d` / `f` | Filtre du journal par période / par projet |
+| `d` / `f` | Filtre du Log par période / par projet |
 
 Import / export :
 

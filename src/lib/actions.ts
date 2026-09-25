@@ -1,8 +1,9 @@
 import { createContext, useContext } from 'react';
 import type { Settings, Task } from '../../shared/types.ts';
 
-// Champ à focaliser à l'ouverture de la fiche d'une tâche.
-export type TaskField = 'notes' | 'jira';
+// Ouverture de la fiche : lecture (notes), édition complète (edit, focus sur
+// le titre) ou édition rapide du ticket (jira).
+export type TaskField = 'notes' | 'edit' | 'jira';
 
 
 export interface Actions {

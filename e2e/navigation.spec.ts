@@ -17,6 +17,12 @@ function seed(store: Store) {
 // Clé de navigation de l'élément qui a le focus ("project:1", "task:2"…).
 const current = (page: Page) => page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset.navKey ?? null);
 
+// Recharge la page et attend la liste : sinon les touches partent trop tôt.
+async function reload(page: Page) {
+  await page.reload();
+  await expect(page.locator('.project').first()).toBeVisible();
+}
+
 async function pressDown(page: Page, n: number) {
   for (let i = 0; i < n; i++) await page.keyboard.press('ArrowDown');
 }
@@ -123,7 +129,7 @@ test('Espace coche la tâche ; le focus reste à la même place', async ({ page,
 
 test('Espace dans le journal décoche la tâche', async ({ page, store, data }) => {
   store.updateTask(data.tasks.trois.id, { doneAt: '2026-09-20' });
-  await page.reload();
+  await reload(page);
   await expect(page.locator('#journal .name', { hasText: 'Trois' })).toBeVisible();
   await page.keyboard.press('End');
   expect(await current(page)).toBe(`task:${data.tasks.trois.id}`);
@@ -232,7 +238,7 @@ test('J en édition : saisi comme une lettre, pas de bascule', async ({ page, st
 
 test('badge « reporté » conservé dans le journal, et J y fonctionne aussi', async ({ page, store, data }) => {
   store.updateTask(data.tasks.trois.id, { jira: 'done' });
-  await page.reload();
+  await reload(page);
   const row = page.locator(`li.task:has([data-nav-key="task:${data.tasks.trois.id}"])`);
   await expect(row.locator('.report')).toBeVisible();
   await pressDown(page, 6);
@@ -260,7 +266,7 @@ test('Alt+↑ / Alt+↓ changent l’ordre dans le projet ; le focus suit la tâ
   await page.keyboard.press('Alt+ArrowDown');
   await expect(page.locator(`#project-${data.alpha.id} .name`)).toHaveText(['Alpha', 'Une', 'Deux']);
   // Ordre conservé après rechargement.
-  await page.reload();
+  await reload(page);
   await expect(page.locator(`#project-${data.alpha.id} .name`)).toHaveText(['Alpha', 'Une', 'Deux']);
 });
 
@@ -289,7 +295,7 @@ test('Alt+k / Alt+j comme Alt+↑ / Alt+↓ ; tout en haut, rien ne bouge', asyn
 test('vers un projet vide ; les projets archivés masqués sont sautés', async ({ page, store, data }) => {
   const gamma = store.createProject('Gamma'); // vide, après Beta
   store.updateProject(data.beta.id, { archived: true });
-  await page.reload();
+  await reload(page);
   await expect(page.locator('.project')).toHaveCount(2); // Alpha, Gamma
   await pressDown(page, 3); // « Deux »
   await page.keyboard.press('Alt+ArrowDown');
@@ -324,7 +330,7 @@ test('J fait tourner : à reporter (contour) → reportée (plein, fiche propos�
 
 test('fiche : L sur le ticket, clé + URL Jira d’entreprise = lien cliquable', async ({ page, store, data }) => {
   store.updateSettings({ jira_base_url: 'https://entreprise.atlassian.net' });
-  await page.reload();
+  await reload(page);
   await pressDown(page, 2);
   await page.keyboard.press('Shift+L');
   const dialog = page.getByRole('dialog', { name: 'Une' });
@@ -406,7 +412,7 @@ test('fiche Markdown : HTML dangereux neutralisé', async ({ page, store, data }
   store.updateTask(data.tasks.une.id, {
     notes: '<img src=x onerror="window.pwned=1"> <script>window.pwned=1</script> [clic](javascript:window.pwned=1)',
   });
-  await page.reload();
+  await reload(page);
   await pressDown(page, 2);
   await page.keyboard.press('o');
   const preview = page.getByRole('dialog', { name: 'Une' }).locator('.notes-preview');
@@ -418,7 +424,7 @@ test('fiche Markdown : HTML dangereux neutralisé', async ({ page, store, data }
 
 test('réglages (/admin) : URL Jira conservée en base, lien depuis la fiche', async ({ page, store, data }) => {
   store.updateTask(data.tasks.une.id, { jira: 'done', jiraKey: 'PROJ-1' });
-  await page.reload();
+  await reload(page);
   // Sans URL d'entreprise : la clé s'affiche, sans lien.
   await expect(row(page, data.tasks.une.id).locator('.report-done')).toHaveText('reporté · PROJ-1');
   await expect(row(page, data.tasks.une.id).locator('a.report-link')).toHaveCount(0);
@@ -447,7 +453,7 @@ test('compteur « à reporter » : filtre la liste et le journal (r ou clic)', a
   const faite = store.createTask(data.beta.id, 'Faite à reporter');
   store.updateTask(faite.id, { doneAt: '2020-01-01', jira: 'wanted' }); // vieille date : hors « dernière journée »
   store.updateTask(data.tasks.trois.id, { doneAt: '2026-09-20' });
-  await page.reload();
+  await reload(page);
 
   const counter = page.locator('#jira-pending');
   await expect(counter).toHaveText('2 tâches à reporter');
@@ -489,7 +495,7 @@ test('bouton « tâches à reporter » : place réservée, rien ne bouge quand i
 test('titre long : « … » sur une ligne, titre complet au survol ou au focus clavier', async ({ page, store, data }) => {
   const long = 'Préparer la présentation trimestrielle pour le comité de direction avec les chiffres consolidés de toutes les équipes produit';
   store.updateTask(data.tasks.une.id, { title: long, jira: 'done', jiraKey: 'PROJ-1234' });
-  await page.reload();
+  await reload(page);
   const name = page.locator(`[data-nav-key="task:${data.tasks.une.id}"]`);
   // Une seule ligne, coupée : le badge reste visible.
   expect(await name.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
@@ -554,4 +560,36 @@ test('fiche : e modifie aussi le titre et le ticket ; Entrée dans un champ = en
   await page.keyboard.press('ControlOrMeta+Enter');
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.locator(`[data-nav-key="task:${data.tasks.une.id}"]`)).toHaveText('Une');
+});
+
+test('e sur une tâche : fiche ouverte directement en édition, titre sélectionné', async ({ page, store, data }) => {
+  await pressDown(page, 3); // « Deux »
+  await page.keyboard.press('e');
+  const dialog = page.getByRole('dialog', { name: 'Deux' });
+  await expect(dialog.getByLabel('Titre')).toBeFocused();
+  await dialog.getByLabel('Titre').fill('Deux (modifiée)');
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Tab');
+  await page.keyboard.type('Notes rapides');
+  await page.keyboard.press('ControlOrMeta+Enter'); // lecture
+  await expect(page.getByRole('dialog').locator('.notes-preview')).toHaveText('Notes rapides');
+  await page.keyboard.press('ControlOrMeta+Enter'); // fermeture
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  expect(store.state().projects[0].tasks[1]).toMatchObject({ title: 'Deux (modifiée)', notes: 'Notes rapides' });
+  await expect.poll(() => current(page)).toBe(`task:${data.tasks.deux.id}`);
+});
+
+test('zone « Log » : un cadre par jour', async ({ page, store, data }) => {
+  store.updateTask(data.tasks.une.id, { doneAt: '2026-09-20' });
+  store.updateTask(data.tasks.trois.id, { doneAt: '2026-09-21' });
+  await reload(page);
+  const log = page.getByRole('region', { name: 'Log' });
+  await expect(log.getByRole('heading', { name: 'Log' })).toBeVisible();
+  await log.locator('#filter-from').fill('2026-09-20');
+  await log.locator('#filter-to').fill('2026-09-21');
+  const days = log.locator('.day');
+  await expect(days).toHaveCount(2);
+  for (const day of await days.all()) {
+    expect(await day.evaluate((el) => getComputedStyle(el).borderTopWidth)).toBe('1px');
+  }
 });

@@ -25,8 +25,10 @@ function Day({ day, showProjects }: { day: JournalDay; showProjects: boolean }) 
     g.tasks.push(t);
   }
   return (
-    <div className="day mt-4">
-      <h3 className="mb-1 text-sm font-semibold text-muted-foreground first-letter:uppercase">{formatDay(day.date)}</h3>
+    <div className="day mt-3 rounded-lg border px-3 pt-2 pb-1.5">
+      <h3 className="mb-1 border-b pb-1 text-sm font-semibold text-muted-foreground first-letter:uppercase">
+        {formatDay(day.date)}
+      </h3>
       {groups.map((g, i) => (
         <div key={`${g.id}-${i}`}>
           {showProjects && <div className="project-label mt-1.5 ml-1 text-sm font-semibold">{g.name}</div>}
@@ -83,9 +85,9 @@ export function Journal({ days, projects, filter, onFilter }: JournalProps) {
   const filtered = Boolean(filter.from || filter.to || filter.project || filter.jira);
 
   return (
-    <section id="journal" aria-label="Journal" className="mt-12 mb-16 border-t-2 pt-4">
+    <section id="journal" aria-label="Log" className="mt-12 mb-16 border-t-2 pt-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-semibold">Fait</h2>
+        <h2 className="font-semibold">Log</h2>
         <div className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
           <label className="flex items-center gap-1">
             Du <input ref={fromRef} type="date" id="filter-from" aria-label="Date de début" className={fieldClass} onChange={(e) => changeFrom(e.target.value)} />

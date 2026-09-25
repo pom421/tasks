@@ -34,8 +34,8 @@ const isValidTicket = (s: string) => !s || JIRA_KEY_RE.test(s.toUpperCase()) || 
 export function TaskDialog({ task, projectName, field, open, onClose }: TaskDialogProps) {
   const id = useId();
   const [values, setValues] = useState({ title: task.title, ticket: ticketOf(task), notes: task.notes ?? '' });
-  // Ouverte sur le ticket (L, ou J → reporté) : directement en édition.
-  const [editing, setEditing] = useState(field === 'jira');
+  // Ouverte par e (édition complète) ou sur le ticket (L, J → reporté) : directement en édition.
+  const [editing, setEditing] = useState(field !== 'notes');
   const [error, setError] = useState<{ field: Field; message: string } | null>(null);
   const saved = useRef({ ...values, changed: false });
   const refs = {
@@ -45,7 +45,13 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
   };
   const reader = useRef<HTMLDivElement>(null);
   const html = useMemo(() => renderMarkdown(values.notes), [values.notes]);
-  const set = (key: Field) => (e: { target: { value: string } }) => setValues((v) => ({ ...v, [key]: e.target.value }));
+  // Copie toujours à jour des valeurs saisies : Radix appelle parfois un
+  // gestionnaire (Échap) d'un rendu précédent, qui enregistrerait un texte périmé.
+  const latest = useRef(values);
+  const set = (key: Field) => (e: { target: { value: string } }) => {
+    latest.current = { ...latest.current, [key]: e.target.value };
+    setValues(latest.current);
+  };
 
   // En édition, un champ en erreur est corrigé sur place ; en lecture, on y revient.
   const fail = (f: Field, message: string) => {
@@ -62,6 +68,7 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
 
   // Enregistre ce qui a changé. false en cas d'erreur (la fiche reste ouverte).
   const save = async (): Promise<boolean> => {
+    const values = latest.current;
     const ticket = values.ticket.trim();
     const next = {
       title: values.title.trim(),
@@ -79,7 +86,8 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
     try {
       await api.updateTask(task.id, patch);
       saved.current = { ...next, changed: true };
-      setValues((v) => ({ ...v, ticket: next.ticket }));
+      latest.current = { ...latest.current, ticket: next.ticket };
+      setValues(latest.current);
       setError(null);
       return true;
     } catch (err) {
@@ -149,7 +157,7 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
         }}
         onOpenAutoFocus={(e) => {
           e.preventDefault();
-          (editing ? refs.ticket.current : reader.current)?.focus();
+          ({ notes: reader, edit: refs.title, jira: refs.ticket }[field].current as HTMLElement | null)?.focus();
         }}
         // À la fermeture, retour sur la tâche dans la liste pour reprendre la navigation.
         onCloseAutoFocus={(e) => {

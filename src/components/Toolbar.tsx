@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 const SHORTCUTS: [string, string][] = [
   ['↑ ↓  j k', 'Se déplacer (Début / Fin : premier / dernier)'],
   ['Maj+Entrée  o', 'Ouvrir la fiche ; e : tout modifier (Tab : champ suivant), Ctrl+Entrée : lecture'],
+  ['e', 'Ouvrir la fiche directement en édition'],
   ['Entrée', 'Modifier le nom sélectionné / valider'],
   ['Échap', "Quitter l'édition, retour à la navigation"],
   ['Espace', 'Cocher / décocher la tâche'],
@@ -19,8 +20,8 @@ const SHORTCUTS: [string, string][] = [
   ['x x', 'Supprimer la tâche (x une 2e fois pour confirmer)'],
   ['p', 'Nouveau projet'],
   ['n', 'Nouvelle tâche (dernier projet utilisé)'],
-  ['d', 'Filtrer le journal par période (début, puis fin)'],
-  ['f', 'Filtrer le journal par projet'],
+  ['d', 'Filtrer le log par période (début, puis fin)'],
+  ['f', 'Filtrer le log par projet'],
   ['?', 'Cette aide'],
 ];
 

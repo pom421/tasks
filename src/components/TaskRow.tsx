@@ -14,6 +14,7 @@ import { ReportBadge } from './ReportBadge';
 // Clavier, où que soit le focus dans la ligne (hors champ de saisie) :
 // Espace coche / décoche, J (majuscule) fait tourner le suivi du report
 // (rien -> à reporter -> reporté -> rien), o ou Maj+Entrée ouvre la fiche,
+// e l'ouvre directement en édition,
 // L l'ouvre sur l'identifiant du ticket,
 // x ou Suppr demande la suppression, un second appui la confirme,
 // Alt+↑ / Alt+↓ (ou Alt+k / Alt+j) déplacent la tâche (onMove, tâches à faire).
@@ -77,9 +78,9 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
       e.preventDefault();
       cycleJira();
     }
-    if (e.key === 'L' || e.key === 'o' || (e.key === 'Enter' && e.shiftKey)) {
+    if (e.key === 'L' || e.key === 'o' || e.key === 'e' || (e.key === 'Enter' && e.shiftKey)) {
       e.preventDefault();
-      openTask(task, e.key === 'L' ? 'jira' : 'notes');
+      openTask(task, e.key === 'L' ? 'jira' : e.key === 'e' ? 'edit' : 'notes');
     }
   };
 
