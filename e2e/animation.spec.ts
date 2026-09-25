@@ -43,6 +43,20 @@ test('filtrer (Favoris) : animé', async ({ page }) => {
   await expect(page.locator('#projects .project-head .name')).toHaveText(['Beta']);
 });
 
+test('retirer le filtre (Favoris) : les projets qui reviennent apparaissent en fondu dès le début', async ({ page }) => {
+  await page.locator('#favorites-only').click();
+  await expect(page.locator('#projects .project')).toHaveCount(1);
+  await expect.poll(() => running(page)).toBe(0);
+  await page.locator('#favorites-only').click();
+  // Alpha revient : animation d'entrée, visible tout du long (pas de palier invisible).
+  const alpha = page.locator('#projects .project', { hasText: 'Alpha' });
+  const frames = await alpha.evaluate((el) =>
+    el.getAnimations().map((a) => (a.effect as KeyframeEffect).getKeyframes().map((k) => Number(k.opacity))),
+  );
+  expect(frames).toEqual([[0, 1]]);
+  await expect(page.locator('#projects .project-head .name')).toHaveText(['Alpha', 'Beta']);
+});
+
 test('rechercher dans le Log : animé', async ({ page }) => {
   await page.locator('#log-search').fill('faite');
   await expect.poll(() => running(page)).toBeGreaterThan(0); // dès l'arrivée des résultats
