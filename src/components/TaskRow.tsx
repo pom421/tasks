@@ -19,14 +19,29 @@ import { ReportBadge } from './ReportBadge';
 // x ou Suppr demande la suppression, un second appui la confirme,
 // Alt+↑ / Alt+↓ (ou Alt+k / Alt+j) déplacent la tâche (onMove, tâches à faire).
 export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (direction: -1 | 1) => void }) {
-  const { act, openTask } = useActions();
+  const { act, openTask, setUndo } = useActions();
   const done = 'done_at' in task;
   const [editingDate, setEditingDate] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const navKey = `task:${task.id}`;
 
   const patch = (body: TaskPatch, stay = false) => act(() => api.updateTask(task.id, body), { stay });
-  const toggleDone = () => patch(done ? { done: false } : { done: true, done_at: localToday() }, true);
+
+  // Actions annulables (u) : l'annulation n'est mémorisée qu'une fois l'action réussie.
+  const undoable = (label: string, run: () => Promise<unknown>, undo: () => Promise<unknown>, stay = false) =>
+    act(
+      async () => {
+        await run();
+        setUndo({ label, run: undo, focus: navKey });
+      },
+      { stay },
+    );
+  const toggleDone = () =>
+    done
+      ? undoable('tâche décochée', () => api.updateTask(task.id, { done: false }), () => api.updateTask(task.id, { done_at: task.done_at }), true)
+      : undoable('tâche cochée', () => api.updateTask(task.id, { done: true, done_at: localToday() }), () => api.updateTask(task.id, { done: false }), true);
+  const rename = (title: string) =>
+    undoable('renommage', () => api.updateTask(task.id, { title }), () => api.updateTask(task.id, { title: task.title }));
   const NEXT: Record<JiraState, JiraState> = { none: 'wanted', wanted: 'done', done: 'none' };
   // J tapé plusieurs fois vite : chaque appui part du dernier état demandé
   // (pas de celui encore affiché) et les requêtes s'enchaînent dans l'ordre.
@@ -45,7 +60,15 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
     });
   };
 
-  const remove = () => act(() => api.deleteTask(task.id), { stay: true });
+  const remove = () => {
+    let deleted: Record<string, unknown> | undefined;
+    return undoable(
+      'suppression',
+      async () => (deleted = await api.deleteTask(task.id)),
+      () => api.restoreTask(deleted!),
+      true,
+    );
+  };
 
   const onKeyDown = (e: KeyboardEvent<HTMLLIElement>) => {
     const target = e.target as HTMLElement;
@@ -105,7 +128,7 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
           navKey={navKey}
           className={done ? 'text-muted-foreground' : undefined}
           truncate
-          onSave={(title) => patch({ title })}
+          onSave={rename}
         />
         <ReportBadge task={task} />
         {hasDetails(task) && (

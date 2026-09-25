@@ -366,3 +366,31 @@ test('migration 6 : le lien d’une tâche (v5) rejoint ses notes', async () => 
   );
   store5.close();
 });
+
+test('suppression annulable : DELETE renvoie la tâche, restore la réinsère à l’identique', async () => {
+  const { body: p } = await call('POST', '/api/projects', { name: 'Annulation' });
+  const { body: t } = await call('POST', '/api/tasks', { project_id: p.id, title: 'À restaurer' });
+  await call('PATCH', `/api/tasks/${t.id}`, { notes: 'Mes notes', jira_ticket: 'ABC-1', done: true, done_at: '2026-09-01' });
+
+  const { status, body: deleted } = await call('DELETE', `/api/tasks/${t.id}`);
+  assert.equal(status, 200);
+  assert.equal(deleted.notes, 'Mes notes');
+
+  const { status: restored, body: back } = await call('POST', '/api/tasks/restore', deleted);
+  assert.equal(restored, 201);
+  assert.deepEqual(back, deleted); // même id, mêmes colonnes
+
+  // Déjà présente : refus ; données invalides : refus.
+  assert.equal((await call('POST', '/api/tasks/restore', deleted)).status, 409);
+  await call('DELETE', `/api/tasks/${t.id}`);
+  for (const bad of [
+    { ...deleted, jira_url: 'javascript:alert(1)' },
+    { ...deleted, jira_key: 'pas une clé' },
+    { ...deleted, done_at: 'hier' },
+    { ...deleted, title: '' },
+    { ...deleted, id: -1 },
+  ]) {
+    assert.equal((await call('POST', '/api/tasks/restore', bad)).status, 400, JSON.stringify(bad).slice(0, 80));
+  }
+  assert.equal((await call('POST', '/api/tasks/restore', { ...deleted, project_id: 99999 })).status, 400);
+});

@@ -49,7 +49,9 @@ export const api = {
   updateTask: (id: number, patch: TaskPatch) => request('PATCH', `/api/tasks/${id}`, patch),
   moveTask: (id: number, projectId: number, index: number) =>
     request('POST', `/api/tasks/${id}/move`, { project_id: projectId, index }),
-  deleteTask: (id: number) => request('DELETE', `/api/tasks/${id}`),
+  // Renvoie la tâche supprimée (toutes ses colonnes), à passer à restoreTask pour annuler.
+  deleteTask: (id: number) => request<Record<string, unknown>>('DELETE', `/api/tasks/${id}`),
+  restoreTask: (row: Record<string, unknown>) => request('POST', '/api/tasks/restore', row),
   importDb: (file: Blob) => request('POST', '/api/import', file),
   importMarkdown: (text: string) => request<ImportResult>('POST', '/api/import-markdown', text),
 };

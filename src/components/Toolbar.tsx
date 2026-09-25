@@ -18,6 +18,7 @@ const SHORTCUTS: [string, string][] = [
   ['L', 'Ouvrir la fiche sur l’identifiant du ticket (majuscule)'],
   ['r', 'Afficher seulement les tâches à reporter'],
   ['x x', 'Supprimer la tâche (x une 2e fois pour confirmer)'],
+  ['u', 'Annuler la dernière action (cocher, renommer, supprimer)'],
   ['p', 'Nouveau projet'],
   ['n', 'Nouvelle tâche (dernier projet utilisé)'],
   ['d', 'Filtrer le log par période (début, puis fin)'],

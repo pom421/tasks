@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { type Store, type TaskPatch, isDate, today } from './db.ts';
+import { type Store, type TaskPatch, type TaskRow, isDate, today } from './db.ts';
 import { JIRA_KEY_RE, type JiraState, type Settings } from '../shared/types.ts';
 import { parseMarkdown } from './markdown.ts';
 
@@ -103,6 +103,38 @@ function jiraTicket(value: unknown): { jiraKey: string | null; jiraUrl: string |
   if (JIRA_KEY_RE.test(text.toUpperCase())) return { jiraKey: text.toUpperCase(), jiraUrl: null };
   if (/^https?:/i.test(text)) return { jiraKey: null, jiraUrl: httpUrl(text) };
   throw new HttpError(400, 'Ticket invalide : identifiant attendu, ex. PROJ-123');
+}
+
+const TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}:\d{2})?$/;
+
+// Tâche à restaurer : chaque colonne est revérifiée (le corps vient du client).
+function restoredTask(body: Body): TaskRow {
+  const int = (v: unknown, label: string) => {
+    if (!Number.isInteger(v) || (v as number) < 0) throw new HttpError(400, `${label} invalide`);
+    return v as number;
+  };
+  const timestamp = (v: unknown, label: string) => {
+    if (v === null || v === undefined) return null;
+    if (typeof v !== 'string' || !TIMESTAMP_RE.test(v)) throw new HttpError(400, `${label} invalide`);
+    return v;
+  };
+  const doneAt = body.done_at ?? null;
+  if (doneAt !== null && !isDate(doneAt)) throw new HttpError(400, 'Date invalide');
+  const key = body.jira_key ?? null;
+  if (key !== null && (typeof key !== 'string' || !JIRA_KEY_RE.test(key))) throw new HttpError(400, 'Ticket invalide');
+  return {
+    id: int(body.id, 'Identifiant'),
+    project_id: int(body.project_id, 'Projet'),
+    title: requireText(body.title, 'Titre'),
+    created_at: timestamp(body.created_at, 'Date de création') ?? today(),
+    done_at: doneAt as string | null,
+    position: int(body.position ?? 0, 'Position'),
+    notes: optionalText(body.notes, 'Notes', 20_000),
+    jira_wanted_at: timestamp(body.jira_wanted_at, 'Date de report'),
+    jira_at: timestamp(body.jira_at, 'Date de report'),
+    jira_key: key as string | null,
+    jira_url: httpUrl(body.jira_url ?? null),
+  };
 }
 
 function optionalText(value: unknown, label: string, max: number): string | null {
@@ -259,9 +291,19 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
       send(res, 200, { ok: true });
     }],
 
+    // Renvoie la tâche supprimée : le front la garde pour pouvoir annuler (u).
     ['DELETE', /^\/api\/tasks\/(\d+)$/, (_req, res, _url, id) => {
-      if (!store.deleteTask(Number(id))) throw new HttpError(404, 'Tâche introuvable');
-      send(res, 200, { ok: true });
+      const row = store.deleteTask(Number(id));
+      if (!row) throw new HttpError(404, 'Tâche introuvable');
+      send(res, 200, row);
+    }],
+
+    // Annulation d'une suppression : la tâche renvoyée par DELETE, réinsérée telle quelle.
+    ['POST', /^\/api\/tasks\/restore$/, async (req, res) => {
+      const row = restoredTask(await readJson(req));
+      if (store.hasTask(row.id)) throw new HttpError(409, 'Tâche déjà présente');
+      if (!store.hasProject(row.project_id)) throw new HttpError(400, 'Projet introuvable');
+      send(res, 201, store.restoreTask(row));
     }],
 
     ['GET', /^\/api\/export$/, (_req, res) => {

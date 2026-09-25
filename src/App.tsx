@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { JournalDay, Project, Settings, Task } from '../shared/types.ts';
 import { api } from '@/lib/api';
-import { ActionsContext, type Actions, type TaskField } from '@/lib/actions';
+import { ActionsContext, type Actions, type TaskField, type Undo } from '@/lib/actions';
 import { focusByKey, handleNavKey, restore, snapshot, type FocusSnapshot } from '@/lib/nav';
 import { Toolbar } from '@/components/Toolbar';
 import { ProjectList } from '@/components/ProjectList';
@@ -37,8 +37,11 @@ export function App() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const filterRef = useRef(filter);
-  const pending = useRef<PendingFocus | null>(null);
+  // Actions en attente d'affichage. Plusieurs peuvent se chevaucher (fermer la
+  // fiche puis J aussitôt) : aucune n'est perdue, la plus récente décide du focus.
+  const pending = useRef<PendingFocus[]>([]);
   const lastProject = useRef<number | null>(null);
+  const lastUndo = useRef<Undo | null>(null);
 
   const toast = useCallback((msg: string) => setMessage(msg), []);
   useEffect(() => {
@@ -75,6 +78,7 @@ export function App() {
     toast,
     settings: data.settings,
     navigate,
+    setUndo: (undo) => (lastUndo.current = undo),
     openTask: (task, field = 'notes') =>
       setOpenTask((o) => ({ id: task.id, field, open: true, opening: (o?.opening ?? 0) + 1 })),
     setLastProject: (id) => (lastProject.current = id),
@@ -90,10 +94,11 @@ export function App() {
       // restauré : ce que l'appelant fait ensuite (ouvrir un champ…) n'est
       // plus écrasé par la restauration.
       await new Promise<void>((applied) => {
-        pending.current = { snap: snapshot(), stay, key: (result as { focus?: string } | undefined)?.focus, applied };
+        const entry = { snap: snapshot(), stay, key: (result as { focus?: string } | undefined)?.focus, applied };
+        pending.current.push(entry);
         load().catch((err) => {
           toast(err.message);
-          pending.current = null;
+          pending.current = pending.current.filter((p) => p !== entry);
           applied();
         });
       });
@@ -102,18 +107,32 @@ export function App() {
 
   // Restaure le focus clavier après chaque rechargement des données.
   useLayoutEffect(() => {
-    const p = pending.current;
+    const all = pending.current;
+    const p = all.at(-1);
     if (!p) return;
-    pending.current = null;
+    pending.current = [];
     if (p.key) focusByKey(p.key);
     else restore(p.snap, { stay: p.stay });
-    p.applied();
+    for (const entry of all) entry.applied();
   }, [data]);
 
   const changeFilter = (f: Filter) => {
     filterRef.current = f;
     setFilter(f);
     load(f).catch((err) => toast(err.message));
+  };
+
+  // u : annule la dernière action (cocher, renommer, supprimer), une seule fois.
+  // Les modifications faites dans la fiche ne sont pas annulables.
+  const undo = () => {
+    const last = lastUndo.current;
+    lastUndo.current = null;
+    if (!last) return toast('Rien à annuler');
+    actions.act(async () => {
+      await last.run();
+      toast(`Annulé : ${last.label}`);
+      return { focus: last.focus };
+    });
   };
 
   // Navigation (↑/↓…) et raccourcis globaux, hors champs de saisie.
@@ -134,6 +153,7 @@ export function App() {
         d: () => document.getElementById('filter-from')?.focus(),
         f: () => document.getElementById('filter-project')?.focus(),
         r: () => changeFilter({ ...filterRef.current, jira: !filterRef.current.jira }),
+        u: undo,
         '?': () => setHelpOpen(true),
         // Échap sur un élément de la liste : on reste en navigation.
         Escape: () => target.dataset.nav === undefined && changeFilter(NO_FILTER),

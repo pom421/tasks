@@ -245,8 +245,8 @@ test('badge « reporté » conservé dans le journal, et J y fonctionne aussi', 
   await page.keyboard.press(' ');
   await expect(page.locator(`#journal li.task:has([data-nav-key="task:${data.tasks.trois.id}"]) .report-done`)).toBeVisible();
 
-  // Focus resté à la même place (champ d'ajout de Beta) : descendre jusqu'au journal.
-  await pressDown(page, 2);
+  // Plus de tâche dans Beta : le focus remonte sur le projet ; descendre jusqu'au Log.
+  await pressDown(page, 3);
   expect(await current(page)).toBe(`task:${data.tasks.trois.id}`);
   await page.keyboard.press('Shift+J');
   await expect(row.locator('.report')).toHaveCount(0);
@@ -592,4 +592,72 @@ test('zone « Log » : un cadre par jour', async ({ page, store, data }) => {
   for (const day of await days.all()) {
     expect(await day.evaluate((el) => getComputedStyle(el).borderTopWidth)).toBe('1px');
   }
+});
+
+// --- Annulation (u) ----------------------------------------------------------
+
+test('u annule la dernière action : cocher, puis renommer ; une seule fois', async ({ page, store, data }) => {
+  await pressDown(page, 2); // « Une »
+  await page.keyboard.press(' ');
+  await expect(page.locator('#journal .name', { hasText: 'Une' })).toBeVisible();
+  await page.keyboard.press('u');
+  await expect(page.locator('#toast')).toHaveText('Annulé : tâche cochée');
+  await expect(page.locator('#projects .name', { hasText: 'Une' })).toBeVisible();
+  expect(store.state().projects[0].tasks.map((t) => t.title)).toEqual(['Une', 'Deux']);
+  expect(await current(page)).toBe(`task:${data.tasks.une.id}`); // focus restauré
+
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('Une bis');
+  await page.keyboard.press('Enter');
+  await expect(page.locator(`[data-nav-key="task:${data.tasks.une.id}"]`)).toHaveText('Une bis');
+  await page.keyboard.press('u');
+  await expect(page.locator(`[data-nav-key="task:${data.tasks.une.id}"]`)).toHaveText('Une');
+  expect(await current(page)).toBe(`task:${data.tasks.une.id}`);
+
+  // Seule la dernière action est annulable.
+  await page.keyboard.press('u');
+  await expect(page.locator('#toast')).toHaveText('Rien à annuler');
+  expect(store.state().projects[0].tasks[0].title).toBe('Une');
+});
+
+test('u après une suppression : la tâche revient avec son contenu, sélectionnée', async ({ page, store, data }) => {
+  store.updateTask(data.tasks.deux.id, { notes: 'Notes précieuses', jira: 'done', jiraKey: 'PROJ-9' });
+  await reload(page);
+  await pressDown(page, 3); // « Deux »
+  await page.keyboard.press('x');
+  await page.keyboard.press('x');
+  await expect(page.locator('#projects .name', { hasText: 'Deux' })).toHaveCount(0);
+  await page.keyboard.press('u');
+  await expect(page.locator('#toast')).toHaveText('Annulé : suppression');
+  await expect(page.locator(`[data-nav-key="task:${data.tasks.deux.id}"]`)).toBeVisible();
+  await expect.poll(() => current(page)).toBe(`task:${data.tasks.deux.id}`);
+  expect(store.state().projects[0].tasks[1]).toMatchObject({
+    id: data.tasks.deux.id,
+    title: 'Deux',
+    notes: 'Notes précieuses',
+    jira_key: 'PROJ-9',
+  });
+});
+
+test('u dans le Log : décocher puis annuler remet la tâche au même jour', async ({ page, store, data }) => {
+  store.updateTask(data.tasks.trois.id, { doneAt: '2026-09-20' });
+  await reload(page);
+  await page.keyboard.press('End');
+  await page.keyboard.press(' ');
+  await expect(page.locator('#projects .name', { hasText: 'Trois' })).toBeVisible();
+  await page.keyboard.press('u');
+  await expect(page.locator('#journal .name', { hasText: 'Trois' })).toBeVisible();
+  expect(store.journal({ projectId: data.beta.id }).days[0].date).toBe('2026-09-20');
+});
+
+test('les modifications faites dans la fiche ne sont pas annulables', async ({ page, store }) => {
+  await pressDown(page, 2);
+  await page.keyboard.press('e');
+  await page.getByRole('dialog').getByLabel('Titre').fill('Une (fiche)');
+  await page.keyboard.press('ControlOrMeta+Enter');
+  await page.keyboard.press('ControlOrMeta+Enter');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.keyboard.press('u');
+  await expect(page.locator('#toast')).toHaveText('Rien à annuler');
+  expect(store.state().projects[0].tasks[0].title).toBe('Une (fiche)');
 });

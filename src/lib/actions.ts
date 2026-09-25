@@ -6,6 +6,13 @@ import type { Settings, Task } from '../../shared/types.ts';
 export type TaskField = 'notes' | 'edit' | 'jira';
 
 
+// Dernière action annulable (u) : libellé, opération inverse, tâche à resélectionner.
+export interface Undo {
+  label: string;
+  run: () => Promise<unknown>;
+  focus: string;
+}
+
 export interface Actions {
   // Exécute une action serveur, affiche l'erreur éventuelle, recharge les
   // données et restaure le focus clavier (stay : garder la même position).
@@ -14,6 +21,8 @@ export interface Actions {
   toast: (message: string) => void;
   setLastProject: (id: number) => void;
   openTask: (task: Task, field?: TaskField) => void;
+  // Mémorise l'annulation de la dernière action (une seule, remplacée à chaque fois).
+  setUndo: (undo: Undo) => void;
   settings: Settings;
   navigate: (path: string) => void;
 }

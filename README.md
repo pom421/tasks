@@ -61,6 +61,7 @@ Clavier (`?` affiche l'aide) :
 | `L` (majuscule) | Ouvrir la fiche sur le champ « Ticket » |
 | `r` | Afficher seulement les tâches à reporter (ou clic sur « N tâches à reporter ») |
 | `x` puis `x` | Supprimer la tâche : le 1er appui demande confirmation, le 2e supprime (`Échap` annule). `Suppr` marche aussi |
+| `u` | Annuler la dernière action sur une tâche : cocher / décocher, renommer, supprimer (une seule, pas les modifications faites dans la fiche). Le curseur revient sur la tâche |
 | `p` / `n` | Nouveau projet / nouvelle tâche |
 | `d` / `f` | Filtre du Log par période / par projet |
 

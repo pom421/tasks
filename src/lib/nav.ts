@@ -50,8 +50,15 @@ export function restore(snap: FocusSnapshot | null, { stay = false } = {}) {
   if (!snap) return;
   const items = navItems();
   if (!items.length) return;
-  const el = (!stay && items.find((item) => item.dataset.navKey === snap.key)) || items[Math.min(Math.max(snap.index, 0), items.length - 1)];
-  focusItem(el);
+  if (!stay) {
+    const same = items.find((item) => item.dataset.navKey === snap.key);
+    if (same) return focusItem(same);
+  }
+  // Même position ; si c'est un champ de saisie (« + Ajouter »), on remonte à
+  // l'élément précédent : les raccourcis (u, x…) restent utilisables.
+  let i = Math.min(Math.max(snap.index, 0), items.length - 1);
+  while (i > 0 && items[i].matches('input')) i--;
+  focusItem(items[i]);
 }
 
 // Éléments où ↑/↓ ont déjà un sens (listes, dates, édition) : on n'y touche pas.

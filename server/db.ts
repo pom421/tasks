@@ -306,8 +306,30 @@ export class Store {
     return true;
   }
 
-  deleteTask(id: number): boolean {
-    return this.db.prepare('DELETE FROM task WHERE id = ?').run(id).changes > 0;
+  // Renvoie la tâche supprimée (toutes ses colonnes), pour pouvoir l'annuler.
+  deleteTask(id: number): TaskRow | undefined {
+    const row = this.task(id);
+    if (row) this.db.prepare('DELETE FROM task WHERE id = ?').run(id);
+    return row;
+  }
+
+  // Annulation d'une suppression : réinsère la tâche à l'identique (même id).
+  restoreTask(row: TaskRow): TaskRow {
+    this.db
+      .prepare(
+        `INSERT INTO task (id, project_id, title, created_at, done_at, position, notes,
+                           jira_wanted_at, jira_at, jira_key, jira_url)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        row.id, row.project_id, row.title, row.created_at, row.done_at, row.position, row.notes,
+        row.jira_wanted_at, row.jira_at, row.jira_key, row.jira_url,
+      );
+    return this.task(row.id)!;
+  }
+
+  hasTask(id: number): boolean {
+    return this.task(id) !== undefined;
   }
 
   // --- Import markdown -----------------------------------------------------
