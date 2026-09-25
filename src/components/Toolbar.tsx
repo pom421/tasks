@@ -11,7 +11,9 @@ const SHORTCUTS: [string, string][] = [
   ['Échap', "Quitter l'édition, retour à la navigation"],
   ['Espace', 'Cocher / décocher la tâche'],
   ['Alt+↑ Alt+↓', 'Monter / descendre la tâche, jusque dans le projet voisin (Alt+k / Alt+j)'],
-  ['J', 'Marquer / démarquer « reportée dans Jira » (majuscule)'],
+  ['J', 'Suivi Jira : à reporter → reportée → rien (majuscule)'],
+  ['L', 'Lien du ticket Jira (majuscule)'],
+  ['r', 'Afficher seulement les tâches à reporter dans Jira'],
   ['x x', 'Supprimer la tâche (x une 2e fois pour confirmer)'],
   ['p', 'Nouveau projet'],
   ['n', 'Nouvelle tâche (dernier projet utilisé)'],
@@ -21,13 +23,16 @@ const SHORTCUTS: [string, string][] = [
 ];
 
 interface ToolbarProps {
+  jiraPending: number;
+  jiraFilter: boolean;
+  onJiraFilter: () => void;
   showArchived: boolean;
   onShowArchived: (value: boolean) => void;
   helpOpen: boolean;
   onHelpOpen: (open: boolean) => void;
 }
 
-export function Toolbar({ showArchived, onShowArchived, helpOpen, onHelpOpen }: ToolbarProps) {
+export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, showArchived, onShowArchived, helpOpen, onHelpOpen }: ToolbarProps) {
   const { act, toast } = useActions();
   const dbInput = useRef<HTMLInputElement>(null);
   const mdInput = useRef<HTMLInputElement>(null);
@@ -57,6 +62,18 @@ export function Toolbar({ showArchived, onShowArchived, helpOpen, onHelpOpen }: 
     <header className="flex flex-wrap items-center justify-between gap-2 pt-6 pb-2">
       <h1 className="text-2xl font-bold">Tâches</h1>
       <nav className="flex flex-wrap items-center gap-1.5">
+        {(jiraPending > 0 || jiraFilter) && (
+          <Button
+            id="jira-pending"
+            variant={jiraFilter ? 'default' : 'ghost'}
+            size="sm"
+            aria-pressed={jiraFilter}
+            title="Afficher seulement les tâches à reporter dans Jira (r)"
+            onClick={onJiraFilter}
+          >
+            Jira : {jiraPending} à reporter
+          </Button>
+        )}
         <label className="flex items-center gap-1 text-sm text-muted-foreground">
           <Checkbox id="show-archived" checked={showArchived} onCheckedChange={(v) => onShowArchived(v === true)} /> Archivés
         </label>

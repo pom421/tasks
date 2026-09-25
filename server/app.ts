@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { type Store, isDate, today } from './db.ts';
+import type { JiraState } from '../shared/types.ts';
 import { parseMarkdown } from './markdown.ts';
 
 type Req = IncomingMessage;
@@ -84,6 +85,17 @@ async function readJson(req: Req): Promise<Body> {
   return body as Body;
 }
 
+// Lien Jira : http(s) uniquement. Un lien « javascript: » placé dans un href
+// exécuterait du code au clic (XSS).
+function jiraUrl(value: unknown): string | null {
+  if (value === null || value === '') return null;
+  const url = typeof value === 'string' && value.length <= 2000 ? URL.parse(value.trim()) : null;
+  if (!url || (url.protocol !== 'https:' && url.protocol !== 'http:')) {
+    throw new HttpError(400, 'Lien invalide : adresse http(s) attendue');
+  }
+  return url.href;
+}
+
 function requireText(value: unknown, label: string): string {
   if (typeof value !== 'string' || !value.trim()) throw new HttpError(400, `${label} requis`);
   return value.trim();
@@ -149,9 +161,10 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
       const from = url.searchParams.get('from') || undefined;
       const to = url.searchParams.get('to') || undefined;
       const projectId = Number(url.searchParams.get('project')) || undefined;
+      const jiraPending = url.searchParams.get('jira') === 'pending';
       if ((from && !isDate(from)) || (to && !isDate(to))) throw new HttpError(400, 'Date invalide');
       if (from && to && from > to) throw new HttpError(400, 'La date de début est après la date de fin');
-      send(res, 200, store.journal({ from, to, projectId }));
+      send(res, 200, store.journal({ from, to, projectId, jiraPending }));
     }],
 
     ['POST', /^\/api\/projects$/, async (req, res) => {
@@ -186,7 +199,7 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
 
     ['PATCH', /^\/api\/tasks\/(\d+)$/, async (req, res, _url, id) => {
       const body = await readJson(req);
-      const patch: { title?: string; doneAt?: string | null; jira?: boolean } = {};
+      const patch: { title?: string; doneAt?: string | null; jira?: JiraState; jiraUrl?: string | null } = {};
       if ('title' in body) patch.title = requireText(body.title, 'Titre');
       // done: true -> faite (à done_at ou aujourd'hui), false -> à faire.
       const doneAt = body.done_at ?? (body.done ? today() : null);
@@ -195,7 +208,11 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
       }
       if ('done' in body) patch.doneAt = body.done ? (doneAt as string) : null;
       else if ('done_at' in body) patch.doneAt = doneAt as string | null;
-      if ('jira' in body) patch.jira = Boolean(body.jira);
+      if ('jira' in body) {
+        if (!['none', 'wanted', 'done'].includes(body.jira as string)) throw new HttpError(400, 'État Jira invalide');
+        patch.jira = body.jira as JiraState;
+      }
+      if ('jira_url' in body) patch.jiraUrl = jiraUrl(body.jira_url);
       const task = store.updateTask(Number(id), patch);
       if (!task) throw new HttpError(404, 'Tâche introuvable');
       send(res, 200, task);

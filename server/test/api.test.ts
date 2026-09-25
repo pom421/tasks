@@ -192,7 +192,7 @@ test('report Jira : bascule, visible dans les projets et le journal', async () =
   const { body: t } = await call('POST', '/api/tasks', { project_id: p.id, title: 'Ticket' });
   assert.equal(t.jira_at, null);
 
-  const { body: on } = await call('PATCH', `/api/tasks/${t.id}`, { jira: true });
+  const { body: on } = await call('PATCH', `/api/tasks/${t.id}`, { jira: 'done' });
   assert.ok(on.jira_at);
   let { body: state } = await call('GET', '/api/state');
   assert.ok(state.projects.find((x: any) => x.id === p.id).tasks[0].jira_at);
@@ -201,7 +201,7 @@ test('report Jira : bascule, visible dans les projets et le journal', async () =
   const { body: j } = await call('GET', `/api/journal?project=${p.id}`);
   assert.ok(j.days[0].tasks[0].jira_at);
 
-  const { body: off } = await call('PATCH', `/api/tasks/${t.id}`, { jira: false });
+  const { body: off } = await call('PATCH', `/api/tasks/${t.id}`, { jira: 'none' });
   assert.equal(off.jira_at, null);
 });
 
@@ -218,8 +218,8 @@ test('migration : une base v1 (sans jira_at) est mise à niveau à l’ouverture
            PRAGMA user_version = 1;`);
   v1.close();
   const old = new Store(file);
-  assert.deepEqual(old.state().projects[0].tasks[0], { id: 1, project_id: 1, title: 'Tâche v1', jira_at: null });
-  assert.ok(old.updateTask(1, { jira: true })?.jira_at);
+  assert.deepEqual(old.state().projects[0].tasks[0], { id: 1, project_id: 1, title: 'Tâche v1', jira_wanted_at: null, jira_at: null, jira_url: null });
+  assert.ok(old.updateTask(1, { jira: 'done' })?.jira_at);
   old.close();
 });
 
@@ -253,4 +253,64 @@ test('déplacement : dans le projet, vers un autre projet (même vide), validati
   // Une tâche faite ne se déplace pas.
   await call('PATCH', `/api/tasks/${ids.un}`, { done: true, done_at: '2026-09-01' });
   assert.equal((await call('POST', `/api/tasks/${ids.un}/move`, { project_id: a.id, index: 0 })).status, 404);
+});
+
+test('Jira : à reporter puis reportée, lien, compteur et filtre du journal', async () => {
+  const { body: p } = await call('POST', '/api/projects', { name: 'Suivi Jira' });
+  const { body: t } = await call('POST', '/api/tasks', { project_id: p.id, title: 'À reporter' });
+  const pending = async () => (await call('GET', '/api/state')).body.jiraPending;
+  const before = await pending();
+
+  const { body: wanted } = await call('PATCH', `/api/tasks/${t.id}`, { jira: 'wanted' });
+  assert.ok(wanted.jira_wanted_at);
+  assert.equal(wanted.jira_at, null);
+  assert.equal(await pending(), before + 1);
+
+  // Faite mais pas reportée : visible dans le journal filtré, quelle que soit la date.
+  await call('PATCH', `/api/tasks/${t.id}`, { done: true, done_at: '2020-01-01' });
+  const { body: j } = await call('GET', '/api/journal?jira=pending');
+  assert.ok(j.days.some((d: any) => d.tasks.some((x: any) => x.id === t.id)));
+
+  const { body: done } = await call('PATCH', `/api/tasks/${t.id}`, {
+    jira: 'done',
+    jira_url: 'https://exemple.atlassian.net/browse/PROJ-123',
+  });
+  assert.ok(done.jira_at);
+  assert.equal(done.jira_wanted_at, wanted.jira_wanted_at); // date de demande conservée
+  assert.equal(done.jira_url, 'https://exemple.atlassian.net/browse/PROJ-123');
+  assert.equal(await pending(), before);
+  const { body: j2 } = await call('GET', '/api/journal?jira=pending');
+  assert.ok(!j2.days.some((d: any) => d.tasks.some((x: any) => x.id === t.id)));
+
+  // Liens refusés : autre protocole (XSS via javascript:), texte libre.
+  for (const bad of ['javascript:alert(1)', 'data:text/html,x', 'PROJ-123', 42]) {
+    assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { jira_url: bad })).status, 400, String(bad));
+  }
+  assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { jira: 'oui' })).status, 400);
+
+  // Lien vidé ; retour à « rien » efface tout.
+  assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { jira_url: '' })).body.jira_url, null);
+  await call('PATCH', `/api/tasks/${t.id}`, { jira_url: 'https://exemple.atlassian.net/browse/PROJ-9' });
+  const { body: none } = await call('PATCH', `/api/tasks/${t.id}`, { jira: 'none' });
+  assert.deepEqual([none.jira_wanted_at, none.jira_at, none.jira_url], [null, null, null]);
+});
+
+test('migration 4 : une tâche déjà « reportée » (v3) garde son état', async () => {
+  const { DatabaseSync } = await import('node:sqlite');
+  const file = path.join(dir, 'v3.sqlite');
+  const v3 = new DatabaseSync(file);
+  v3.exec(`CREATE TABLE project (id INTEGER PRIMARY KEY, name TEXT NOT NULL,
+             created_at TEXT NOT NULL DEFAULT (datetime('now')), archived_at TEXT);
+           CREATE TABLE task (id INTEGER PRIMARY KEY, project_id INTEGER NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+             title TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')), done_at TEXT,
+             jira_at TEXT, position INTEGER NOT NULL DEFAULT 0);
+           INSERT INTO project (name) VALUES ('P');
+           INSERT INTO task (project_id, title, jira_at) VALUES (1, 'Reportée', '2026-09-01 10:00:00');
+           PRAGMA user_version = 3;`);
+  v3.close();
+  const store3 = new Store(file);
+  const task = store3.state().projects[0].tasks[0];
+  assert.equal(task.jira_at, '2026-09-01 10:00:00');
+  assert.equal(task.jira_wanted_at, '2026-09-01 10:00:00');
+  store3.close();
 });

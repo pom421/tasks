@@ -10,6 +10,7 @@ import { Journal, NO_FILTER, type Filter } from '@/components/Journal';
 interface Data {
   projects: Project[];
   days: JournalDay[];
+  jiraPending: number;
 }
 
 // Focus à appliquer une fois les nouvelles données affichées.
@@ -17,10 +18,11 @@ interface PendingFocus {
   snap: FocusSnapshot | null;
   stay: boolean;
   key?: string;
+  applied: () => void; // termine l'action une fois le focus appliqué
 }
 
 export function App() {
-  const [data, setData] = useState<Data>({ projects: [], days: [] });
+  const [data, setData] = useState<Data>({ projects: [], days: [], jiraPending: 0 });
   const [filter, setFilter] = useState<Filter>(NO_FILTER);
   const [showArchived, setShowArchived] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -39,9 +41,9 @@ export function App() {
   const load = useCallback(async (f: Filter = filterRef.current) => {
     const [state, journal] = await Promise.all([
       api.state(),
-      api.journal({ from: f.from, to: f.to, projectId: Number(f.project) || undefined }),
+      api.journal({ from: f.from, to: f.to, projectId: Number(f.project) || undefined, jiraPending: f.jira }),
     ]);
-    setData({ projects: state.projects, days: journal.days });
+    setData({ projects: state.projects, days: journal.days, jiraPending: state.jiraPending });
   }, []);
 
   useEffect(() => {
@@ -59,8 +61,17 @@ export function App() {
         toast((err as Error).message);
       }
       // Après fn (qui a pu vider un champ d'ajout), juste avant le re-rendu.
-      pending.current = { snap: snapshot(), stay, key: (result as { focus?: string } | undefined)?.focus };
-      await load().catch((err) => toast(err.message));
+      // act ne se termine qu'une fois les données affichées et le focus
+      // restauré : ce que l'appelant fait ensuite (ouvrir un champ…) n'est
+      // plus écrasé par la restauration.
+      await new Promise<void>((applied) => {
+        pending.current = { snap: snapshot(), stay, key: (result as { focus?: string } | undefined)?.focus, applied };
+        load().catch((err) => {
+          toast(err.message);
+          pending.current = null;
+          applied();
+        });
+      });
     },
   };
 
@@ -71,6 +82,7 @@ export function App() {
     pending.current = null;
     if (p.key) focusByKey(p.key);
     else restore(p.snap, { stay: p.stay });
+    p.applied();
   }, [data]);
 
   const changeFilter = (f: Filter) => {
@@ -95,6 +107,7 @@ export function App() {
         n: focusAdd,
         d: () => document.getElementById('filter-from')?.focus(),
         f: () => document.getElementById('filter-project')?.focus(),
+        r: () => changeFilter({ ...filterRef.current, jira: !filterRef.current.jira }),
         '?': () => setHelpOpen(true),
         // Échap sur un élément de la liste : on reste en navigation.
         Escape: () => target.dataset.nav === undefined && changeFilter(NO_FILTER),
@@ -111,9 +124,13 @@ export function App() {
   return (
     <ActionsContext.Provider value={actions}>
       <div className="mx-auto max-w-2xl px-4">
-        <Toolbar showArchived={showArchived} onShowArchived={setShowArchived} helpOpen={helpOpen} onHelpOpen={setHelpOpen} />
+        <Toolbar
+          jiraPending={data.jiraPending}
+          jiraFilter={filter.jira}
+          onJiraFilter={() => changeFilter({ ...filter, jira: !filter.jira })}
+          showArchived={showArchived} onShowArchived={setShowArchived} helpOpen={helpOpen} onHelpOpen={setHelpOpen} />
         <main>
-          <ProjectList projects={data.projects} showArchived={showArchived} />
+          <ProjectList projects={data.projects} showArchived={showArchived} jiraOnly={filter.jira} />
           <Journal days={data.days} projects={data.projects} filter={filter} onFilter={changeFilter} />
         </main>
       </div>

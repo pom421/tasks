@@ -1,10 +1,20 @@
 // Types échangés entre le serveur et le front (réponses de l'API).
 
+// Suivi Jira : rien -> à reporter (jira_wanted_at) -> reportée (jira_at).
+export type JiraState = 'none' | 'wanted' | 'done';
+
 export interface Task {
   id: number;
   project_id: number;
   title: string;
-  jira_at: string | null; // horodatage du report dans Jira, null = non reportée
+  jira_wanted_at: string | null; // marquée « à reporter dans Jira »
+  jira_at: string | null; // reportée dans Jira
+  jira_url: string | null; // lien vers le ticket (http/https)
+}
+
+export function jiraState(t: Pick<Task, 'jira_wanted_at' | 'jira_at'>): JiraState {
+  if (t.jira_at) return 'done';
+  return t.jira_wanted_at ? 'wanted' : 'none';
 }
 
 export interface Project {
@@ -26,6 +36,7 @@ export interface JournalDay {
 
 export interface State {
   projects: Project[];
+  jiraPending: number; // tâches à reporter dans Jira (à faire ou faites)
 }
 
 export interface Journal {
@@ -36,6 +47,7 @@ export interface JournalFilter {
   from?: string;
   to?: string;
   projectId?: number;
+  jiraPending?: boolean; // seulement les tâches à reporter dans Jira
 }
 
 export interface ImportResult {

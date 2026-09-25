@@ -9,9 +9,10 @@ export interface Filter {
   from: string;
   to: string;
   project: string; // id du projet, '' = tous
+  jira: boolean; // seulement les tâches à reporter dans Jira (liste et journal)
 }
 
-export const NO_FILTER: Filter = { from: '', to: '', project: '' };
+export const NO_FILTER: Filter = { from: '', to: '', project: '', jira: false };
 
 const fieldClass = 'rounded-md border bg-background px-1.5 py-0.5 text-sm';
 
@@ -79,7 +80,7 @@ export function Journal({ days, projects, filter, onFilter }: JournalProps) {
     onFilter({ ...filter, to });
   };
 
-  const filtered = Boolean(filter.from || filter.to || filter.project);
+  const filtered = Boolean(filter.from || filter.to || filter.project || filter.jira);
 
   return (
     <section id="journal" aria-label="Journal" className="mt-12 mb-16 border-t-2 pt-4">

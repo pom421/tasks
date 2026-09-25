@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import type { Project, Task } from '../../shared/types.ts';
+import { jiraState, type Project, type Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
 import { useActions } from '@/lib/actions';
 import { cn } from '@/lib/utils';
@@ -9,7 +9,7 @@ import { TaskRow } from './TaskRow';
 
 type MoveTask = (task: Task, direction: -1 | 1) => void;
 
-function ProjectCard({ project: p, onMove }: { project: Project; onMove: MoveTask }) {
+function ProjectCard({ project: p, onMove }: { project: Project; onMove?: MoveTask }) {
   const { act, setLastProject } = useActions();
   const archived = Boolean(p.archived_at);
 
@@ -54,7 +54,7 @@ function ProjectCard({ project: p, onMove }: { project: Project; onMove: MoveTas
       </div>
       <ul>
         {p.tasks.map((t) => (
-          <TaskRow key={t.id} task={t} onMove={(direction) => onMove(t, direction)} />
+          <TaskRow key={t.id} task={t} onMove={onMove && ((direction) => onMove(t, direction))} />
         ))}
       </ul>
       <AddInput
@@ -67,9 +67,18 @@ function ProjectCard({ project: p, onMove }: { project: Project; onMove: MoveTas
   );
 }
 
-export function ProjectList({ projects, showArchived }: { projects: Project[]; showArchived: boolean }) {
+interface ProjectListProps {
+  projects: Project[];
+  showArchived: boolean;
+  jiraOnly: boolean; // filtre « à reporter dans Jira »
+}
+
+export function ProjectList({ projects, showArchived, jiraOnly }: ProjectListProps) {
   const { act } = useActions();
-  const visible = projects.filter((p) => showArchived || !p.archived_at);
+  const visible = projects
+    .filter((p) => showArchived || !p.archived_at)
+    .map((p) => (jiraOnly ? { ...p, tasks: p.tasks.filter((t) => jiraState(t) === 'wanted') } : p))
+    .filter((p) => !jiraOnly || p.tasks.length > 0);
 
   // Monte / descend d'un cran. En bord de projet, la tâche passe dans le
   // projet visible voisin : à la fin du précédent, en tête du suivant.
@@ -108,9 +117,14 @@ export function ProjectList({ projects, showArchived }: { projects: Project[]; s
     <>
       <section id="projects" aria-label="Projets">
         {visible.map((p) => (
-          <ProjectCard key={p.id} project={p} onMove={moveTask} />
+          // Liste filtrée : les positions affichées ne sont pas les vraies, pas de déplacement.
+          <ProjectCard key={p.id} project={p} onMove={jiraOnly ? undefined : moveTask} />
         ))}
-        {!visible.length && <p className="empty mt-3 italic text-muted-foreground">Aucun projet. Créez-en un ci-dessous.</p>}
+        {!visible.length && (
+          <p className="empty mt-3 italic text-muted-foreground">
+            {jiraOnly ? 'Aucune tâche à faire à reporter dans Jira.' : 'Aucun projet. Créez-en un ci-dessous.'}
+          </p>
+        )}
       </section>
       <AddInput id="new-project" className="mt-6 font-semibold" placeholder="+ Nouveau projet (p)" navKey="new-project" onAdd={addProject} />
     </>

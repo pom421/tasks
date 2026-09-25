@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { DoneTask, ImportResult, Journal, JournalDay, JournalFilter, Project, State, Task } from '../shared/types.ts';
+import type { DoneTask, ImportResult, JiraState, Journal, JournalDay, JournalFilter, Project, State, Task } from '../shared/types.ts';
 import type { ImportItem } from './markdown.ts';
 
 // Schéma versionné via PRAGMA user_version : chaque entrée = une migration.
@@ -28,7 +28,14 @@ const MIGRATIONS = [
   // 3 : ordre des tâches dans leur projet (priorité), initialisé sur l'ordre de création.
   `ALTER TABLE task ADD COLUMN position INTEGER NOT NULL DEFAULT 0;
    UPDATE task SET position = id;`,
+  // 4 : suivi Jira en deux temps (à reporter, puis reportée) et lien du ticket.
+  `ALTER TABLE task ADD COLUMN jira_wanted_at TEXT;
+   ALTER TABLE task ADD COLUMN jira_url TEXT;
+   UPDATE task SET jira_wanted_at = jira_at WHERE jira_at IS NOT NULL;`,
 ];
+
+// À reporter dans Jira : marquée mais pas encore reportée.
+const JIRA_PENDING = 'jira_wanted_at IS NOT NULL AND jira_at IS NULL';
 
 // Lignes brutes renvoyées par SQLite (toutes les colonnes).
 export interface ProjectRow {
@@ -133,17 +140,18 @@ export class Store {
       'tasks'
     >[];
     const tasks = this.db
-      .prepare('SELECT id, project_id, title, jira_at FROM task WHERE done_at IS NULL ORDER BY position, id')
+      .prepare('SELECT id, project_id, title, jira_wanted_at, jira_at, jira_url FROM task WHERE done_at IS NULL ORDER BY position, id')
       .all() as unknown as Task[];
     const byProject = new Map<number, Project>(projects.map((p) => [p.id, { ...p, tasks: [] }]));
     for (const t of tasks) byProject.get(t.project_id)?.tasks.push({ ...t });
-    return { projects: [...byProject.values()] };
+    const { n } = this.db.prepare(`SELECT count(*) AS n FROM task WHERE ${JIRA_PENDING}`).get() as { n: number };
+    return { projects: [...byProject.values()], jiraPending: n };
   }
 
   // Période [from, to] incluse, bornes facultatives ('YYYY-MM-DD').
   // done_at n'a pas d'heure : from = to couvre toute la journée.
   // Sans aucun filtre : la dernière journée travaillée.
-  journal({ from, to, projectId }: JournalFilter = {}): Journal {
+  journal({ from, to, projectId, jiraPending }: JournalFilter = {}): Journal {
     const where = ['t.done_at IS NOT NULL'];
     const params: (string | number)[] = [];
     if (from) {
@@ -158,7 +166,8 @@ export class Store {
       where.push('t.project_id = ?');
       params.push(projectId);
     }
-    if (!from && !to && !projectId) {
+    if (jiraPending) where.push(JIRA_PENDING.replaceAll('jira_', 't.jira_'));
+    if (!from && !to && !projectId && !jiraPending) {
       const last = (this.db.prepare('SELECT MAX(done_at) AS d FROM task').get() as { d: string | null }).d;
       if (!last) return { days: [] };
       where.push('t.done_at = ?');
@@ -166,7 +175,7 @@ export class Store {
     }
     const rows = this.db
       .prepare(
-        `SELECT t.id, t.title, t.done_at, t.jira_at, t.project_id, p.name AS project_name
+        `SELECT t.id, t.title, t.done_at, t.jira_wanted_at, t.jira_at, t.jira_url, t.project_id, p.name AS project_name
          FROM task t JOIN project p ON p.id = t.project_id
          WHERE ${where.join(' AND ')}
          ORDER BY t.done_at DESC, p.id, t.id`,
@@ -224,15 +233,22 @@ export class Store {
   }
 
   // doneAt : 'YYYY-MM-DD' pour marquer faite, null pour remettre à faire.
-  // jira : true = reportée dans Jira (horodatée), false = retirée.
-  updateTask(id: number, { title, doneAt, jira }: { title?: string; doneAt?: string | null; jira?: boolean }) {
+  // jira : état du suivi Jira ('none' efface aussi le lien) ; jiraUrl : lien du ticket.
+  updateTask(
+    id: number,
+    { title, doneAt, jira, jiraUrl }: { title?: string; doneAt?: string | null; jira?: JiraState; jiraUrl?: string | null },
+  ) {
     if (title !== undefined) this.db.prepare('UPDATE task SET title = ? WHERE id = ?').run(title, id);
     if (doneAt !== undefined) this.db.prepare('UPDATE task SET done_at = ? WHERE id = ?').run(doneAt, id);
     if (jira !== undefined) {
-      this.db
-        .prepare(`UPDATE task SET jira_at = ${jira ? "datetime('now')" : 'NULL'} WHERE id = ?`)
-        .run(id);
+      const set = {
+        none: 'jira_wanted_at = NULL, jira_at = NULL, jira_url = NULL',
+        wanted: "jira_wanted_at = COALESCE(jira_wanted_at, datetime('now')), jira_at = NULL",
+        done: "jira_wanted_at = COALESCE(jira_wanted_at, datetime('now')), jira_at = COALESCE(jira_at, datetime('now'))",
+      }[jira];
+      this.db.prepare(`UPDATE task SET ${set} WHERE id = ?`).run(id);
     }
+    if (jiraUrl !== undefined) this.db.prepare('UPDATE task SET jira_url = ? WHERE id = ?').run(jiraUrl, id);
     return this.task(id);
   }
 

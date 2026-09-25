@@ -200,10 +200,8 @@ test('j / k naviguent comme ↓ / ↑, mais s’écrivent dans un champ', async 
 test('raccourcis actifs même quand le focus est sur la case à cocher', async ({ page, store }) => {
   await page.locator('#projects li.task').first().getByRole('checkbox').focus();
   await page.keyboard.press('Shift+J');
-  await expect(page.locator('#projects li.task').first().locator('svg.jira')).toBeVisible();
-  await page.keyboard.press('Shift+J');
-  await expect(page.locator('#projects li.task').first().locator('svg.jira')).toHaveCount(0);
-  expect(store.state().projects[0].tasks[0].jira_at).toBeNull();
+  await expect(page.locator('#projects li.task').first().locator('svg.jira-wanted')).toBeVisible();
+  expect(store.state().projects[0].tasks[0].jira_wanted_at).toBeTruthy();
 });
 
 test('nouveau projet : le focus va sur la saisie de sa première tâche', async ({ page, store }) => {
@@ -221,20 +219,6 @@ test('nouveau projet : le focus va sur la saisie de sa première tâche', async 
   await expect(page.locator(`[data-nav-key="add:${gamma.id}"]`)).toBeFocused();
 });
 
-test('J bascule l’icône Jira après le texte de la tâche', async ({ page, store, data }) => {
-  const icon = page.locator(`li.task:has([data-nav-key="task:${data.tasks.une.id}"]) svg.jira`);
-  await pressDown(page, 2);
-  await page.keyboard.press('Shift+J');
-  await expect(icon).toBeVisible();
-  expect(store.state().projects[0].tasks[0].jira_at).toBeTruthy();
-  // Le focus reste sur la tâche : on peut rebasculer aussitôt.
-  expect(await current(page)).toBe(`task:${data.tasks.une.id}`);
-
-  await page.keyboard.press('Shift+J');
-  await expect(icon).toHaveCount(0);
-  expect(store.state().projects[0].tasks[0].jira_at).toBeNull();
-});
-
 test('J en édition : saisi comme une lettre, pas de bascule', async ({ page, store, data }) => {
   await pressDown(page, 2);
   await page.keyboard.press('Enter');
@@ -247,7 +231,7 @@ test('J en édition : saisi comme une lettre, pas de bascule', async ({ page, st
 });
 
 test('icône Jira conservée dans le journal, et J y fonctionne aussi', async ({ page, store, data }) => {
-  store.updateTask(data.tasks.trois.id, { jira: true });
+  store.updateTask(data.tasks.trois.id, { jira: 'done' });
   await page.reload();
   const row = page.locator(`li.task:has([data-nav-key="task:${data.tasks.trois.id}"])`);
   await expect(row.locator('svg.jira')).toBeVisible();
@@ -311,4 +295,84 @@ test('vers un projet vide ; les projets archivés masqués sont sautés', async 
   await page.keyboard.press('Alt+ArrowDown');
   await expect(page.locator(`#project-${gamma.id} .name`)).toHaveText(['Gamma', 'Deux']);
   expect(store.state().projects.find((p) => p.id === gamma.id)!.tasks.map((t) => t.title)).toEqual(['Deux']);
+});
+
+// --- Suivi Jira ------------------------------------------------------------
+
+const row = (page: Page, taskId: number) => page.locator(`li.task:has([data-nav-key="task:${taskId}"])`);
+
+test('J fait tourner : à reporter (contour) → reportée (plein, lien proposé) → rien', async ({ page, store, data }) => {
+  const une = row(page, data.tasks.une.id);
+  await pressDown(page, 2);
+  await page.keyboard.press('Shift+J');
+  await expect(une.locator('svg.jira-wanted')).toBeVisible();
+  expect(store.state().jiraPending).toBe(1);
+
+  await page.keyboard.press('Shift+J');
+  await expect(une.locator('svg.jira-done')).toBeVisible();
+  // Champ de lien proposé ; Échap passe et rend le focus à la tâche.
+  await expect(une.locator('input.jira-url')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(une.locator('input.jira-url')).toHaveCount(0);
+  expect(await current(page)).toBe(`task:${data.tasks.une.id}`);
+
+  await page.keyboard.press('Shift+J');
+  await expect(une.locator('svg.jira')).toHaveCount(0);
+  expect(store.state().projects[0].tasks[0]).toMatchObject({ jira_wanted_at: null, jira_at: null, jira_url: null });
+});
+
+test('lien Jira : saisi après le report, icône cliquable ; L pour modifier', async ({ page, store, data }) => {
+  const une = row(page, data.tasks.une.id);
+  await pressDown(page, 2);
+  await page.keyboard.press('Shift+J');
+  await page.keyboard.press('Shift+J');
+  await expect(une.locator('input.jira-url')).toBeFocused();
+  await page.keyboard.type('https://exemple.atlassian.net/browse/PROJ-1');
+  await page.keyboard.press('Enter');
+
+  const link = une.locator('a.jira-link');
+  await expect(link).toHaveAttribute('href', 'https://exemple.atlassian.net/browse/PROJ-1');
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  expect(await current(page)).toBe(`task:${data.tasks.une.id}`);
+
+  // L : modifier ; un lien invalide est refusé.
+  await page.keyboard.press('Shift+L');
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.type('javascript:alert(1)');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#toast')).toContainText('Lien invalide');
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.type('https://exemple.atlassian.net/browse/PROJ-2');
+  await page.keyboard.press('Enter');
+  await expect(link).toHaveAttribute('href', 'https://exemple.atlassian.net/browse/PROJ-2');
+  expect(store.state().projects[0].tasks[0].jira_url).toBe('https://exemple.atlassian.net/browse/PROJ-2');
+});
+
+test('L sur une tâche sans suivi : le lien la marque reportée', async ({ page, store, data }) => {
+  await pressDown(page, 3); // « Deux »
+  await page.keyboard.press('Shift+L');
+  await page.keyboard.type('https://exemple.atlassian.net/browse/PROJ-3');
+  await page.keyboard.press('Enter');
+  await expect(row(page, data.tasks.deux.id).locator('svg.jira-done')).toBeVisible();
+  expect(store.state().projects[0].tasks[1].jira_at).toBeTruthy();
+});
+
+test('compteur « à reporter » : filtre la liste et le journal (r ou clic)', async ({ page, store, data }) => {
+  store.updateTask(data.tasks.deux.id, { jira: 'wanted' });
+  const faite = store.createTask(data.beta.id, 'Faite à reporter');
+  store.updateTask(faite.id, { doneAt: '2020-01-01', jira: 'wanted' }); // vieille date : hors « dernière journée »
+  store.updateTask(data.tasks.trois.id, { doneAt: '2026-09-20' });
+  await page.reload();
+
+  const counter = page.locator('#jira-pending');
+  await expect(counter).toHaveText('Jira : 2 à reporter');
+  await page.keyboard.press('r');
+  await expect(counter).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#projects .name')).toHaveText(['Alpha', 'Deux']);
+  await expect(page.locator('#journal .name')).toHaveText(['Faite à reporter']);
+
+  await counter.click();
+  await expect(page.locator('#projects .name')).toHaveText(['Alpha', 'Une', 'Deux', 'Beta']);
+  await expect(page.locator('#journal .name')).toHaveText(['Trois']);
 });

@@ -1,4 +1,4 @@
-import type { ImportResult, Journal, JournalFilter, State } from '../../shared/types.ts';
+import type { ImportResult, JiraState, Journal, JournalFilter, State } from '../../shared/types.ts';
 
 // Le serveur exige un Content-Type précis par route (protection CSRF).
 async function request<T>(method: string, url: string, body?: unknown): Promise<T> {
@@ -24,16 +24,18 @@ export interface TaskPatch {
   title?: string;
   done?: boolean;
   done_at?: string;
-  jira?: boolean;
+  jira?: JiraState;
+  jira_url?: string | null;
 }
 
 export const api = {
   state: () => request<State>('GET', '/api/state'),
-  journal: ({ from, to, projectId }: JournalFilter) => {
+  journal: ({ from, to, projectId, jiraPending }: JournalFilter) => {
     const params = new URLSearchParams();
     if (from) params.set('from', from);
     if (to) params.set('to', to);
     if (projectId) params.set('project', String(projectId));
+    if (jiraPending) params.set('jira', 'pending');
     return request<Journal>('GET', `/api/journal?${params}`);
   },
   createProject: (name: string) => request<{ id: number }>('POST', '/api/projects', { name }),
