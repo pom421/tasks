@@ -59,9 +59,7 @@ export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, favorites, favo
         {(jiraPending > 0 || jiraFilter) && (
           <Button
             id="jira-pending"
-            variant="outline"
             className={filterClass(jiraFilter)}
-            size="sm"
             aria-pressed={jiraFilter}
             title="Afficher seulement les tâches à reporter (r)"
             onClick={onJiraFilter}
@@ -73,9 +71,7 @@ export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, favorites, favo
         {(archived > 0 || archivedOnly) && (
           <Button
             id="archived-only"
-            variant="outline"
             className={filterClass(archivedOnly)}
-            size="sm"
             aria-pressed={archivedOnly}
             title="Afficher seulement les projets archivés"
             onClick={onArchivedOnly}
@@ -86,9 +82,7 @@ export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, favorites, favo
         {(favorites > 0 || favoritesOnly) && (
           <Button
             id="favorites-only"
-            variant="outline"
             className={filterClass(favoritesOnly)}
-            size="sm"
             aria-pressed={favoritesOnly}
             title="Afficher seulement les projets favoris (*)"
             onClick={onFavoritesOnly}
@@ -96,10 +90,10 @@ export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, favorites, favo
             <Heart aria-hidden className="text-red-600" fill={favoritesOnly ? 'currentColor' : 'none'} /> Favoris
           </Button>
         )}
-        <Button variant="outline" size="sm" title="Raccourcis (?)" onClick={() => onHelpOpen(true)}>
+        <Button title="Raccourcis (?)" onClick={() => onHelpOpen(true)}>
           ?
         </Button>
-        <Button variant="outline" size="sm" asChild>
+        <Button asChild>
           <a
             href="/admin"
             id="settings-link"

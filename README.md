@@ -96,7 +96,7 @@ Clavier (`?` affiche l'aide) :
 
 Import / export (page Réglages) :
 
-- **Exporter** télécharge la base `.sqlite`. **Importer .sqlite** remplace toute la base.
+- **Exporter** télécharge la base `.sqlite`. **Importer .sqlite** remplace toute la base, en deux temps sans fenêtre de confirmation : 1er clic = message, 2e clic = choix du fichier, `Échap` annule (sans quitter les Réglages).
 - **Importer .md** ajoute des projets et tâches depuis un markdown : puce = projet, sous-puce = tâche, une ligne avec une date (`## 24/09/2026`) ouvre une journée de tâches faites.
 
 ## Sécurité

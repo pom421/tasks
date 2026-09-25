@@ -173,7 +173,6 @@ export function Journal({ days, dates, projects, filter, onFilter }: JournalProp
       <div className="mt-3 flex items-center gap-1" role="group" aria-label="Navigation par jour">
         <Button
           id="day-prev"
-          variant="outline"
           size="icon"
           className="size-7"
           aria-label="Jour précédent"
@@ -185,7 +184,6 @@ export function Journal({ days, dates, projects, filter, onFilter }: JournalProp
         </Button>
         <Button
           id="day-next"
-          variant="outline"
           size="icon"
           className="size-7"
           aria-label="Jour suivant"
@@ -201,8 +199,6 @@ export function Journal({ days, dates, projects, filter, onFilter }: JournalProp
         {/* Tout à droite, toujours visible ; désactivé si on y est déjà. */}
         <Button
           id="day-today"
-          variant="outline"
-          size="sm"
           className="h-7"
           title="Revenir au jour courant"
           disabled={!dayMode || current === today}

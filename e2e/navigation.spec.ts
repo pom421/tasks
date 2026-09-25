@@ -701,6 +701,31 @@ test('réglages (/admin) : URL Jira conservée en base, lien depuis la fiche', a
   );
 });
 
+test('réglages : Importer .sqlite en deux temps, sans fenêtre de confirmation ; Échap annule', async ({ page }) => {
+  let dialogs = 0;
+  page.on('dialog', () => dialogs++);
+  await page.goto('/admin');
+  const importDb = page.getByRole('button', { name: 'Importer .sqlite' });
+  const warning = page.getByRole('alert').filter({ hasText: 'remplacera toute la base' });
+
+  // 1er clic : message seulement ; Échap annule sans quitter les Réglages.
+  await importDb.click();
+  await expect(warning).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(warning).toHaveCount(0);
+  await expect(page).toHaveURL(/\/admin$/);
+
+  // 1er clic puis 2e clic : choix du fichier, import direct.
+  const file = Buffer.from(await (await page.request.get('/api/export')).body());
+  await importDb.click();
+  const chooser = page.waitForEvent('filechooser');
+  await importDb.click();
+  await (await chooser).setFiles({ name: 'base.sqlite', mimeType: 'application/octet-stream', buffer: file });
+  await expect(page.locator('#data-status')).toHaveText('Base importée.');
+  await expect(warning).toHaveCount(0);
+  expect(dialogs).toBe(0);
+});
+
 test('compteur « à reporter » : filtre la zone des projets seulement (r ou clic)', async ({ page, store, data }) => {
   store.updateTask(data.tasks.deux.id, { jira: 'wanted' });
   const faite = store.createTask(data.beta.id, 'Faite à reporter');

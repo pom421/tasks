@@ -259,7 +259,7 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
               : 'e : modifier · Ctrl+Entrée ou Échap : fermer'}
           </p>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={close}>
+            <Button type="button" onClick={close}>
               Fermer
             </Button>
           </DialogFooter>
