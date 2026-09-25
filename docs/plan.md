@@ -29,6 +29,7 @@ Rien.
 
 ## Fait (récent)
 
+- [x] Badge « reporté » : l’identifiant du ticket seul quand il y en a un (« reporté » pour les lecteurs d’écran et en info-bulle)
 - [x] `gg` / `G` (à la manière de vim) : premier / dernier élément, comme `Début` / `Fin`
 - [x] `n` ouvre le champ d’ajout du projet où est le curseur (plus le dernier utilisé) ; `Échap` dans un champ « + Ajouter » le vide et en sort (`p` ne s’y écrit plus)
 - [x] Deux colonnes sur écran large : « Projets » à gauche, « Log » à droite (toujours visible) ; tâches cochées barrées dans le Log (`35ce5d4`)

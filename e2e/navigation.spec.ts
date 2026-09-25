@@ -604,7 +604,7 @@ test('J fait tourner : à reporter (contour) → reportée (plein, fiche propos�
   expect(store.state().jiraPending).toBe(1);
 
   await page.keyboard.press('Shift+J');
-  await expect(une.locator('.report-done')).toBeVisible();
+  await expect(une.locator('.report-done')).toHaveText('reporté'); // sans identifiant : le mot, visible
   // Fiche proposée sur le champ du ticket ; Échap la ferme et rend le focus à la tâche.
   const dialog = page.getByRole('dialog', { name: 'Une' });
   await expect(dialog.getByLabel('Ticket', { exact: true })).toBeFocused();
@@ -634,6 +634,9 @@ test('fiche : L sur le ticket, clé + URL Jira d’entreprise = lien cliquable',
   await expect(link).toHaveAttribute('href', 'https://entreprise.atlassian.net/browse/PROJ-7');
   await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   await expect(link).toHaveText('reporté · PROJ-7');
+  // À l'écran, l'identifiant seul : « reporté » est réservé aux lecteurs d'écran.
+  await expect(link.getByText('reporté', { exact: false })).toHaveClass(/sr-only/);
+  await expect(link.locator('.report-key')).toHaveText('PROJ-7');
   await expect(row(page, data.tasks.une.id).locator('.report-done')).toBeVisible(); // ticket = reportée
   expect(await current(page)).toBe(`task:${data.tasks.une.id}`);
 });

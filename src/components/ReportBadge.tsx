@@ -5,7 +5,8 @@ import { cn } from '@/lib/utils';
 const day = (ts: string) => ts.slice(0, 10).split('-').reverse().join('/');
 
 // Suivi du report d'une tâche, en toutes lettres : « à reporter » (contour),
-// « reporté » (plein) suivi de l'identifiant du ticket. Avec une URL de base
+// « reporté » (plein), ou seulement l'identifiant du ticket s'il y en a un
+// (« reporté » reste lu par les lecteurs d'écran et dans l'info-bulle). Avec une URL de base
 // (réglages) ou un lien complet, le badge « reporté » ouvre le ticket.
 export function ReportBadge({ task }: { task: Task }) {
   const { settings } = useActions();
@@ -22,10 +23,13 @@ export function ReportBadge({ task }: { task: Task }) {
   }
 
   const href = jiraLink(task, settings);
-  const label = (
+  const label = task.jira_key ? (
     <>
-      reporté{task.jira_key && <span className="report-key font-mono"> · {task.jira_key}</span>}
+      <span className="sr-only">reporté · </span>
+      <span className="report-key font-mono">{task.jira_key}</span>
     </>
+  ) : (
+    'reporté'
   );
   const className = cn(base, 'report-done border-primary/30 bg-primary/10 text-primary');
   const title = `Reporté le ${day(task.jira_at!)}`;

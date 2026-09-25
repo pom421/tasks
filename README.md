@@ -67,7 +67,7 @@ Chaque session démarre dans un conteneur neuf : les dépendances doivent y êtr
   - Lecture seule par défaut. `e` (comme GitLab) passe tout en édition : titre, puis `Tab` → ticket, puis `Tab` → contenu. Double-clic sur le contenu : édition directement dedans.
   - `Ctrl+Entrée` (ou `Entrée` dans le titre / le ticket) enregistre et repasse en lecture seule ; un second `Ctrl+Entrée` (ou `Échap`) ferme. Enregistrement automatique.
   - Ouverte par `L` (ou `J` → reporté), la fiche démarre en édition sur le ticket et `Entrée` la ferme.
-- Report : une tâche passe « à reporter », puis « reporté » (badge après le titre, avec l'identifiant du ticket).
+- Report : une tâche passe « à reporter », puis « reporté » (badge après le titre : l'identifiant du ticket s'il y en a un, « reporté » sinon ; date du report en info-bulle).
 - Réglages (icône ⚙, page `/admin`, `Échap` pour revenir) : URL de base des tickets (ex. `https://entreprise.atlassian.net`), qui transforme les identifiants en liens (`URL/browse/PROJ-123`), conservée en base ; export / import des données.
 
 Clavier (`?` affiche l'aide) :
