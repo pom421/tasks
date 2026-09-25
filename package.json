@@ -1,0 +1,12 @@
+{
+  "name": "tasks",
+  "version": "1.0.0",
+  "description": "Gestionnaire de tâches par projet avec journal quotidien",
+  "type": "module",
+  "private": true,
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/server.js",
+    "test": "node --disable-warning=ExperimentalWarning --test"
+  }
+}
