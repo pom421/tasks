@@ -27,6 +27,7 @@ Rien.
 
 ## Fait (récent)
 
+- [x] Skills du projet : livrer, verifier-ci, nouveau-controle, capture-ecran, migration
 - [x] Filtres sobres : contour, icône vide / pleine selon l'état (`87f5ede`)
 - [x] Message de liste vide avec plusieurs filtres (`4358d0b`)
 - [x] Filtres combinables en ET, boutons toujours présents ; export / import

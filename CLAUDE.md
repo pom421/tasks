@@ -28,6 +28,14 @@ modèle de données) et `docs/plan.md` (tâches en cours, décisions attendues).
 - **Messages exacts** : un message (liste vide, compteur…) décrit précisément la
   situation, y compris quand plusieurs filtres sont combinés.
 
+## Skills du projet (`.claude/skills/`)
+
+- `livrer` : vérifications, documentation, commit, push, rappel CI (fin de chaque demande).
+- `verifier-ci` : résultat de la CI, correction si rouge.
+- `nouveau-controle` : liste de contrôle avant tout nouvel élément d'interface.
+- `capture-ecran` : vérifier un rendu visuel avec des données choisies.
+- `migration` : évolution du schéma de la base.
+
 ## Façon de travailler
 
 - Pousser directement sur `main`, puis vérifier la CI (GitHub Actions) quelques
