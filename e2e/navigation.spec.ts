@@ -678,6 +678,11 @@ test('réglages (/admin) : URL Jira conservée en base, lien depuis la fiche', a
   await page.getByRole('link', { name: 'Réglages' }).click();
   await expect(page).toHaveURL(/\/admin$/);
   await expect(page.getByRole('heading', { name: 'Réglages' })).toBeVisible();
+  // Boutons homogènes : même hauteur, à contour, sans fond coloré.
+  const save = page.getByRole('button', { name: 'Enregistrer' });
+  const importMd = page.getByRole('button', { name: 'Importer .md' });
+  expect((await save.boundingBox())!.height).toBe((await importMd.boundingBox())!.height);
+  await expect(save).toHaveCSS('background-color', await importMd.evaluate((b) => getComputedStyle(b).backgroundColor));
   await page.getByLabel('URL de base des tickets').fill('https://entreprise.atlassian.net/');
   await page.getByRole('button', { name: 'Enregistrer' }).click();
   await expect(page.getByText('Réglages enregistrés.')).toBeVisible();

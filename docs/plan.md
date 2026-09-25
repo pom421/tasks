@@ -9,6 +9,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 - [~] Branche `ui/disposition-deux-colonnes` : projets à gauche, Log à droite (sticky) sur écran large, titres de colonnes « Projets » / « Log » ; tâches cochées barrées dans le Log. À valider par l'utilisateur, puis fusion dans `main`
 - [~] Même branche : Réglages, la valeur chargée n’écrase plus une saisie commencée ; test « fiche Markdown » compatible macOS (tests e2e verts en local sur Mac)
+- [~] Même branche : Réglages, bouton « Enregistrer » à contour et de même taille que les autres (plus de gros bouton bleu)
 
 ## Décisions attendues
 

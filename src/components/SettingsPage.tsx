@@ -108,7 +108,9 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
             {jiraBaseUrl.trim() || 'cette URL'}/browse/PROJ-123.
           </p>
           <div className="mt-2 flex items-center gap-3">
-            <Button type="submit">Enregistrer</Button>
+            <Button type="submit" variant="outline" size="sm">
+              Enregistrer
+            </Button>
             <p role="status" className="text-sm text-muted-foreground">
               {status.ok}
             </p>
