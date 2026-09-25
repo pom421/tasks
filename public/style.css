@@ -108,7 +108,15 @@ li.task {
 li.task:hover { background: var(--hover); }
 li.task .name { flex: 1; }
 
-.name { cursor: text; overflow-wrap: anywhere; }
+.name { cursor: text; overflow-wrap: anywhere; outline: none; }
+
+/* Élément courant de la navigation clavier : ligne surlignée + filet d'accent. */
+li.task:has(> .name:focus),
+.project-head:has(> .name:focus) {
+  background: var(--hover);
+  box-shadow: inset 3px 0 var(--accent);
+}
+.project-head:has(> .name:focus) { padding-left: 6px; }
 
 .actions { display: flex; gap: 2px; visibility: hidden; }
 li.task:hover .actions,
@@ -139,8 +147,15 @@ input[type="checkbox"] { accent-color: var(--accent); margin: 0; cursor: pointer
   outline: none;
 }
 .add { color: var(--muted); margin-top: 2px; padding-left: 4px; }
-.add:focus { color: var(--fg); border-bottom-color: var(--line); }
-.edit { border-bottom-color: var(--accent); flex: 1; }
+.add:focus { color: var(--fg); border-bottom-color: var(--accent); }
+/* Même hauteur que le nom affiché : pas de saut de mise en page en édition. */
+.edit {
+  flex: 1;
+  padding: 0;
+  border: none;
+  line-height: inherit;
+  box-shadow: 0 1px 0 var(--accent);
+}
 input.add#new-project { margin-top: 24px; font-weight: 600; }
 
 /* --- Journal ------------------------------------------------------------ */

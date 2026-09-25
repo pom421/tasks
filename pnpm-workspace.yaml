@@ -13,3 +13,6 @@ minimumReleaseAge: 10080
 # Scripts d'installation (preinstall/postinstall…) des dépendances : aucun
 # autorisé. Ajouter ici, un par un, les seuls paquets qui en ont besoin.
 allowBuilds: {}
+
+# Versions exactes dans package.json (pas de ^) : une mise à jour est toujours explicite.
+savePrefix: ''

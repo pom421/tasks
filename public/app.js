@@ -1,3 +1,7 @@
+import { api } from './api.js';
+import { h, editable, addInput } from './dom.js';
+import { installNav, snapshot, restore } from './nav.js';
+
 const $ = (sel) => document.querySelector(sel);
 
 const state = {
@@ -8,40 +12,6 @@ const state = {
 };
 
 // --- Utilitaires -------------------------------------------------------------
-
-// Le serveur exige un Content-Type précis par route (protection CSRF).
-async function api(method, url, body) {
-  const opts = { method, headers: {} };
-  if (body instanceof Blob) {
-    opts.headers['Content-Type'] = 'application/octet-stream';
-    opts.body = body;
-  } else if (typeof body === 'string') {
-    opts.headers['Content-Type'] = 'text/markdown';
-    opts.body = body;
-  } else if (body !== undefined) {
-    opts.headers['Content-Type'] = 'application/json';
-    opts.body = JSON.stringify(body);
-  }
-  const res = await fetch(url, opts);
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
-  return data;
-}
-
-// Crée un élément : h('li.task', { onclick }, enfant1, enfant2...)
-function h(tag, props = {}, ...children) {
-  const [name, ...classes] = tag.split('.');
-  const el = document.createElement(name);
-  if (classes.length) el.className = classes.join(' ');
-  for (const [k, v] of Object.entries(props)) {
-    if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
-    else if (k === 'dataset') Object.assign(el.dataset, v);
-    else if (k in el) el[k] = v;
-    else el.setAttribute(k, v);
-  }
-  el.append(...children.filter((c) => c != null && c !== false));
-  return el;
-}
 
 function localToday() {
   const d = new Date();
@@ -64,61 +34,41 @@ function toast(msg) {
   toastTimer = setTimeout(() => (el.hidden = true), 3000);
 }
 
-// Exécute une action serveur, affiche l'erreur éventuelle, puis rafraîchit l'affichage.
-async function act(fn) {
+// Exécute une action serveur, affiche l'erreur éventuelle, puis rafraîchit
+// l'affichage en conservant le focus clavier (voir nav.js).
+async function act(fn, { stay = false } = {}) {
   try {
     await fn();
   } catch (err) {
     toast(err.message);
   }
-  await refresh().catch((err) => toast(err.message));
+  // Après fn (qui a pu vider un champ d'ajout), juste avant le re-rendu.
+  const snap = snapshot();
+  try {
+    await refresh();
+  } catch (err) {
+    toast(err.message);
+  }
+  restore(snap, { stay });
 }
 
-// Nom cliquable -> input ; Entrée valide, Échap ou perte de focus annule.
-function editable(value, onSave) {
-  const span = h('span.name', { textContent: value, title: 'Cliquer pour modifier', tabIndex: 0 });
-  const start = () => {
-    const input = h('input.edit', { value, autocomplete: 'off' });
-    let done = false;
-    const finish = (save) => {
-      if (done) return;
-      done = true;
-      const next = input.value.trim();
-      if (save && next && next !== value) act(() => onSave(next));
-      else input.replaceWith(span);
-    };
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') finish(true);
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        finish(false);
-      }
-    });
-    input.addEventListener('blur', () => finish(false));
-    span.replaceWith(input);
-    input.focus();
-    input.select();
-  };
-  span.addEventListener('click', start);
-  span.addEventListener('keydown', (e) => e.key === 'Enter' && start());
-  return span;
+const patchTask = (id, body, opts) => act(() => api('PATCH', `/api/tasks/${id}`, body), opts);
+
+function deleteTask(task) {
+  if (confirm(`Supprimer « ${task.title} » ?`)) act(() => api('DELETE', `/api/tasks/${task.id}`), { stay: true });
 }
 
-function addInput(placeholder, onAdd, props = {}) {
-  return h('input.add', {
-    placeholder,
-    autocomplete: 'off',
-    ...props,
-    onkeydown: (e) => {
-      if (e.key === 'Escape') e.target.blur();
-      if (e.key !== 'Enter' || !e.target.value.trim()) return;
-      const value = e.target.value.trim();
-      act(async () => {
-        await onAdd(value);
-        e.target.value = '';
-      });
-    },
+// Nom de tâche : Espace coche / décoche, Suppr supprime.
+function taskName(task, done) {
+  const span = editable(task.title, `task:${task.id}`, (title) => patchTask(task.id, { title }));
+  span.addEventListener('keydown', (e) => {
+    if (e.key === ' ') {
+      e.preventDefault();
+      patchTask(task.id, done ? { done: false } : { done: true, done_at: localToday() }, { stay: true });
+    }
+    if (e.key === 'Delete') deleteTask(task);
   });
+  return span;
 }
 
 // --- Rendu : projets ---------------------------------------------------------
@@ -129,13 +79,13 @@ function renderTask(task) {
     h('input', {
       type: 'checkbox',
       title: 'Marquer comme faite',
-      onchange: () => act(() => api('PATCH', `/api/tasks/${task.id}`, { done: true, done_at: localToday() })),
+      onchange: () => patchTask(task.id, { done: true, done_at: localToday() }),
     }),
-    editable(task.title, (title) => api('PATCH', `/api/tasks/${task.id}`, { title })),
+    taskName(task, false),
     h('span.actions', {},
       h('button.icon.danger', {
-        type: 'button', textContent: '✕', title: 'Supprimer la tâche',
-        onclick: () => confirm(`Supprimer « ${task.title} » ?`) && act(() => api('DELETE', `/api/tasks/${task.id}`)),
+        type: 'button', textContent: '✕', title: 'Supprimer la tâche (Suppr)',
+        onclick: () => deleteTask(task),
       }),
     ),
   );
@@ -146,7 +96,7 @@ function renderProject(p) {
   return h(`div.project${archived ? '.archived' : ''}`,
     { id: `project-${p.id}` },
     h('div.project-head', {},
-      editable(p.name, (name) => api('PATCH', `/api/projects/${p.id}`, { name })),
+      editable(p.name, `project:${p.id}`, (name) => act(() => api('PATCH', `/api/projects/${p.id}`, { name }))),
       h('span.count', { textContent: p.tasks.length || '' }),
       h('span.actions', {},
         h('button.icon', {
@@ -163,29 +113,24 @@ function renderProject(p) {
       ),
     ),
     h('ul', {}, ...p.tasks.map(renderTask)),
-    addInput('+ Ajouter une tâche', (title) => api('POST', '/api/tasks', { project_id: p.id, title }), {
-      onfocus: () => (state.lastProjectId = p.id),
-      dataset: { project: p.id },
-    }),
+    addInput(
+      '+ Ajouter une tâche',
+      `add:${p.id}`,
+      (title, clear) =>
+        act(async () => {
+          await api('POST', '/api/tasks', { project_id: p.id, title });
+          clear();
+        }),
+      { onfocus: () => (state.lastProjectId = p.id), dataset: { project: p.id } },
+    ),
   );
 }
 
 function renderProjects() {
   const visible = state.projects.filter((p) => state.showArchived || !p.archived_at);
   const root = $('#projects');
-  // Préserve le focus et la saisie en cours dans un champ d'ajout.
-  const active = document.activeElement;
-  const focused = active?.dataset?.project;
-  const draft = focused ? active.value : '';
   root.replaceChildren(...visible.map(renderProject));
   if (!visible.length) root.append(h('p.empty', { textContent: 'Aucun projet. Créez-en un ci-dessous.' }));
-  if (focused) {
-    const input = root.querySelector(`input[data-project="${focused}"]`);
-    if (input) {
-      input.value = draft;
-      input.focus();
-    }
-  }
 }
 
 // --- Rendu : journal ---------------------------------------------------------
@@ -207,7 +152,7 @@ function renderDoneTask(task) {
   dateBtn.addEventListener('click', () => {
     const input = h('input', { type: 'date', value: task.done_at });
     input.addEventListener('change', () =>
-      input.value && act(() => api('PATCH', `/api/tasks/${task.id}`, { done_at: input.value })),
+      input.value && patchTask(task.id, { done_at: input.value }),
     );
     input.addEventListener('keydown', (e) => e.key === 'Escape' && input.replaceWith(dateBtn));
     dateBtn.replaceWith(input);
@@ -218,14 +163,14 @@ function renderDoneTask(task) {
       type: 'checkbox',
       checked: true,
       title: 'Remettre à faire',
-      onchange: () => act(() => api('PATCH', `/api/tasks/${task.id}`, { done: false })),
+      onchange: () => patchTask(task.id, { done: false }),
     }),
-    editable(task.title, (title) => api('PATCH', `/api/tasks/${task.id}`, { title })),
+    taskName(task, true),
     h('span.actions', {},
       dateBtn,
       h('button.icon.danger', {
-        type: 'button', textContent: '✕', title: 'Supprimer',
-        onclick: () => confirm(`Supprimer « ${task.title} » ?`) && act(() => api('DELETE', `/api/tasks/${task.id}`)),
+        type: 'button', textContent: '✕', title: 'Supprimer (Suppr)',
+        onclick: () => deleteTask(task),
       }),
     ),
   );
@@ -270,7 +215,16 @@ async function refresh() {
 // --- Événements globaux ------------------------------------------------------
 
 $('#new-project').replaceWith(
-  addInput('+ Nouveau projet (p)', (name) => api('POST', '/api/projects', { name }), { id: 'new-project' }),
+  addInput(
+    '+ Nouveau projet (p)',
+    'new-project',
+    (name, clear) =>
+      act(async () => {
+        await api('POST', '/api/projects', { name });
+        clear();
+      }),
+    { id: 'new-project' },
+  ),
 );
 
 $('#show-archived').addEventListener('change', (e) => {
@@ -318,6 +272,8 @@ $('#import-md').addEventListener('change', (e) => {
 
 $('#help-btn').addEventListener('click', () => $('#help').showModal());
 
+installNav();
+
 document.addEventListener('keydown', (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (e.target.closest('input, select, textarea') || $('#help').open) return;
@@ -332,7 +288,8 @@ document.addEventListener('keydown', (e) => {
     d: () => $('#filter-date').focus(),
     f: () => $('#filter-project').focus(),
     '?': () => $('#help').showModal(),
-    Escape: resetFilters,
+    // Échap sur un élément de la liste : ne rien faire (on reste en navigation).
+    Escape: () => e.target.dataset.nav === undefined && resetFilters(),
   };
   if (keys[e.key]) {
     e.preventDefault();

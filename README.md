@@ -1,7 +1,7 @@
 # Tâches
 
 Tâches par projet + journal de ce qui a été fait, jour par jour.
-Front en HTML/CSS/JS vanilla, serveur Node + SQLite. Aucune dépendance à installer.
+Front en HTML/CSS/JS vanilla, serveur Node + SQLite. Aucune dépendance à l’exécution (Playwright sert seulement aux tests).
 
 ## Lancer en local
 
@@ -25,14 +25,28 @@ Front en HTML/CSS/JS vanilla, serveur Node + SQLite. Aucune dépendance à insta
 Arrêter : `Ctrl+C`. Les données sont dans `data/tasks.db`, qui est créé au premier lancement.
 
 Options : `PORT=8080 pnpm start` pour changer de port, `TASKS_DB=~/taches.db pnpm start` pour un autre fichier de base.
-Tests : `pnpm test`.
+
+Tests :
+- `pnpm test` : API et import (Node, sans navigateur)
+- `pnpm test:e2e` : interface dans Chromium. La première fois, installer le navigateur : `pnpm exec playwright install chromium`
 
 ## Utilisation
 
-- Clic sur un nom → modifier, `Entrée` valide, `Échap` annule
 - Cocher une tâche → elle passe dans le journal, datée du jour. La décocher → elle revient dans son projet.
 - Journal : par défaut, la dernière journée. Filtres par date ou par projet.
-- Raccourcis : `p` projet, `n` tâche, `d` / `f` filtres, `?` aide
+- Souris : clic sur un nom pour le modifier.
+
+Clavier (`?` affiche l'aide) :
+
+| Touche | Action |
+|---|---|
+| `↑` `↓` | Passer d'un projet, d'une tâche ou d'un champ « + Ajouter » à l'autre (`Début` / `Fin` : premier / dernier) |
+| `Entrée` | Modifier le nom sélectionné, puis `Entrée` pour enregistrer |
+| `Échap` | Quitter l'édition sans enregistrer, retour à la navigation |
+| `Espace` | Cocher / décocher la tâche |
+| `Suppr` | Supprimer la tâche |
+| `p` / `n` | Nouveau projet / nouvelle tâche |
+| `d` / `f` | Filtre du journal par date / par projet |
 - **Exporter** télécharge la base `.sqlite`. **Importer .sqlite** remplace toute la base.
 - **Importer .md** ajoute des projets et tâches depuis un markdown : puce = projet, sous-puce = tâche, une ligne avec une date (`## 24/09/2026`) ouvre une journée de tâches faites.
 
@@ -43,6 +57,20 @@ Tests : `pnpm test`.
 - Import `.sqlite` vérifié (intégrité, ni trigger ni vue). Base lisible par ton seul utilisateur (`600`).
 - pnpm : version épinglée par hash, npm/yarn bloqués, versions de moins de 7 jours refusées, scripts d'installation interdits (voir `pnpm-workspace.yaml`).
 - ⚠️ Exposer l'app sur un réseau (`HOST=0.0.0.0` + `ALLOWED_HOSTS=…`) la rend accessible sans mot de passe.
+
+## Architecture
+
+```
+src/server.js     serveur HTTP : routes API, fichiers statiques, sécurité
+src/db.js         accès SQLite, migrations du schéma
+src/markdown.js   import du markdown
+public/app.js     rendu des projets et du journal
+public/nav.js     navigation clavier (focus, ↑/↓, restauration après re-rendu)
+public/dom.js     création d'éléments, noms éditables, champs d'ajout
+public/api.js     appels au serveur
+test/             tests API (node:test)
+e2e/              tests d'interface (Playwright), 1 serveur + 1 base vierge par test
+```
 
 ## Modèle de données
 
