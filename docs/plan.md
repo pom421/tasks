@@ -19,6 +19,7 @@ Rien.
 
 ## Idées / plus tard
 
+- [ ] Supprimer la branche distante `ui/taches-icones-a-droite` (fusionnée ; suppression refusée depuis la session, à faire sur GitHub)
 - [ ] ~~Animations des listes~~ : AutoAnimate essayé puis retiré (rendu jugé pire). Ne pas reproposer sans nouvelle demande.
 - [ ] Corbeille durable (table `trash` : JSON du projet + tâches) si l'annulation
   `u`, limitée à l'onglet et à une seule action, ne suffit plus
@@ -28,6 +29,7 @@ Rien.
 
 ## Fait (récent)
 
+- [x] Curseur sur le premier projet : retour en haut de page, en-tête visible
 - [x] Tâche : icônes (report, détails) à droite, titre cliquable sur toute la largeur (branche fusionnée)
 - [x] Suppression homogène : plus de ✕ ni de fenêtre de confirmation, corbeille du projet en deux temps
 - [x] Installation automatique des dépendances en session web (hook SessionStart + setup script)

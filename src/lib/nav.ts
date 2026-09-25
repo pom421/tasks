@@ -17,7 +17,9 @@ export function navItems(): HTMLElement[] {
 function focusItem(el: HTMLElement | undefined) {
   if (!el) return;
   el.focus({ preventScroll: true });
-  el.scrollIntoView({ block: 'nearest' });
+  // Premier élément : haut de page, pour garder l'en-tête (titre, filtres) visible.
+  if (el === navItems()[0]) window.scrollTo({ top: 0 });
+  else el.scrollIntoView({ block: 'nearest' });
 }
 
 export function focusByKey(key: string) {

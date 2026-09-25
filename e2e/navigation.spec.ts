@@ -208,6 +208,28 @@ test('ligne de tâche : icônes alignées à droite, clic n’importe où sur la
   expect(await current(page)).toBe(`task:${data.tasks.deux.id}`);
 });
 
+test('remonter au premier projet : l’en-tête (titre, filtres, réglages) redevient visible', async ({ page, store, data }) => {
+  for (let i = 0; i < 25; i++) store.createTask(data.beta.id, `Tâche ${i}`);
+  await reload(page);
+  await page.setViewportSize({ width: 800, height: 400 });
+  await page.keyboard.press('End'); // tout en bas (champ « + Nouveau projet ») : l'en-tête sort de l'écran
+  await page.keyboard.press('ArrowUp'); // hors champ de saisie : Début est une touche de navigation
+  await page.keyboard.press('ArrowUp');
+  await expect(page.getByRole('heading', { name: 'Tâches', level: 1 })).not.toBeInViewport();
+  await page.keyboard.press('Home'); // premier projet
+  expect(await current(page)).toBe(`project:${data.alpha.id}`);
+  await expect(page.getByRole('heading', { name: 'Tâches', level: 1 })).toBeInViewport();
+  await expect(page.locator('#settings-link')).toBeInViewport();
+
+  // Même chose en remontant pas à pas (↑).
+  await page.keyboard.press('End');
+  await page.keyboard.press('ArrowUp');
+  await expect(page.getByRole('heading', { name: 'Tâches', level: 1 })).not.toBeInViewport();
+  for (let i = 0; i < 40; i++) await page.keyboard.press('ArrowUp');
+  expect(await current(page)).toBe(`project:${data.alpha.id}`);
+  await expect(page.getByRole('heading', { name: 'Tâches', level: 1 })).toBeInViewport();
+});
+
 test('Suppr fonctionne comme x (double appui)', async ({ page, store }) => {
   await pressDown(page, 2);
   await page.keyboard.press('Delete');
