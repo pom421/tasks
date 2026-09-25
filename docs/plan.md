@@ -7,7 +7,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-Rien.
+- [~] Branche `ui/taches-icones-a-droite` : icônes de la tâche (report, détails) alignées à droite, titre cliquable sur toute la largeur. À valider par l'utilisateur, puis fusion dans `main`
 
 ## Décisions attendues
 
