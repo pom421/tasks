@@ -206,7 +206,9 @@ export function App() {
           }}
         />
       )}
-      <div className="mx-auto max-w-2xl px-4">
+      {/* Écran large : projets à gauche, Log à droite (une tâche cochée y apparaît
+          aussitôt) ; écran étroit : l'un sous l'autre. */}
+      <div className="mx-auto max-w-2xl px-4 lg:max-w-6xl">
         <Toolbar
           // Compteurs sur tous les projets : un bouton ne disparaît pas selon les autres filtres.
           jiraPending={data.projects.flatMap((p) => p.tasks).filter((t) => jiraState(t) === 'wanted').length}
@@ -221,8 +223,12 @@ export function App() {
           helpOpen={helpOpen}
           onHelpOpen={setHelpOpen}
         />
-        <main>
-          <ProjectList projects={data.projects} archivedOnly={archivedOnly} jiraOnly={jiraOnly} favoritesOnly={favoritesOnly} />
+        <main className="lg:grid lg:grid-cols-2 lg:items-start">
+          <div className="min-w-0 lg:pr-8 lg:pb-16">
+            {/* Écran large : titre de colonne, sur la ligne de celui du Log (même hauteur). */}
+            <h2 className="hidden h-[26px] items-center font-semibold lg:mt-5 lg:flex">Projets</h2>
+            <ProjectList projects={data.projects} archivedOnly={archivedOnly} jiraOnly={jiraOnly} favoritesOnly={favoritesOnly} />
+          </div>
           <Journal days={data.days} dates={data.dates} projects={data.projects} filter={filter} onFilter={changeFilter} />
         </main>
       </div>

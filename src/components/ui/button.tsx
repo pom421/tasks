@@ -24,7 +24,8 @@ const buttonVariants = cva(
         'icon-xs': "size-6 rounded-md [&_svg:not([class*='size-'])]:size-3.5",
       },
     },
-    defaultVariants: { variant: 'default', size: 'default' },
+    // Par défaut : bouton sobre, à contour, petite taille (homogène dans toute l'app).
+    defaultVariants: { variant: 'outline', size: 'sm' },
   },
 );
 

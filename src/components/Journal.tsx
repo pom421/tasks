@@ -113,7 +113,13 @@ export function Journal({ days, dates, projects, filter, onFilter }: JournalProp
   const goTo = (day: string) => onFilter({ ...filter, day: day === today ? '' : day });
 
   return (
-    <section id="journal" aria-label="Log" className="mt-12 mb-16 border-t-2 pt-4">
+    // Écran large : colonne de droite, qui reste visible quand on fait défiler les
+    // projets (sticky) et défile seule si le Log est long.
+    <section
+      id="journal"
+      aria-label="Log"
+      className="mt-12 mb-16 border-t-2 pt-4 lg:sticky lg:top-0 lg:mt-0 lg:mb-0 lg:max-h-screen lg:min-w-0 lg:overflow-y-auto lg:border-t-0 lg:border-l lg:pt-5 lg:pb-8 lg:pl-8"
+    >
       {/* Titre et filtres sur une ligne (repliée sur écran étroit). */}
       <div className="flex flex-wrap items-center gap-1.5">
         <h2 className="mr-auto font-semibold">Log</h2>
@@ -167,7 +173,6 @@ export function Journal({ days, dates, projects, filter, onFilter }: JournalProp
       <div className="mt-3 flex items-center gap-1" role="group" aria-label="Navigation par jour">
         <Button
           id="day-prev"
-          variant="outline"
           size="icon"
           className="size-7"
           aria-label="Jour précédent"
@@ -179,7 +184,6 @@ export function Journal({ days, dates, projects, filter, onFilter }: JournalProp
         </Button>
         <Button
           id="day-next"
-          variant="outline"
           size="icon"
           className="size-7"
           aria-label="Jour suivant"
@@ -195,8 +199,6 @@ export function Journal({ days, dates, projects, filter, onFilter }: JournalProp
         {/* Tout à droite, toujours visible ; désactivé si on y est déjà. */}
         <Button
           id="day-today"
-          variant="outline"
-          size="sm"
           className="h-7"
           title="Revenir au jour courant"
           disabled={!dayMode || current === today}

@@ -4,28 +4,34 @@ import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 // Page d'administration (/admin) : réglages conservés en base.
 export function SettingsPage({ onBack }: { onBack: () => void }) {
   const id = useId();
   const [jiraBaseUrl, setJiraBaseUrl] = useState('');
   const [status, setStatus] = useState<{ ok?: string; error?: string }>({});
+  // Import .sqlite en deux temps (il remplace toute la base) : 1er clic = message,
+  // 2e clic = choix du fichier. Pas de fenêtre de confirmation.
+  const [confirmImport, setConfirmImport] = useState(false);
 
-  // Échap : retour à la page principale (où que soit le focus).
+  // Échap : annule l'import demandé, sinon retour à la page principale (où que soit le focus).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented) return;
       e.preventDefault();
-      onBack();
+      if (confirmImport) setConfirmImport(false);
+      else onBack();
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [onBack]);
+  }, [onBack, confirmImport]);
 
   useEffect(() => {
     api
       .settings()
-      .then((s) => setJiraBaseUrl(s.jira_base_url ?? ''))
+      // Saisie déjà commencée pendant le chargement : on ne l'écrase pas.
+      .then((s) => setJiraBaseUrl((v) => v || (s.jira_base_url ?? '')))
       .catch((err) => setStatus({ error: err.message }));
   }, []);
 
@@ -41,13 +47,11 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
       setData({ error: (err as Error).message });
     }
   };
-  const importDb = (file: File) => {
-    if (!confirm('Remplacer TOUTE la base actuelle par ce fichier ?\nPensez à exporter avant.')) return;
+  const importDb = (file: File) =>
     run(async () => {
       await api.importDb(file);
       return 'Base importée.';
     });
-  };
   const importMd = (file: File) =>
     run(async () => {
       const r = await api.importMarkdown(await file.text());
@@ -99,6 +103,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
             placeholder="https://entreprise.atlassian.net"
             value={jiraBaseUrl}
             onChange={(e) => setJiraBaseUrl(e.target.value)}
+            className="h-8"
             aria-describedby={`${id}-hint`}
             aria-invalid={Boolean(status.error)}
           />
@@ -107,7 +112,9 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
             {jiraBaseUrl.trim() || 'cette URL'}/browse/PROJ-123.
           </p>
           <div className="mt-2 flex items-center gap-3">
-            <Button type="submit">Enregistrer</Button>
+            <Button type="submit">
+              Enregistrer
+            </Button>
             <p role="status" className="text-sm text-muted-foreground">
               {status.ok}
             </p>
@@ -128,18 +135,31 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
           Exporter télécharge la base (.sqlite). Importer .sqlite la remplace entièrement ; importer .md ajoute des projets et des tâches.
         </p>
         <div className="mt-3 flex flex-wrap gap-1.5">
-          <Button variant="outline" size="sm" asChild>
+          <Button asChild>
             <a href="/api/export">Exporter</a>
           </Button>
-          <Button variant="outline" size="sm" onClick={() => dbInput.current?.click()}>
+          <Button
+            className={cn(confirmImport && 'text-destructive')}
+            title="Remplace toute la base (clic, puis clic à nouveau)"
+            onClick={() => {
+              setConfirmImport(!confirmImport);
+              if (confirmImport) dbInput.current?.click();
+            }}
+            onBlur={() => setConfirmImport(false)}
+          >
             Importer .sqlite
           </Button>
-          <Button variant="outline" size="sm" onClick={() => mdInput.current?.click()}>
+          <Button onClick={() => mdInput.current?.click()}>
             Importer .md
           </Button>
           <input ref={dbInput} type="file" accept=".sqlite,.db,.sqlite3" hidden onChange={pick(importDb)} />
           <input ref={mdInput} type="file" accept=".md,.markdown,.txt" hidden onChange={pick(importMd)} />
         </div>
+        {confirmImport && (
+          <p role="alert" className="mt-2 text-sm text-destructive">
+            Importer .sqlite à nouveau : choisir le fichier qui remplacera toute la base (pensez à exporter avant) · Échap : annuler
+          </p>
+        )}
         <p id="data-status" role="status" className="mt-2 text-sm text-muted-foreground">
           {data.ok}
         </p>
