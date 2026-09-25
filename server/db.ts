@@ -54,12 +54,17 @@ export function today(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+// Texte ramené en minuscules sans accents, pour la recherche.
+export const fold = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+
 // Ouvre la base et l'amène à la dernière version du schéma (voir migrations.ts).
 function openDb(file: string): { db: DatabaseSync; migration: MigrationReport } {
   const db = new DatabaseSync(file);
   db.exec('PRAGMA foreign_keys = ON');
   // Ne pas exécuter de fonctions SQL appelées depuis le schéma (vues, triggers) d'une base importée.
   db.exec('PRAGMA trusted_schema = OFF');
+  // Recherche sans tenir compte de la casse ni des accents (« reunion » trouve « Réunion »).
+  db.function('fold', { deterministic: true }, (value) => (typeof value === 'string' ? fold(value) : null));
   try {
     return { db, migration: migrate(db, file) };
   } catch (err) {
@@ -115,7 +120,7 @@ export class Store {
   // --- Lecture -------------------------------------------------------------
 
   state(): State {
-    const projects = this.db.prepare('SELECT id, name, archived_at FROM project ORDER BY id').all() as Omit<
+    const projects = this.db.prepare('SELECT id, name, archived_at FROM project ORDER BY position, id').all() as Omit<
       Project,
       'tasks'
     >[];
@@ -133,7 +138,8 @@ export class Store {
   // Sans aucun filtre : la dernière journée travaillée.
   // dates : tous les jours ayant des tâches faites (du projet filtré s'il y en
   // a un), pour naviguer d'un jour à l'autre.
-  journal({ from, to, projectId, jiraPending }: JournalFilter = {}): Journal {
+  // q : recherche dans le titre, le contenu et le ticket (casse et accents ignorés).
+  journal({ from, to, projectId, jiraPending, q }: JournalFilter = {}): Journal {
     const dates = (
       this.db
         .prepare(
@@ -156,7 +162,14 @@ export class Store {
       params.push(projectId);
     }
     if (jiraPending) where.push(JIRA_PENDING.replaceAll('jira_', 't.jira_'));
-    if (!from && !to && !projectId && !jiraPending) {
+    if (q) {
+      // % et _ saisis sont cherchés tels quels, pas comme jokers SQL.
+      const pattern = '%' + fold(q).replace(/[\\%_]/g, (c) => '\\' + c) + '%';
+      const cols = ['t.title', 't.notes', 't.jira_key', 't.jira_url'];
+      where.push('(' + cols.map((c) => `fold(${c}) LIKE ? ESCAPE '\\'`).join(' OR ') + ')');
+      params.push(...cols.map(() => pattern));
+    }
+    if (!from && !to && !projectId && !jiraPending && !q) {
       const last = (this.db.prepare('SELECT MAX(done_at) AS d FROM task').get() as { d: string | null }).d;
       if (!last) return { days: [], dates };
       where.push('t.done_at = ?');
@@ -195,7 +208,7 @@ export class Store {
   }
 
   createProject(name: string): ProjectRow {
-    const { lastInsertRowid } = this.db.prepare('INSERT INTO project (name) VALUES (?)').run(name);
+    const { lastInsertRowid } = this.db.prepare('INSERT INTO project (name, position) VALUES (?, (SELECT COALESCE(MAX(position) + 1, 0) FROM project))').run(name);
     return this.project(lastInsertRowid)!;
   }
 
@@ -267,6 +280,26 @@ export class Store {
     return true;
   }
 
+  // Place un projet à l'index donné parmi tous les projets (archivés compris) ;
+  // les positions sont renumérotées. false si le projet n'existe pas.
+  moveProject(id: number, index: number): boolean {
+    if (!this.project(id)) return false;
+    const ids = (
+      this.db.prepare('SELECT id FROM project WHERE id != ? ORDER BY position, id').all(id) as { id: number }[]
+    ).map((r) => r.id);
+    ids.splice(Math.min(Math.max(index, 0), ids.length), 0, id);
+    const update = this.db.prepare('UPDATE project SET position = ? WHERE id = ?');
+    this.db.exec('BEGIN');
+    try {
+      ids.forEach((projectId, position) => update.run(position, projectId));
+      this.db.exec('COMMIT');
+    } catch (err) {
+      this.db.exec('ROLLBACK');
+      throw err;
+    }
+    return true;
+  }
+
   // Renvoie la tâche supprimée (toutes ses colonnes), pour pouvoir l'annuler.
   deleteTask(id: number): TaskRow | undefined {
     const row = this.task(id);
@@ -298,7 +331,7 @@ export class Store {
   // title null = projet seul. Réutilise les projets existants de même nom.
   importItems(items: ImportItem[]): ImportResult {
     const find = this.db.prepare('SELECT id FROM project WHERE lower(name) = lower(?)');
-    const insertProject = this.db.prepare('INSERT INTO project (name) VALUES (?)');
+    const insertProject = this.db.prepare('INSERT INTO project (name, position) VALUES (?, (SELECT COALESCE(MAX(position) + 1, 0) FROM project))');
     const insertTask = this.db.prepare(
       'INSERT INTO task (project_id, title, done_at, position) VALUES (?, ?, ?, (SELECT COALESCE(MAX(position) + 1, 0) FROM task WHERE project_id = ?))',
     );

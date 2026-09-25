@@ -67,6 +67,7 @@ export interface JournalFilter {
   to?: string;
   projectId?: number;
   jiraPending?: boolean; // seulement les tâches à reporter dans Jira
+  q?: string; // recherche : titre, contenu, ticket
 }
 
 export interface ImportResult {

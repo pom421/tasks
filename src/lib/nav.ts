@@ -81,3 +81,9 @@ export function handleNavKey(e: KeyboardEvent) {
     move(moves[e.key]);
   }
 }
+
+// Touches de déplacement (Alt+↑/↓ ou Alt+k/j). e.code : sur macOS, Alt+j produit « ∆ » dans e.key.
+export function moveDirection(e: { altKey: boolean; ctrlKey: boolean; metaKey: boolean; code: string; target: EventTarget | null }): -1 | 1 | undefined {
+  if (!e.altKey || e.ctrlKey || e.metaKey || (e.target as HTMLElement).matches('input, textarea')) return undefined;
+  return ({ ArrowUp: -1, KeyK: -1, ArrowDown: 1, KeyJ: 1 } as Record<string, -1 | 1>)[e.code];
+}

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { DoneTask, JournalDay, JournalFilter, Project } from '../../shared/types.ts';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatDay, isComplete, localToday } from '@/lib/dates';
@@ -12,12 +12,13 @@ export interface Filter {
   project: string; // id du projet, '' = tous
   jira: boolean; // seulement les tâches à reporter dans Jira (liste et journal)
   day: string; // jour affiché hors filtre par période ; '' = aujourd'hui
+  q: string; // recherche : titre, contenu, ticket
 }
 
-export const NO_FILTER: Filter = { from: '', to: '', project: '', jira: false, day: '' };
+export const NO_FILTER: Filter = { from: '', to: '', project: '', jira: false, day: '', q: '' };
 
-// Sans période ni filtre « à reporter », le Log montre un seul jour (aujourd'hui par défaut).
-export const isDayMode = (f: Filter) => !f.from && !f.to && !f.jira;
+// Sans période, recherche ni filtre « à reporter », le Log montre un seul jour (aujourd'hui par défaut).
+export const isDayMode = (f: Filter) => !f.from && !f.to && !f.jira && !f.q;
 
 export function journalQuery(f: Filter): JournalFilter {
   const day = f.day || localToday();
@@ -26,6 +27,7 @@ export function journalQuery(f: Filter): JournalFilter {
     to: isDayMode(f) ? day : f.to,
     projectId: Number(f.project) || undefined,
     jiraPending: f.jira,
+    q: f.q || undefined,
   };
 }
 
@@ -99,7 +101,28 @@ export function Journal({ days, dates, projects, filter, onFilter }: JournalProp
     onFilter({ ...filter, to });
   };
 
-  const filtered = Boolean(filter.from || filter.to || filter.project || filter.jira);
+  const filtered = Boolean(filter.from || filter.to || filter.project || filter.jira || filter.q);
+
+  // Recherche : lancée 250 ms après la dernière frappe ; le champ suit la
+  // réinitialisation des filtres.
+  const [query, setQuery] = useState(filter.q);
+  // Valeurs courantes lues au déclenchement (onFilter change à chaque rendu).
+  const latest = useRef({ filter, onFilter });
+  latest.current = { filter, onFilter };
+  useEffect(() => setQuery(filter.q), [filter.q]);
+  useEffect(() => {
+    if (query.trim() === latest.current.filter.q) return;
+    const timer = setTimeout(() => latest.current.onFilter({ ...latest.current.filter, q: query.trim() }), 250);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  // « 5 tâches trouvées dans 2 journées »
+  const taskCount = days.reduce((n, d) => n + d.tasks.length, 0);
+  const dayCount = days.filter((d) => d.tasks.length).length;
+  const s = (n: number) => (n > 1 ? 's' : '');
+  const found = taskCount
+    ? `${taskCount} tâche${s(taskCount)} trouvée${s(taskCount)} dans ${dayCount} journée${s(dayCount)}`
+    : 'Aucune tâche trouvée';
 
   // Navigation jour par jour : parmi les jours ayant des entrées, plus aujourd'hui
   // (pour pouvoir y revenir). Hors mode « un jour », les boutons sont désactivés.
@@ -137,6 +160,21 @@ export function Journal({ days, dates, projects, filter, onFilter }: JournalProp
           )}
         </div>
       </div>
+      <input
+        type="search"
+        id="log-search"
+        aria-label="Rechercher dans le Log"
+        placeholder="Rechercher dans le Log : titre, contenu, ticket… (/)"
+        className="mt-3 w-full rounded-md border bg-background px-2.5 py-1 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape' && query) {
+            e.stopPropagation();
+            setQuery('');
+          }
+        }}
+      />
       <div className="mt-3 flex items-center gap-1" role="group" aria-label="Navigation par jour">
         <Button
           id="day-prev"
@@ -162,12 +200,15 @@ export function Journal({ days, dates, projects, filter, onFilter }: JournalProp
         >
           <ChevronRight aria-hidden />
         </Button>
+        <p id="log-count" aria-live="polite" className="flex-1 text-center text-sm text-muted-foreground">
+          {found}
+        </p>
         {/* Tout à droite, toujours visible ; désactivé si on y est déjà. */}
         <Button
           id="day-today"
           variant="outline"
           size="sm"
-          className="ml-auto h-7"
+          className="h-7"
           title="Revenir au jour courant"
           disabled={!dayMode || current === today}
           onClick={() => goTo(today)}

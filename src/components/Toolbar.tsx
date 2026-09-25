@@ -23,6 +23,7 @@ const SHORTCUTS: [string, string][] = [
   ['n', 'Nouvelle tâche (dernier projet utilisé)'],
   ['d', 'Filtrer le log par période (début, puis fin)'],
   ['f', 'Filtrer le log par projet'],
+  ['/', 'Rechercher dans le log (titre, contenu, ticket)'],
   ['?', 'Cette aide'],
 ];
 

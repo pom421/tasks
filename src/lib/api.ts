@@ -33,12 +33,13 @@ export const api = {
   state: () => request<State>('GET', '/api/state'),
   settings: () => request<Settings>('GET', '/api/settings'),
   updateSettings: (patch: Partial<Settings>) => request<Settings>('PUT', '/api/settings', patch),
-  journal: ({ from, to, projectId, jiraPending }: JournalFilter) => {
+  journal: ({ from, to, projectId, jiraPending, q }: JournalFilter) => {
     const params = new URLSearchParams();
     if (from) params.set('from', from);
     if (to) params.set('to', to);
     if (projectId) params.set('project', String(projectId));
     if (jiraPending) params.set('jira', 'pending');
+    if (q) params.set('q', q);
     return request<Journal>('GET', `/api/journal?${params}`);
   },
   createProject: (name: string) => request<{ id: number }>('POST', '/api/projects', { name }),
@@ -47,6 +48,7 @@ export const api = {
   deleteProject: (id: number) => request('DELETE', `/api/projects/${id}`),
   createTask: (projectId: number, title: string) => request('POST', '/api/tasks', { project_id: projectId, title }),
   updateTask: (id: number, patch: TaskPatch) => request('PATCH', `/api/tasks/${id}`, patch),
+  moveProject: (id: number, index: number) => request('POST', `/api/projects/${id}/move`, { index }),
   moveTask: (id: number, projectId: number, index: number) =>
     request('POST', `/api/tasks/${id}/move`, { project_id: projectId, index }),
   // Renvoie la tâche supprimée (toutes ses colonnes), à passer à restoreTask pour annuler.

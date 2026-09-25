@@ -209,9 +209,10 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
       const to = url.searchParams.get('to') || undefined;
       const projectId = Number(url.searchParams.get('project')) || undefined;
       const jiraPending = url.searchParams.get('jira') === 'pending';
+      const q = url.searchParams.get('q')?.trim().slice(0, 200) || undefined;
       if ((from && !isDate(from)) || (to && !isDate(to))) throw new HttpError(400, 'Date invalide');
       if (from && to && from > to) throw new HttpError(400, 'La date de début est après la date de fin');
-      send(res, 200, store.journal({ from, to, projectId, jiraPending }));
+      send(res, 200, store.journal({ from, to, projectId, jiraPending, q }));
     }],
 
     ['GET', /^\/api\/settings$/, (_req, res) => send(res, 200, store.settings())],
@@ -237,6 +238,14 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
       const project = store.updateProject(Number(id), patch);
       if (!project) throw new HttpError(404, 'Projet introuvable');
       send(res, 200, project);
+    }],
+
+    // Déplacement d'un projet : { index } parmi tous les projets.
+    ['POST', /^\/api\/projects\/(\d+)\/move$/, async (req, res, _url, id) => {
+      const index = Number((await readJson(req)).index);
+      if (!Number.isInteger(index) || index < 0) throw new HttpError(400, 'Index invalide');
+      if (!store.moveProject(Number(id), index)) throw new HttpError(404, 'Projet introuvable');
+      send(res, 200, { ok: true });
     }],
 
     ['DELETE', /^\/api\/projects\/(\d+)$/, (_req, res, _url, id) => {

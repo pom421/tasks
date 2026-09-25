@@ -667,3 +667,26 @@ test('les modifications faites dans la fiche ne sont pas annulables', async ({ p
   await expect(page.locator('#toast')).toHaveText('Rien à annuler');
   expect(store.state().projects[0].tasks[0].title).toBe('Une (fiche)');
 });
+
+// --- Déplacement de projet ------------------------------------------------------
+
+test('Alt+↑ / Alt+↓ sur un projet : il passe au-dessus du précédent / sous le suivant', async ({ page, store, data }) => {
+  const names = () => page.locator('.project-head .name');
+  await pressDown(page, 5); // projet « Beta »
+  expect(await current(page)).toBe(`project:${data.beta.id}`);
+  await page.keyboard.press('Alt+ArrowUp');
+  await expect(names()).toHaveText(['Beta', 'Alpha']);
+  expect(store.state().projects.map((p) => p.name)).toEqual(['Beta', 'Alpha']);
+  expect(await current(page)).toBe(`project:${data.beta.id}`); // le focus suit
+  // Ses tâches suivent aussi.
+  await expect(page.locator(`#project-${data.beta.id} li.task .name`)).toHaveText(['Trois']);
+
+  await page.keyboard.press('Alt+ArrowUp'); // déjà en haut : rien
+  await page.waitForTimeout(200);
+  expect(store.state().projects.map((p) => p.name)).toEqual(['Beta', 'Alpha']);
+
+  await page.keyboard.press('Alt+KeyJ'); // comme Alt+↓
+  await expect(names()).toHaveText(['Alpha', 'Beta']);
+  await reload(page);
+  await expect(names()).toHaveText(['Alpha', 'Beta']);
+});

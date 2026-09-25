@@ -159,6 +159,7 @@ export function App() {
         n: focusAdd,
         d: () => document.getElementById('filter-from')?.focus(),
         f: () => document.getElementById('filter-project')?.focus(),
+        '/': () => document.getElementById('log-search')?.focus(),
         r: () => changeFilter({ ...filterRef.current, jira: !filterRef.current.jira }),
         u: undo,
         '?': () => setHelpOpen(true),

@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { jiraState, type Project, type Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
 import { useActions } from '@/lib/actions';
+import { moveDirection } from '@/lib/nav';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { AddInput, EditableName } from './Editable';
@@ -9,7 +10,13 @@ import { TaskRow } from './TaskRow';
 
 type MoveTask = (task: Task, direction: -1 | 1) => void;
 
-function ProjectCard({ project: p, onMove }: { project: Project; onMove?: MoveTask }) {
+interface ProjectCardProps {
+  project: Project;
+  onMove?: MoveTask;
+  onMoveProject: (direction: -1 | 1) => void;
+}
+
+function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
   const { act, setLastProject } = useActions();
   const archived = Boolean(p.archived_at);
 
@@ -30,7 +37,14 @@ function ProjectCard({ project: p, onMove }: { project: Project; onMove?: MoveTa
 
   return (
     <div id={`project-${p.id}`} className={cn('project mt-5', archived && 'opacity-55')}>
-      <div className="project-head group flex items-baseline gap-2 border-b pb-0.5 has-[.name:focus]:bg-accent has-[.name:focus]:pl-1.5 has-[.name:focus]:shadow-[inset_3px_0_var(--color-primary)]">
+      <div
+        onKeyDown={(e) => {
+          const direction = moveDirection(e);
+          if (!direction) return;
+          e.preventDefault();
+          onMoveProject(direction);
+        }}
+        className="project-head group flex items-baseline gap-2 border-b pb-0.5 has-[.name:focus]:bg-accent has-[.name:focus]:pl-1.5 has-[.name:focus]:shadow-[inset_3px_0_var(--color-primary)]">
         <EditableName
           value={p.name}
           navKey={`project:${p.id}`}
@@ -83,6 +97,20 @@ export function ProjectList({ projects, showArchived, jiraOnly }: ProjectListPro
   // Monte / descend d'un cran. En bord de projet, la tâche passe dans le
   // projet visible voisin : à la fin du précédent, en tête du suivant.
   const moving = useRef(false);
+
+  // Projet : passe au-dessus du projet visible précédent, ou sous le suivant.
+  // L'index envoyé porte sur la liste complète (projets archivés compris).
+  const moveProject = async (project: Project, direction: -1 | 1) => {
+    if (moving.current) return;
+    const neighbour = visible[visible.findIndex((p) => p.id === project.id) + direction];
+    if (!neighbour) return;
+    const others = projects.filter((p) => p.id !== project.id).map((p) => p.id);
+    const index = others.indexOf(neighbour.id) + (direction > 0 ? 1 : 0);
+    moving.current = true;
+    await act(() => api.moveProject(project.id, index));
+    moving.current = false;
+  };
+
   const moveTask: MoveTask = async (task, direction) => {
     // Touche maintenue : on ignore les répétitions tant que le déplacement
     // précédent n'est pas enregistré et affiché (sinon calcul sur données périmées).
@@ -118,7 +146,12 @@ export function ProjectList({ projects, showArchived, jiraOnly }: ProjectListPro
       <section id="projects" aria-label="Projets">
         {visible.map((p) => (
           // Liste filtrée : les positions affichées ne sont pas les vraies, pas de déplacement.
-          <ProjectCard key={p.id} project={p} onMove={jiraOnly ? undefined : moveTask} />
+          <ProjectCard
+            key={p.id}
+            project={p}
+            onMove={jiraOnly ? undefined : moveTask}
+            onMoveProject={(direction) => moveProject(p, direction)}
+          />
         ))}
         {!visible.length && (
           <p className="empty mt-3 italic text-muted-foreground">

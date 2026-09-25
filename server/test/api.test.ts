@@ -475,3 +475,46 @@ test('versions du schéma : base plus récente que l’outil refusée', async ()
   future.close();
   assert.throws(() => new Store(file), /plus récente que l'outil/);
 });
+
+test('recherche dans le Log : titre, contenu, ticket ; casse et accents ignorés', async () => {
+  const { body: p } = await call('POST', '/api/projects', { name: 'Recherche' });
+  const make = async (title: string, patch: Record<string, unknown>, doneAt: string) => {
+    const { body: t } = await call('POST', '/api/tasks', { project_id: p.id, title });
+    await call('PATCH', `/api/tasks/${t.id}`, { ...patch, done: true, done_at: doneAt });
+  };
+  await make('Réunion budget', {}, '2018-05-01');
+  await make('Préparer slides', { notes: 'Voir la **réunion** de lundi' }, '2018-05-02');
+  await make('Déployer', { jira_ticket: 'OPS-42' }, '2018-05-02');
+  await make('Taux à 100%_ok', {}, '2018-05-03');
+
+  const search = async (q: string) =>
+    (await call('GET', `/api/journal?project=${p.id}&q=${encodeURIComponent(q)}`)).body.days.map((d: any) => [
+      d.date,
+      d.tasks.map((t: any) => t.title),
+    ]);
+  assert.deepEqual(await search('REUNION'), [
+    ['2018-05-02', ['Préparer slides']],
+    ['2018-05-01', ['Réunion budget']],
+  ]);
+  assert.deepEqual(await search('ops-42'), [['2018-05-02', ['Déployer']]]);
+  // % et _ ne sont pas des jokers.
+  assert.deepEqual(await search('%_'), [['2018-05-03', ['Taux à 100%_ok']]]);
+  assert.deepEqual(await search('introuvable'), []);
+});
+
+test('déplacement de projet : index parmi tous les projets', async () => {
+  const ids: number[] = [];
+  for (const name of ['P1', 'P2', 'P3']) ids.push((await call('POST', '/api/projects', { name })).body.id);
+  const order = async () =>
+    (await call('GET', '/api/state')).body.projects.filter((p: any) => ids.includes(p.id)).map((p: any) => p.name);
+  const all = async () => (await call('GET', '/api/state')).body.projects.map((p: any) => p.id);
+  // P3 juste avant P2.
+  const before = await all();
+  assert.equal((await call('POST', `/api/projects/${ids[2]}/move`, { index: before.indexOf(ids[1]) })).status, 200);
+  assert.deepEqual(await order(), ['P1', 'P3', 'P2']);
+  // Un nouveau projet arrive en dernier.
+  const { body: p4 } = await call('POST', '/api/projects', { name: 'P4' });
+  assert.equal((await all()).at(-1), p4.id);
+  assert.equal((await call('POST', `/api/projects/${ids[0]}/move`, { index: -1 })).status, 400);
+  assert.equal((await call('POST', '/api/projects/99999/move', { index: 0 })).status, 404);
+});

@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { EditableName } from './Editable';
 import { ReportBadge } from './ReportBadge';
+import { moveDirection } from '@/lib/nav';
 
 // Ligne de tâche, à faire (liste des projets) ou faite (journal).
 // Clavier, où que soit le focus dans la ligne (hors champ de saisie) :
@@ -75,8 +76,7 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
     // Hors de la ligne (fiche ouverte dans une modale, rendue ailleurs dans le DOM) ou dans un champ : rien.
     if (!e.currentTarget.contains(target) || target.matches('input, textarea') || e.ctrlKey || e.metaKey) return;
     if (e.altKey) {
-      // e.code : sur macOS, Alt+j produit « ∆ » dans e.key.
-      const direction = { ArrowUp: -1, KeyK: -1, ArrowDown: 1, KeyJ: 1 }[e.code] as -1 | 1 | undefined;
+      const direction = moveDirection(e);
       if (direction && onMove) {
         e.preventDefault();
         setConfirmDelete(false);

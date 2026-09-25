@@ -103,3 +103,38 @@ test('navigation par jour : limitée au projet filtré, désactivée pendant une
   await expect(prev).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Jour suivant' })).toBeDisabled();
 });
+
+test('recherche : toutes les journées dont une tâche correspond (titre, contenu, ticket), avec compteur', async ({ page, store }) => {
+  const p = store.createProject('Beta');
+  store.updateTask(store.createTask(p.id, 'Déploiement').id, { doneAt: '2026-09-22', notes: 'Suite de la réunion **Vingt**' });
+  store.updateTask(store.createTask(p.id, 'Ticket seul').id, { doneAt: '2026-09-24', jira: 'done', jiraKey: 'VING-1' });
+  await page.reload();
+  const count = page.locator('#log-count');
+  await expect(count).toHaveText('Aucune tâche trouvée'); // aujourd'hui : rien
+
+  await page.keyboard.press('/');
+  await expect(page.locator('#log-search')).toBeFocused();
+  await page.keyboard.type('VINGT'); // casse ignorée ; titre, contenu et ticket (VING-1 ne correspond pas)
+  await expect(days(page)).toHaveText([
+    'mercredi 23 septembre 2026',
+    'mardi 22 septembre 2026', // trouvé par le contenu
+    'lundi 21 septembre 2026',
+    'dimanche 20 septembre 2026',
+  ]);
+  await expect(count).toHaveText('5 tâches trouvées dans 4 journées');
+  await expect(page.getByRole('button', { name: 'Jour précédent' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Aujourd’hui' })).toBeDisabled();
+
+  await page.locator('#log-search').fill('ving-1');
+  await expect(days(page)).toHaveText(['jeudi 24 septembre 2026']);
+  await expect(count).toHaveText('1 tâche trouvée dans 1 journée');
+
+  // Accents ignorés : « deploiement » trouve « Déploiement ».
+  await page.locator('#log-search').fill('deploiement');
+  await expect(page.locator('#journal .name')).toHaveText(['Déploiement']);
+
+  // Échap vide la recherche : retour à aujourd'hui.
+  await page.locator('#log-search').press('Escape');
+  await expect(page.locator('#log-search')).toHaveValue('');
+  await expect(days(page)).toHaveText(['vendredi 25 septembre 2026']);
+});

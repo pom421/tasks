@@ -77,6 +77,13 @@ export const MIGRATIONS: Migration[] = [
       UPDATE task SET notes = COALESCE(notes || char(10) || char(10), '') || link WHERE link IS NOT NULL;
       ALTER TABLE task DROP COLUMN link;`,
   },
+  {
+    version: 7,
+    name: 'ordre des projets',
+    sql: `
+      ALTER TABLE project ADD COLUMN position INTEGER NOT NULL DEFAULT 0;
+      UPDATE project SET position = id;`,
+  },
 ];
 
 export const LATEST_VERSION = MIGRATIONS.at(-1)!.version;
