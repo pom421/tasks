@@ -10,6 +10,7 @@ const SHORTCUTS: [string, string][] = [
   ['Entrée', 'Modifier le nom sélectionné / valider'],
   ['Échap', "Quitter l'édition, retour à la navigation"],
   ['Espace', 'Cocher / décocher la tâche'],
+  ['Alt+↑ Alt+↓', 'Monter / descendre la tâche, jusque dans le projet voisin (Alt+k / Alt+j)'],
   ['J', 'Marquer / démarquer « reportée dans Jira » (majuscule)'],
   ['x x', 'Supprimer la tâche (x une 2e fois pour confirmer)'],
   ['p', 'Nouveau projet'],

@@ -42,6 +42,8 @@ export const api = {
   deleteProject: (id: number) => request('DELETE', `/api/projects/${id}`),
   createTask: (projectId: number, title: string) => request('POST', '/api/tasks', { project_id: projectId, title }),
   updateTask: (id: number, patch: TaskPatch) => request('PATCH', `/api/tasks/${id}`, patch),
+  moveTask: (id: number, projectId: number, index: number) =>
+    request('POST', `/api/tasks/${id}/move`, { project_id: projectId, index }),
   deleteTask: (id: number) => request('DELETE', `/api/tasks/${id}`),
   importDb: (file: Blob) => request('POST', '/api/import', file),
   importMarkdown: (text: string) => request<ImportResult>('POST', '/api/import-markdown', text),

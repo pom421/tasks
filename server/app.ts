@@ -201,6 +201,17 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
       send(res, 200, task);
     }],
 
+    // Déplacement (priorité) : { project_id, index } parmi les tâches à faire.
+    ['POST', /^\/api\/tasks\/(\d+)\/move$/, async (req, res, _url, id) => {
+      const body = await readJson(req);
+      const projectId = Number(body.project_id);
+      const index = Number(body.index);
+      if (!Number.isInteger(index) || index < 0) throw new HttpError(400, 'Index invalide');
+      if (!store.hasProject(projectId)) throw new HttpError(400, 'Projet introuvable');
+      if (!store.moveTask(Number(id), projectId, index)) throw new HttpError(404, 'Tâche à faire introuvable');
+      send(res, 200, { ok: true });
+    }],
+
     ['DELETE', /^\/api\/tasks\/(\d+)$/, (_req, res, _url, id) => {
       if (!store.deleteTask(Number(id))) throw new HttpError(404, 'Tâche introuvable');
       send(res, 200, { ok: true });

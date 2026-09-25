@@ -262,3 +262,53 @@ test('icône Jira conservée dans le journal, et J y fonctionne aussi', async ({
   await expect(row.locator('svg.jira')).toHaveCount(0);
   expect(store.journal({ projectId: data.beta.id }).days[0].tasks[0].jira_at).toBeNull();
 });
+
+// Titres des tâches à faire, par projet, tels qu'enregistrés.
+const order = (store: Store) => store.state().projects.map((p) => p.tasks.map((t) => t.title));
+
+test('Alt+↑ / Alt+↓ changent l’ordre dans le projet ; le focus suit la tâche', async ({ page, store, data }) => {
+  await pressDown(page, 3); // « Deux »
+  await page.keyboard.press('Alt+ArrowUp');
+  await expect(page.locator(`#project-${data.alpha.id} .name`)).toHaveText(['Alpha', 'Deux', 'Une']);
+  expect(order(store)).toEqual([['Deux', 'Une'], ['Trois']]);
+  expect(await current(page)).toBe(`task:${data.tasks.deux.id}`);
+
+  await page.keyboard.press('Alt+ArrowDown');
+  await expect(page.locator(`#project-${data.alpha.id} .name`)).toHaveText(['Alpha', 'Une', 'Deux']);
+  // Ordre conservé après rechargement.
+  await page.reload();
+  await expect(page.locator(`#project-${data.alpha.id} .name`)).toHaveText(['Alpha', 'Une', 'Deux']);
+});
+
+test('en bord de projet, la tâche passe dans le projet voisin', async ({ page, store, data }) => {
+  await pressDown(page, 3); // « Deux », dernière d'Alpha
+  await page.keyboard.press('Alt+ArrowDown'); // → en tête de Beta
+  await expect(page.locator(`#project-${data.beta.id} .name`)).toHaveText(['Beta', 'Deux', 'Trois']);
+  expect(order(store)).toEqual([['Une'], ['Deux', 'Trois']]);
+  expect(await current(page)).toBe(`task:${data.tasks.deux.id}`);
+
+  await page.keyboard.press('Alt+ArrowUp'); // → retour en fin d'Alpha
+  expect(await current(page)).toBe(`task:${data.tasks.deux.id}`);
+  await expect(page.locator(`#project-${data.alpha.id} .name`)).toHaveText(['Alpha', 'Une', 'Deux']);
+  expect(order(store)).toEqual([['Une', 'Deux'], ['Trois']]);
+});
+
+test('Alt+k / Alt+j comme Alt+↑ / Alt+↓ ; tout en haut, rien ne bouge', async ({ page, store, data }) => {
+  await pressDown(page, 2); // « Une », première du premier projet
+  await page.keyboard.press('Alt+KeyK');
+  await page.waitForTimeout(200);
+  expect(order(store)).toEqual([['Une', 'Deux'], ['Trois']]);
+  await page.keyboard.press('Alt+KeyJ');
+  await expect(page.locator(`#project-${data.alpha.id} .name`)).toHaveText(['Alpha', 'Deux', 'Une']);
+});
+
+test('vers un projet vide ; les projets archivés masqués sont sautés', async ({ page, store, data }) => {
+  const gamma = store.createProject('Gamma'); // vide, après Beta
+  store.updateProject(data.beta.id, { archived: true });
+  await page.reload();
+  await expect(page.locator('.project')).toHaveCount(2); // Alpha, Gamma
+  await pressDown(page, 3); // « Deux »
+  await page.keyboard.press('Alt+ArrowDown');
+  await expect(page.locator(`#project-${gamma.id} .name`)).toHaveText(['Gamma', 'Deux']);
+  expect(store.state().projects.find((p) => p.id === gamma.id)!.tasks.map((t) => t.title)).toEqual(['Deux']);
+});

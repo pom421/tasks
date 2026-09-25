@@ -12,8 +12,9 @@ import { JiraIcon } from './JiraIcon';
 // Ligne de tâche, à faire (liste des projets) ou faite (journal).
 // Clavier, où que soit le focus dans la ligne (hors champ de saisie) :
 // Espace coche / décoche, J (majuscule) bascule Jira,
-// x ou Suppr demande la suppression, un second appui la confirme.
-export function TaskRow({ task }: { task: Task | DoneTask }) {
+// x ou Suppr demande la suppression, un second appui la confirme,
+// Alt+↑ / Alt+↓ (ou Alt+k / Alt+j) déplacent la tâche (onMove, tâches à faire).
+export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (direction: -1 | 1) => void }) {
   const { act } = useActions();
   const done = 'done_at' in task;
   const [editingDate, setEditingDate] = useState(false);
@@ -26,7 +27,17 @@ export function TaskRow({ task }: { task: Task | DoneTask }) {
 
   const onKeyDown = (e: KeyboardEvent<HTMLLIElement>) => {
     const target = e.target as HTMLElement;
-    if (target.matches('input') || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (target.matches('input') || e.ctrlKey || e.metaKey) return;
+    if (e.altKey) {
+      // e.code : sur macOS, Alt+j produit « ∆ » dans e.key.
+      const direction = { ArrowUp: -1, KeyK: -1, ArrowDown: 1, KeyJ: 1 }[e.code] as -1 | 1 | undefined;
+      if (direction && onMove) {
+        e.preventDefault();
+        setConfirmDelete(false);
+        onMove(direction);
+      }
+      return;
+    }
     if (e.key === 'x' || e.key === 'Delete') {
       e.preventDefault();
       if (confirmDelete) remove();

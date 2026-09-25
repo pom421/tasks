@@ -1,4 +1,5 @@
-import type { Project } from '../../shared/types.ts';
+import { useRef } from 'react';
+import type { Project, Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
 import { useActions } from '@/lib/actions';
 import { cn } from '@/lib/utils';
@@ -6,7 +7,9 @@ import { Button } from '@/components/ui/button';
 import { AddInput, EditableName } from './Editable';
 import { TaskRow } from './TaskRow';
 
-function ProjectCard({ project: p }: { project: Project }) {
+type MoveTask = (task: Task, direction: -1 | 1) => void;
+
+function ProjectCard({ project: p, onMove }: { project: Project; onMove: MoveTask }) {
   const { act, setLastProject } = useActions();
   const archived = Boolean(p.archived_at);
 
@@ -51,7 +54,7 @@ function ProjectCard({ project: p }: { project: Project }) {
       </div>
       <ul>
         {p.tasks.map((t) => (
-          <TaskRow key={t.id} task={t} />
+          <TaskRow key={t.id} task={t} onMove={(direction) => onMove(t, direction)} />
         ))}
       </ul>
       <AddInput
@@ -68,6 +71,28 @@ export function ProjectList({ projects, showArchived }: { projects: Project[]; s
   const { act } = useActions();
   const visible = projects.filter((p) => showArchived || !p.archived_at);
 
+  // Monte / descend d'un cran. En bord de projet, la tâche passe dans le
+  // projet visible voisin : à la fin du précédent, en tête du suivant.
+  const moving = useRef(false);
+  const moveTask: MoveTask = async (task, direction) => {
+    // Touche maintenue : on ignore les répétitions tant que le déplacement
+    // précédent n'est pas enregistré et affiché (sinon calcul sur données périmées).
+    if (moving.current) return;
+    const pi = visible.findIndex((p) => p.id === task.project_id);
+    const tasks = visible[pi].tasks;
+    const ti = tasks.findIndex((t) => t.id === task.id);
+    let target: { projectId: number; index: number } | undefined;
+    if (ti + direction >= 0 && ti + direction < tasks.length) target = { projectId: task.project_id, index: ti + direction };
+    else if (visible[pi + direction]) {
+      const neighbour = visible[pi + direction];
+      target = { projectId: neighbour.id, index: direction < 0 ? neighbour.tasks.length : 0 };
+    }
+    if (!target) return;
+    moving.current = true;
+    await act(() => api.moveTask(task.id, target.projectId, target.index));
+    moving.current = false;
+  };
+
   const addProject = async (name: string) => {
     let ok = false;
     await act(async () => {
@@ -83,7 +108,7 @@ export function ProjectList({ projects, showArchived }: { projects: Project[]; s
     <>
       <section id="projects" aria-label="Projets">
         {visible.map((p) => (
-          <ProjectCard key={p.id} project={p} />
+          <ProjectCard key={p.id} project={p} onMove={moveTask} />
         ))}
         {!visible.length && <p className="empty mt-3 italic text-muted-foreground">Aucun projet. Créez-en un ci-dessous.</p>}
       </section>

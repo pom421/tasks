@@ -25,6 +25,9 @@ const MIGRATIONS = [
   `,
   // 2 : tâche reportée dans Jira (horodatage du report, NULL = non reportée).
   `ALTER TABLE task ADD COLUMN jira_at TEXT;`,
+  // 3 : ordre des tâches dans leur projet (priorité), initialisé sur l'ordre de création.
+  `ALTER TABLE task ADD COLUMN position INTEGER NOT NULL DEFAULT 0;
+   UPDATE task SET position = id;`,
 ];
 
 // Lignes brutes renvoyées par SQLite (toutes les colonnes).
@@ -38,6 +41,7 @@ export interface ProjectRow {
 export interface TaskRow extends Task {
   created_at: string;
   done_at: string | null;
+  position: number;
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -129,7 +133,7 @@ export class Store {
       'tasks'
     >[];
     const tasks = this.db
-      .prepare('SELECT id, project_id, title, jira_at FROM task WHERE done_at IS NULL ORDER BY id')
+      .prepare('SELECT id, project_id, title, jira_at FROM task WHERE done_at IS NULL ORDER BY position, id')
       .all() as unknown as Task[];
     const byProject = new Map<number, Project>(projects.map((p) => [p.id, { ...p, tasks: [] }]));
     for (const t of tasks) byProject.get(t.project_id)?.tasks.push({ ...t });
@@ -187,6 +191,10 @@ export class Store {
     return this.db.prepare('SELECT * FROM task WHERE id = ?').get(id) as TaskRow | undefined;
   }
 
+  hasProject(id: number): boolean {
+    return this.project(id) !== undefined;
+  }
+
   createProject(name: string): ProjectRow {
     const { lastInsertRowid } = this.db.prepare('INSERT INTO project (name) VALUES (?)').run(name);
     return this.project(lastInsertRowid)!;
@@ -210,8 +218,8 @@ export class Store {
 
   createTask(projectId: number, title: string): TaskRow {
     const { lastInsertRowid } = this.db
-      .prepare('INSERT INTO task (project_id, title) VALUES (?, ?)')
-      .run(projectId, title);
+      .prepare('INSERT INTO task (project_id, title, position) VALUES (?, ?, (SELECT COALESCE(MAX(position) + 1, 0) FROM task WHERE project_id = ?))')
+      .run(projectId, title, projectId);
     return this.task(lastInsertRowid)!;
   }
 
@@ -228,6 +236,30 @@ export class Store {
     return this.task(id);
   }
 
+  // Place une tâche à faire à l'index donné parmi les tâches à faire du projet
+  // cible (qui peut être un autre projet). Renvoie false si la tâche n'existe
+  // pas ou est déjà faite. Les positions du projet cible sont renumérotées.
+  moveTask(id: number, projectId: number, index: number): boolean {
+    const task = this.task(id);
+    if (!task || task.done_at !== null) return false;
+    const ids = (
+      this.db
+        .prepare('SELECT id FROM task WHERE project_id = ? AND done_at IS NULL AND id != ? ORDER BY position, id')
+        .all(projectId, id) as { id: number }[]
+    ).map((r) => r.id);
+    ids.splice(Math.min(Math.max(index, 0), ids.length), 0, id);
+    const update = this.db.prepare('UPDATE task SET project_id = ?, position = ? WHERE id = ?');
+    this.db.exec('BEGIN');
+    try {
+      ids.forEach((taskId, position) => update.run(projectId, position, taskId));
+      this.db.exec('COMMIT');
+    } catch (err) {
+      this.db.exec('ROLLBACK');
+      throw err;
+    }
+    return true;
+  }
+
   deleteTask(id: number): boolean {
     return this.db.prepare('DELETE FROM task WHERE id = ?').run(id).changes > 0;
   }
@@ -238,7 +270,9 @@ export class Store {
   importItems(items: ImportItem[]): ImportResult {
     const find = this.db.prepare('SELECT id FROM project WHERE lower(name) = lower(?)');
     const insertProject = this.db.prepare('INSERT INTO project (name) VALUES (?)');
-    const insertTask = this.db.prepare('INSERT INTO task (project_id, title, done_at) VALUES (?, ?, ?)');
+    const insertTask = this.db.prepare(
+      'INSERT INTO task (project_id, title, done_at, position) VALUES (?, ?, ?, (SELECT COALESCE(MAX(position) + 1, 0) FROM task WHERE project_id = ?))',
+    );
     const ids = new Map<string, number | bigint>();
     let projects = 0;
     let tasks = 0;
@@ -255,7 +289,7 @@ export class Store {
           ids.set(key, id);
         }
         if (title) {
-          insertTask.run(ids.get(key)!, title, doneAt ?? null);
+          insertTask.run(ids.get(key)!, title, doneAt ?? null, ids.get(key)!);
           tasks++;
         }
       }

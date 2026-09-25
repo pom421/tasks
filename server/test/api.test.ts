@@ -222,3 +222,35 @@ test('migration : une base v1 (sans jira_at) est mise à niveau à l’ouverture
   assert.ok(old.updateTask(1, { jira: true })?.jira_at);
   old.close();
 });
+
+test('déplacement : dans le projet, vers un autre projet (même vide), validations', async () => {
+  const { body: a } = await call('POST', '/api/projects', { name: 'Ordre A' });
+  const { body: b } = await call('POST', '/api/projects', { name: 'Ordre B' });
+  const ids: Record<string, number> = {};
+  for (const title of ['un', 'deux', 'trois']) ids[title] = (await call('POST', '/api/tasks', { project_id: a.id, title })).body.id;
+  const titles = async (projectId: number) =>
+    (await call('GET', '/api/state')).body.projects.find((p: any) => p.id === projectId).tasks.map((t: any) => t.title);
+
+  // Monter « trois » d'un cran, puis en tête.
+  assert.equal((await call('POST', `/api/tasks/${ids.trois}/move`, { project_id: a.id, index: 1 })).status, 200);
+  assert.deepEqual(await titles(a.id), ['un', 'trois', 'deux']);
+  await call('POST', `/api/tasks/${ids.trois}/move`, { project_id: a.id, index: 0 });
+  assert.deepEqual(await titles(a.id), ['trois', 'un', 'deux']);
+
+  // Vers le projet B, vide ; puis index trop grand = en fin.
+  await call('POST', `/api/tasks/${ids.un}/move`, { project_id: b.id, index: 0 });
+  await call('POST', `/api/tasks/${ids.deux}/move`, { project_id: b.id, index: 99 });
+  assert.deepEqual(await titles(a.id), ['trois']);
+  assert.deepEqual(await titles(b.id), ['un', 'deux']);
+
+  // Une nouvelle tâche arrive en fin de liste.
+  await call('POST', '/api/tasks', { project_id: b.id, title: 'quatre' });
+  assert.deepEqual(await titles(b.id), ['un', 'deux', 'quatre']);
+
+  assert.equal((await call('POST', `/api/tasks/${ids.un}/move`, { project_id: 9999, index: 0 })).status, 400);
+  assert.equal((await call('POST', `/api/tasks/${ids.un}/move`, { project_id: b.id, index: -1 })).status, 400);
+  assert.equal((await call('POST', '/api/tasks/9999/move', { project_id: b.id, index: 0 })).status, 404);
+  // Une tâche faite ne se déplace pas.
+  await call('PATCH', `/api/tasks/${ids.un}`, { done: true, done_at: '2026-09-01' });
+  assert.equal((await call('POST', `/api/tasks/${ids.un}/move`, { project_id: a.id, index: 0 })).status, 404);
+});
