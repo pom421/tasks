@@ -7,10 +7,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-- [~] Branche `ui/disposition-deux-colonnes` : projets à gauche, Log à droite (sticky) sur écran large, titres de colonnes « Projets » / « Log » ; tâches cochées barrées dans le Log. À valider par l'utilisateur, puis fusion dans `main`
-- [~] Même branche : Réglages, la valeur chargée n’écrase plus une saisie commencée ; test « fiche Markdown » compatible macOS (tests e2e verts en local sur Mac)
-- [~] Même branche : Réglages, bouton « Enregistrer » à contour et de même taille que les autres (plus de gros bouton bleu)
-- [~] Même branche : boutons à contour et petite taille par défaut (composant `Button`), « Fermer » de la fiche compris ; Réglages : champ URL à 32 px, Importer .sqlite en deux temps (plus de fenêtre `confirm`)
+Rien.
 
 ## Décisions attendues
 
@@ -22,7 +19,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Idées / plus tard
 
-- [ ] Supprimer la branche distante `ui/taches-icones-a-droite` (fusionnée ; suppression refusée depuis la session, à faire sur GitHub)
+- [ ] Supprimer les branches distantes fusionnées `ui/taches-icones-a-droite` et `ui/disposition-deux-colonnes` (à faire sur GitHub)
 - [ ] ~~Animations des listes~~ : AutoAnimate essayé puis retiré (rendu jugé pire). Ne pas reproposer sans nouvelle demande.
 - [ ] Corbeille durable (table `trash` : JSON du projet + tâches) si l'annulation
   `u`, limitée à l'onglet et à une seule action, ne suffit plus
@@ -32,6 +29,9 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
+- [x] Deux colonnes sur écran large : « Projets » à gauche, « Log » à droite (toujours visible) ; tâches cochées barrées dans le Log (`35ce5d4`)
+- [x] Boutons homogènes : à contour et petite taille par défaut ; Réglages : champ à 32 px, Importer .sqlite en deux temps, la valeur chargée n'écrase plus une saisie (`35ce5d4`)
+- [x] Tests e2e verts en local sur Mac (Chromium de Playwright installé, raccourci « fin du texte » selon le système)
 - [x] Curseur sur le premier projet : retour en haut de page, en-tête visible
 - [x] Tâche : icônes (report, détails) à droite, titre cliquable sur toute la largeur (branche fusionnée)
 - [x] Suppression homogène : plus de ✕ ni de fenêtre de confirmation, corbeille du projet en deux temps
