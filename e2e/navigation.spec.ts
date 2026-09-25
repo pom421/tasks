@@ -179,6 +179,13 @@ test('x puis Échap, ou x puis déplacement : suppression annulée', async ({ pa
   expect(store.state().projects[0].tasks.map((t) => t.title)).toEqual(['Une', 'Deux']);
 });
 
+test('tâche : pas de bouton de suppression à la souris, seulement x x (ni fenêtre de confirmation)', async ({ page, data }) => {
+  const une = page.locator(`li.task:has([data-nav-key="task:${data.tasks.une.id}"])`);
+  await une.hover();
+  await expect(une.getByRole('button', { name: /Supprimer|✕/ })).toHaveCount(0);
+  await expect(une.getByText('✕')).toHaveCount(0);
+});
+
 test('Suppr fonctionne comme x (double appui)', async ({ page, store }) => {
   await pressDown(page, 2);
   await page.keyboard.press('Delete');
@@ -346,11 +353,17 @@ test('archiver et supprimer : boutons icônes nommés, titre au survol', async (
   await expect(alpha.getByRole('button', { name: 'Désarchiver le projet' })).toBeVisible();
   await page.locator('#archived-only').click();
 
+  // Corbeille : comme x x, en deux temps, sans fenêtre de confirmation.
   const beta = page.locator(`#project-${data.beta.id}`);
-  page.once('dialog', (d) => d.accept());
+  let dialogs = 0;
+  page.on('dialog', () => dialogs++);
   await beta.locator('.project-head').hover();
   await beta.getByRole('button', { name: 'Supprimer le projet' }).click();
+  await expect(beta.locator('.confirm-delete')).toContainText('supprimer le projet et ses tâches');
+  expect(store.state().projects).toHaveLength(2); // pas encore supprimé
+  await beta.getByRole('button', { name: 'Confirmer la suppression du projet' }).click();
   await expect(beta).toHaveCount(0);
+  expect(dialogs).toBe(0);
   expect(store.state().projects.map((p) => p.name)).toEqual(['Alpha']);
 });
 
@@ -474,7 +487,7 @@ test('clavier sur un projet : f favori, a archiver, x x supprimer, u annule tout
 
   // x : message de confirmation ; Échap annule ; x x supprime.
   await page.keyboard.press('x');
-  await expect(page.locator(`#project-${data.beta.id} .confirm-delete`)).toContainText('x pour supprimer le projet');
+  await expect(page.locator(`#project-${data.beta.id} .confirm-delete`)).toContainText('x ou corbeille à nouveau : supprimer le projet');
   await page.keyboard.press('Escape');
   await expect(page.locator('.confirm-delete')).toHaveCount(0);
   await page.keyboard.press('x');
@@ -757,7 +770,7 @@ test('ligne épurée et fiche ordonnée : titre, ticket, contenu', async ({ page
   await expect(page.locator(`[data-nav-key="add:${data.alpha.id}"]`)).toHaveAttribute('placeholder', '+ Ajouter une tâche (n)');
   const une = row(page, data.tasks.une.id);
   await une.hover();
-  await expect(une.locator('.actions button')).toHaveText(['✕']); // plus de « reporté » / « détails »
+  await expect(une.locator('.actions button')).toHaveCount(0); // ni « reporté », ni « détails », ni suppression (x x)
 
   await pressDown(page, 2);
   await page.keyboard.press('Shift+Enter');

@@ -166,15 +166,6 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
                 date
               </Button>
             ))}
-          <Button
-            variant="ghost"
-            size="xs"
-            className="text-muted-foreground hover:text-destructive"
-            title="Supprimer (x x)"
-            onClick={() => confirm(`Supprimer « ${task.title} » ?`) && remove()}
-          >
-            ✕
-          </Button>
         </span>
       )}
     </li>

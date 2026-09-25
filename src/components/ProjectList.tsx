@@ -109,7 +109,7 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
         <EditableName
           value={p.name}
           navKey={navKey}
-          className="font-semibold"
+          className={cn('font-semibold', confirmDelete && 'shrink-0')}
           onSave={(name) => act(() => api.updateProject(p.id, { name }))}
         />
         <span className="count text-xs text-muted-foreground">{p.tasks.length || ''}</span>
@@ -125,12 +125,20 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
         >
           <Heart aria-hidden fill={favorite ? 'currentColor' : 'none'} />
         </Button>
-        {confirmDelete ? (
-          <span className="confirm-delete ml-auto self-center text-xs text-destructive" role="alert">
-            x pour supprimer le projet et toutes ses tâches (Log compris) · Échap pour annuler
+        {/* Suppression en deux temps, au clavier (x x) comme à la souris
+            (corbeille, puis corbeille à nouveau) : pas de fenêtre de confirmation. */}
+        {confirmDelete && (
+          <span className="confirm-delete ml-auto min-w-0 self-center text-right text-xs text-destructive" role="alert">
+            x ou corbeille à nouveau : supprimer le projet et ses tâches (Log compris) · Échap : annuler
           </span>
-        ) : (
-          <span className="actions invisible ml-auto flex gap-0.5 self-center group-hover:visible group-focus-within:visible">
+        )}
+        <span
+          className={cn(
+            'actions flex gap-0.5 self-center',
+            confirmDelete ? 'visible' : 'invisible ml-auto group-hover:visible group-focus-within:visible',
+          )}
+        >
+          {!confirmDelete && (
             <Button
               variant="ghost"
               size="icon-xs"
@@ -141,18 +149,18 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
             >
               {archived ? <ArchiveRestore aria-hidden /> : <Archive aria-hidden />}
             </Button>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              className="delete text-muted-foreground hover:text-destructive"
-              aria-label="Supprimer le projet"
-              title="Supprimer le projet (x x)"
-              onClick={() => confirm(`Supprimer le projet « ${p.name} » et toutes ses tâches (y compris l'historique) ?`) && remove()}
-            >
-              <Trash2 aria-hidden />
-            </Button>
-          </span>
-        )}
+          )}
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            className={cn('delete hover:text-destructive', confirmDelete ? 'text-destructive' : 'text-muted-foreground')}
+            aria-label={confirmDelete ? 'Confirmer la suppression du projet' : 'Supprimer le projet'}
+            title={confirmDelete ? 'Confirmer la suppression (x)' : 'Supprimer le projet (x x)'}
+            onClick={() => (confirmDelete ? remove() : setConfirmDelete(true))}
+          >
+            <Trash2 aria-hidden />
+          </Button>
+        </span>
       </div>
       <ul>
         {p.tasks.map((t) => (

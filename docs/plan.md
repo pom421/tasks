@@ -28,6 +28,7 @@ Rien.
 
 ## Fait (récent)
 
+- [x] Suppression homogène : plus de ✕ ni de fenêtre de confirmation, corbeille du projet en deux temps
 - [x] Installation automatique des dépendances en session web (hook SessionStart + setup script)
 - [x] Skills du projet : livrer, verifier-ci, nouveau-controle, capture-ecran, migration
 - [x] Filtres sobres : contour, icône vide / pleine selon l'état (`87f5ede`)
