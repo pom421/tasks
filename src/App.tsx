@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { JournalDay, Project, Settings, Task } from '../shared/types.ts';
+import { jiraState, type JournalDay, type Project, type Settings, type Task } from '../shared/types.ts';
 import { api } from '@/lib/api';
 import { ActionsContext, type Actions, type TaskField, type Undo } from '@/lib/actions';
 import { focusByKey, handleNavKey, restore, snapshot, type FocusSnapshot } from '@/lib/nav';
@@ -13,7 +13,6 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 interface Data {
   projects: Project[];
   days: JournalDay[];
-  jiraPending: number;
   settings: Settings;
   dates: string[]; // jours du Log ayant des entrées
 }
@@ -27,14 +26,16 @@ interface PendingFocus {
 }
 
 export function App() {
-  const [data, setData] = useState<Data>({ projects: [], days: [], jiraPending: 0, settings: { jira_base_url: null }, dates: [] });
+  const [data, setData] = useState<Data>({ projects: [], days: [], settings: { jira_base_url: null }, dates: [] });
   // Deux « pages » seulement : la liste (/) et les réglages (/admin), sans routeur.
   const [path, setPath] = useState(window.location.pathname);
   // Fiche d'une tâche : id, champ focalisé, open à false pendant l'animation de
   // fermeture ; opening numérote les ouvertures (formulaire neuf à chaque fois).
   const [openTask, setOpenTask] = useState<{ id: number; field: TaskField; open: boolean; opening: number } | null>(null);
   const [filter, setFilter] = useState<Filter>(NO_FILTER);
-  const [showArchived, setShowArchived] = useState(false);
+  // Filtres de la zone des projets (boutons sous la barre d'outils) : sans effet sur le Log.
+  const [jiraOnly, setJiraOnly] = useState(false);
+  const [archivedOnly, setArchivedOnly] = useState(false);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -60,7 +61,6 @@ export function App() {
     setData({
       projects: state.projects,
       days: journal.days,
-      jiraPending: state.jiraPending,
       settings: state.settings,
       dates: journal.dates,
     });
@@ -158,14 +158,14 @@ export function App() {
       const keys: Record<string, () => void> = {
         p: () => document.getElementById('new-project')?.focus(),
         n: focusAdd,
-        d: () => document.getElementById('filter-from')?.focus(),
+        d: () => document.getElementById('filter-date')?.focus(),
         f: () => document.getElementById('filter-project')?.focus(),
         '/': () => document.getElementById('log-search')?.focus(),
-        r: () => changeFilter({ ...filterRef.current, jira: !filterRef.current.jira }),
+        r: () => setJiraOnly((v) => !v),
         '*': () => setFavoritesOnly((v) => !v),
         u: undo,
         '?': () => setHelpOpen(true),
-        // Échap sur un élément de la liste : on reste en navigation.
+        // Échap (hors élément de la liste) : réinitialise les filtres du Log.
         Escape: () => target.dataset.nav === undefined && changeFilter(NO_FILTER),
       };
       if (keys[e.key]) {
@@ -185,6 +185,10 @@ export function App() {
   const current = openTask && allTasks.find((t) => t.id === openTask.id);
   const projectName = (t: Task & { project_name?: string }) =>
     t.project_name ?? data.projects.find((p) => p.id === t.project_id)?.name ?? '';
+
+  // Projets affichés selon « Archivés » (seulement les archivés, ou seulement
+  // les autres) : base des compteurs des boutons à reporter et Favoris.
+  const visibleProjects = data.projects.filter((p) => Boolean(p.archived_at) === archivedOnly);
 
   if (path === '/admin') {
     return <SettingsPage onBack={() => navigate('/')} />;
@@ -208,20 +212,20 @@ export function App() {
       )}
       <div className="mx-auto max-w-2xl px-4">
         <Toolbar
-          jiraPending={data.jiraPending}
-          jiraFilter={filter.jira}
-          onJiraFilter={() => changeFilter({ ...filter, jira: !filter.jira })}
-          favorites={data.projects.filter((p) => p.favorite_at && (showArchived || !p.archived_at)).length}
+          jiraPending={visibleProjects.flatMap((p) => p.tasks).filter((t) => jiraState(t) === 'wanted').length}
+          jiraFilter={jiraOnly}
+          onJiraFilter={() => setJiraOnly((v) => !v)}
+          favorites={visibleProjects.filter((p) => p.favorite_at).length}
           favoritesOnly={favoritesOnly}
           onFavoritesOnly={() => setFavoritesOnly((v) => !v)}
           archived={data.projects.filter((p) => p.archived_at).length}
-          showArchived={showArchived}
-          onShowArchived={() => setShowArchived((v) => !v)}
+          archivedOnly={archivedOnly}
+          onArchivedOnly={() => setArchivedOnly((v) => !v)}
           helpOpen={helpOpen}
           onHelpOpen={setHelpOpen}
         />
         <main>
-          <ProjectList projects={data.projects} showArchived={showArchived} jiraOnly={filter.jira} favoritesOnly={favoritesOnly} />
+          <ProjectList projects={data.projects} archivedOnly={archivedOnly} jiraOnly={jiraOnly} favoritesOnly={favoritesOnly} />
           <Journal days={data.days} dates={data.dates} projects={data.projects} filter={filter} onFilter={changeFilter} />
         </main>
       </div>

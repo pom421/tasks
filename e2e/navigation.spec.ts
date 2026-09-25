@@ -339,9 +339,12 @@ test('archiver et supprimer : boutons icônes nommés, titre au survol', async (
   await expect(page.locator('.project')).toHaveCount(1);
   expect(store.state().projects.find((p) => p.id === data.alpha.id)!.archived_at).toBeTruthy();
 
-  await page.locator('#show-archived').click();
+  // Archivés : seulement les projets archivés.
+  await page.locator('#archived-only').click();
+  await expect(page.locator('.project')).toHaveCount(1);
   await alpha.locator('.project-head').hover();
   await expect(alpha.getByRole('button', { name: 'Désarchiver le projet' })).toBeVisible();
+  await page.locator('#archived-only').click();
 
   const beta = page.locator(`#project-${data.beta.id}`);
   page.once('dialog', (d) => d.accept());
@@ -352,22 +355,25 @@ test('archiver et supprimer : boutons icônes nommés, titre au survol', async (
 });
 
 test('boutons de filtre : à reporter, Archivés, Favoris, dans cet ordre, seulement si utiles', async ({ page, store, data }) => {
-  const row = page.locator('#jira-pending, #show-archived, #favorites-only');
+  const row = page.locator('#jira-pending, #archived-only, #favorites-only');
   await expect(row).toHaveCount(0); // rien à reporter, ni archivé, ni favori
   store.updateTask(data.tasks.une.id, { jira: 'wanted' });
-  store.updateProject(data.alpha.id, { archived: true });
+  const gamma = store.createProject('Gamma');
+  store.updateProject(gamma.id, { archived: true });
   store.updateProject(data.beta.id, { favorite: true });
   await reload(page);
-  expect(await row.evaluateAll((els) => els.map((e) => e.id))).toEqual(['jira-pending', 'show-archived', 'favorites-only']);
+  expect(await row.evaluateAll((els) => els.map((e) => e.id))).toEqual(['jira-pending', 'archived-only', 'favorites-only']);
 
-  // Archivés : bouton bascule, plein quand actif.
-  const archived = page.locator('#show-archived');
+  // Archivés : comme « à reporter », un filtre : seulement les projets archivés.
+  const archived = page.locator('#archived-only');
   await expect(archived).toHaveAttribute('aria-pressed', 'false');
-  await expect(page.locator('.project')).toHaveCount(1);
+  await expect(page.locator('#projects .project-head .name')).toHaveText(['Alpha', 'Beta']);
   await archived.click();
   await expect(archived).toHaveAttribute('aria-pressed', 'true');
-  await expect(archived).toHaveClass(/bg-primary/);
-  await expect(page.locator('.project')).toHaveCount(2);
+  await expect(archived).toHaveClass(/bg-primary/); // plein quand actif
+  await expect(page.locator('#projects .project-head .name')).toHaveText(['Gamma']);
+  await archived.click();
+  await expect(page.locator('#projects .project-head .name')).toHaveText(['Alpha', 'Beta']);
 });
 
 test('clavier sur un projet : f favori, a archiver, x x supprimer, u annule tout', async ({ page, store, data }) => {
@@ -557,23 +563,67 @@ test('réglages (/admin) : URL Jira conservée en base, lien depuis la fiche', a
   );
 });
 
-test('compteur « à reporter » : filtre la liste et le journal (r ou clic)', async ({ page, store, data }) => {
+test('compteur « à reporter » : filtre la zone des projets seulement (r ou clic)', async ({ page, store, data }) => {
   store.updateTask(data.tasks.deux.id, { jira: 'wanted' });
   const faite = store.createTask(data.beta.id, 'Faite à reporter');
-  store.updateTask(faite.id, { doneAt: '2020-01-01', jira: 'wanted' }); // vieille date : hors « dernière journée »
+  store.updateTask(faite.id, { doneAt: '2026-09-25', jira: 'wanted' });
   store.updateTask(data.tasks.trois.id, { doneAt: '2026-09-25' });
   await reload(page);
 
   const counter = page.locator('#jira-pending');
-  await expect(counter).toHaveText('2 tâches à reporter');
+  await expect(counter).toHaveText('1 tâche à reporter'); // tâches à faire des projets
   await page.keyboard.press('r');
   await expect(counter).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#projects .name')).toHaveText(['Alpha', 'Deux']);
-  await expect(page.locator('#journal .name')).toHaveText(['Faite à reporter']);
+  await expect(page.locator('#journal .name')).toHaveText(['Trois', 'Faite à reporter']); // Log inchangé
 
   await counter.click();
   await expect(page.locator('#projects .name')).toHaveText(['Alpha', 'Une', 'Deux', 'Beta']);
-  await expect(page.locator('#journal .name')).toHaveText(['Trois']);
+  await expect(page.locator('#journal .name')).toHaveText(['Trois', 'Faite à reporter']);
+});
+
+// Non-régression : les boutons sous la barre d'outils ne touchent qu'à la zone des projets.
+test('boutons à reporter, Archivés, Favoris : le Log ne change pas', async ({ page, store, data }) => {
+  const gamma = store.createProject('Gamma');
+  store.updateTask(store.createTask(gamma.id, 'Gamma faite').id, { doneAt: '2026-09-25' });
+  store.updateTask(data.tasks.trois.id, { doneAt: '2026-09-25' });
+  store.updateTask(data.tasks.une.id, { jira: 'wanted' });
+  store.updateProject(gamma.id, { archived: true });
+  store.updateProject(data.alpha.id, { favorite: true });
+  await reload(page);
+
+  const log = page.locator('#journal');
+  const snapshot = async () => ({
+    names: await log.locator('.name').allTextContents(),
+    labels: await log.locator('.project-label').allTextContents(),
+    count: await page.locator('#log-count').textContent(),
+    date: await page.locator('#filter-date').inputValue(),
+    options: await page.locator('#filter-project option').allTextContents(),
+  });
+  const before = await snapshot();
+  expect(before.names).toEqual(['Trois', 'Gamma faite']); // tâche d'un projet archivé comprise
+  expect(before.options).toEqual(['Tous les projets', 'Alpha', 'Beta', 'Gamma (archivé)']);
+
+  for (const id of ['#jira-pending', '#archived-only', '#favorites-only']) {
+    const button = page.locator(id);
+    const projects = await page.locator('#projects .project').count();
+    await button.click();
+    await expect(button).toHaveAttribute('aria-pressed', 'true');
+    await expect.poll(() => page.locator('#projects .project').count(), id).not.toBe(projects); // la zone des projets change
+    expect(await snapshot(), id).toEqual(before); // le Log, non
+    await button.click();
+    await expect(button).toHaveAttribute('aria-pressed', 'false');
+  }
+  // Au clavier (r, *), combinés.
+  await page.keyboard.press('r');
+  await page.keyboard.press('*');
+  await expect(page.locator('#projects .name')).toHaveText(['Alpha', 'Une']);
+  expect(await snapshot()).toEqual(before);
+
+  // Et le Log filtré (recherche) ne touche pas à la zone des projets.
+  await page.locator('#log-search').fill('Gamma');
+  await expect(log.locator('.name')).toHaveText(['Gamma faite']);
+  await expect(page.locator('#projects .name')).toHaveText(['Alpha', 'Une']);
 });
 
 test('fiche rouverte : contenu relu depuis les données à jour', async ({ page, data }) => {
@@ -694,12 +744,11 @@ test('e sur une tâche : fiche ouverte directement en édition, titre sélection
 
 test('zone « Log » : un cadre par jour', async ({ page, store, data }) => {
   store.updateTask(data.tasks.une.id, { doneAt: '2026-09-20' });
-  store.updateTask(data.tasks.trois.id, { doneAt: '2026-09-21' });
+  store.updateTask(data.tasks.deux.id, { doneAt: '2026-09-21' });
   await reload(page);
   const log = page.getByRole('region', { name: 'Log' });
   await expect(log.getByRole('heading', { name: 'Log' })).toBeVisible();
-  await log.locator('#filter-from').fill('2026-09-20');
-  await log.locator('#filter-to').fill('2026-09-21');
+  await log.locator('#log-search').fill('e'); // Une (le 20) et Deux (le 21)
   const days = log.locator('.day');
   await expect(days).toHaveCount(2);
   for (const day of await days.all()) {

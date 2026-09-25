@@ -1,32 +1,30 @@
 import { useEffect, useRef, useState } from 'react';
 import type { DoneTask, JournalDay, JournalFilter, Project } from '../../shared/types.ts';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { formatDay, isComplete, localToday } from '@/lib/dates';
-import { useActions } from '@/lib/actions';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { TaskRow } from './TaskRow';
 
+// Filtres du Log, indépendants de ceux de la zone des projets.
 export interface Filter {
-  from: string;
-  to: string;
+  day: string; // journée choisie ; '' = aujourd'hui (sans recherche) ou toutes (avec recherche)
   project: string; // id du projet, '' = tous
-  jira: boolean; // seulement les tâches à reporter dans Jira (liste et journal)
-  day: string; // jour affiché hors filtre par période ; '' = aujourd'hui
   q: string; // recherche : titre, contenu, ticket
 }
 
-export const NO_FILTER: Filter = { from: '', to: '', project: '', jira: false, day: '', q: '' };
+export const NO_FILTER: Filter = { day: '', project: '', q: '' };
 
-// Sans période, recherche ni filtre « à reporter », le Log montre un seul jour (aujourd'hui par défaut).
-export const isDayMode = (f: Filter) => !f.from && !f.to && !f.jira && !f.q;
+// Sans recherche, le Log montre un seul jour (aujourd'hui par défaut).
+export const isDayMode = (f: Filter) => !f.q;
 
+// La journée choisie filtre toujours ; sans recherche, c'est aujourd'hui par défaut.
 export function journalQuery(f: Filter): JournalFilter {
-  const day = f.day || localToday();
+  const day = f.day || (isDayMode(f) ? localToday() : '');
   return {
-    from: isDayMode(f) ? day : f.from,
-    to: isDayMode(f) ? day : f.to,
+    from: day || undefined,
+    to: day || undefined,
     projectId: Number(f.project) || undefined,
-    jiraPending: f.jira,
     q: f.q || undefined,
   };
 }
@@ -70,38 +68,21 @@ interface JournalProps {
 }
 
 export function Journal({ days, dates, projects, filter, onFilter }: JournalProps) {
-  const { toast } = useActions();
-  // Champs de date non contrôlés : une valeur incomplète (année en cours de
-  // frappe) ne doit pas être écrasée par React.
-  const fromRef = useRef<HTMLInputElement>(null);
-  const toRef = useRef<HTMLInputElement>(null);
+  const today = localToday();
+  const dayMode = isDayMode(filter);
+  const current = filter.day || today;
+
+  // Champ de date non contrôlé : une valeur incomplète (année en cours de
+  // frappe) ne doit pas être écrasée par React. Il montre le jour affiché ;
+  // pendant une recherche, vide = toutes les journées.
+  const dateRef = useRef<HTMLInputElement>(null);
+  const shownDate = dayMode ? current : filter.day;
   useEffect(() => {
-    if (fromRef.current && fromRef.current.value !== filter.from) fromRef.current.value = filter.from;
-    if (toRef.current && toRef.current.value !== filter.to) toRef.current.value = filter.to;
-  }, [filter.from, filter.to]);
+    if (dateRef.current && dateRef.current.value !== shownDate) dateRef.current.value = shownDate;
+  }, [shownDate]);
+  const changeDay = (day: string) => isComplete(day) && onFilter({ ...filter, day });
 
-  // Date de début renseignée : la date de fin prend la même valeur (une journée)
-  // et reçoit le focus pour être ajustée si besoin.
-  const changeFrom = (from: string) => {
-    if (!isComplete(from)) return;
-    onFilter({ ...filter, from, to: from || filter.to });
-    if (from && toRef.current) {
-      toRef.current.value = from;
-      toRef.current.focus();
-    }
-  };
-
-  const changeTo = (to: string) => {
-    if (!isComplete(to)) return;
-    if (to && filter.from && to < filter.from) {
-      toast('La date de fin doit être après la date de début');
-      if (toRef.current) toRef.current.value = filter.to;
-      return;
-    }
-    onFilter({ ...filter, to });
-  };
-
-  const filtered = Boolean(filter.from || filter.to || filter.project || filter.jira || filter.q);
+  const filtered = Boolean(filter.day || filter.project || filter.q);
 
   // Recherche : lancée 250 ms après la dernière frappe ; le champ suit la
   // réinitialisation des filtres.
@@ -126,9 +107,6 @@ export function Journal({ days, dates, projects, filter, onFilter }: JournalProp
 
   // Navigation jour par jour : parmi les jours ayant des entrées, plus aujourd'hui
   // (pour pouvoir y revenir). Hors mode « un jour », les boutons sont désactivés.
-  const today = localToday();
-  const dayMode = isDayMode(filter);
-  const current = filter.day || today;
   const stops = [...new Set([...dates, today])].sort();
   const prev = dayMode ? stops.filter((d) => d < current).at(-1) : undefined;
   const next = dayMode ? stops.find((d) => d > current) : undefined;
@@ -136,45 +114,56 @@ export function Journal({ days, dates, projects, filter, onFilter }: JournalProp
 
   return (
     <section id="journal" aria-label="Log" className="mt-12 mb-16 border-t-2 pt-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-semibold">Log</h2>
-        <div className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
-          <label className="flex items-center gap-1">
-            Du <input ref={fromRef} type="date" id="filter-from" aria-label="Date de début" className={fieldClass} onChange={(e) => changeFrom(e.target.value)} />
-          </label>
-          <label className="flex items-center gap-1">
-            au <input ref={toRef} type="date" id="filter-to" aria-label="Date de fin" min={filter.from} className={fieldClass} onChange={(e) => changeTo(e.target.value)} />
-          </label>
-          <select id="filter-project" aria-label="Filtrer par projet" className={fieldClass} value={filter.project} onChange={(e) => onFilter({ ...filter, project: e.target.value })}>
-            <option value="">Tous les projets</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name + (p.archived_at ? ' (archivé)' : '')}
-              </option>
-            ))}
-          </select>
-          {filtered && (
-            <Button id="filter-reset" variant="outline" size="xs" onClick={() => onFilter(NO_FILTER)}>
-              Réinitialiser
-            </Button>
-          )}
-        </div>
+      {/* Titre et filtres sur une ligne (repliée sur écran étroit). */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        <h2 className="mr-auto font-semibold">Log</h2>
+        <input
+          type="search"
+          id="log-search"
+          aria-label="Rechercher dans le Log"
+          title="Rechercher dans le Log : titre, contenu, ticket (/)"
+          placeholder="Rechercher… (/)"
+          className={cn(fieldClass, 'w-40 outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50')}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' && query) {
+              e.stopPropagation();
+              setQuery('');
+            }
+          }}
+        />
+        <input
+          ref={dateRef}
+          type="date"
+          id="filter-date"
+          aria-label="Journée"
+          title="Journée (d)"
+          className={fieldClass}
+          onChange={(e) => changeDay(e.target.value)}
+        />
+        <select id="filter-project" aria-label="Filtrer par projet" title="Projet (f)" className={fieldClass} value={filter.project} onChange={(e) => onFilter({ ...filter, project: e.target.value })}>
+          <option value="">Tous les projets</option>
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name + (p.archived_at ? ' (archivé)' : '')}
+            </option>
+          ))}
+        </select>
+        {filtered && (
+          <Button
+            id="filter-reset"
+            variant="ghost"
+            size="icon-xs"
+            className="text-muted-foreground"
+            aria-label="Réinitialiser les filtres du Log"
+            title="Réinitialiser les filtres du Log (Échap)"
+            onClick={() => onFilter(NO_FILTER)}
+          >
+            <X aria-hidden />
+          </Button>
+        )}
       </div>
-      <input
-        type="search"
-        id="log-search"
-        aria-label="Rechercher dans le Log"
-        placeholder="Rechercher dans le Log : titre, contenu, ticket… (/)"
-        className="mt-3 w-full rounded-md border bg-background px-2.5 py-1 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape' && query) {
-            e.stopPropagation();
-            setQuery('');
-          }
-        }}
-      />
       <div className="mt-3 flex items-center gap-1" role="group" aria-label="Navigation par jour">
         <Button
           id="day-prev"
@@ -224,7 +213,7 @@ export function Journal({ days, dates, projects, filter, onFilter }: JournalProp
         )}
         {!dayMode && !days.length && (
           <p className="empty mt-3 italic text-muted-foreground">
-            Aucune tâche faite pour ce filtre.
+            Aucune tâche trouvée.
           </p>
         )}
       </div>

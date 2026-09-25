@@ -15,7 +15,7 @@ const SHORTCUTS: [string, string][] = [
   ['Alt+↑ Alt+↓', 'Monter / descendre la tâche, jusque dans le projet voisin (Alt+k / Alt+j)'],
   ['J', 'Report : à reporter → reporté → rien (majuscule)'],
   ['L', 'Ouvrir la fiche sur l’identifiant du ticket (majuscule)'],
-  ['r', 'Afficher seulement les tâches à reporter'],
+  ['r', 'Afficher seulement les tâches à reporter (projets)'],
   ['*', 'Afficher seulement les projets favoris'],
   ['x x', 'Supprimer la tâche ou le projet (x une 2e fois pour confirmer)'],
   ['f', 'Sur un projet : favori / plus favori'],
@@ -23,7 +23,7 @@ const SHORTCUTS: [string, string][] = [
   ['u', 'Annuler la dernière action (cocher, renommer, supprimer, favori, archivage)'],
   ['p', 'Nouveau projet'],
   ['n', 'Nouvelle tâche (dernier projet utilisé)'],
-  ['d', 'Filtrer le log par période (début, puis fin)'],
+  ['d', 'Filtrer le log sur une journée'],
   ['f', 'Ailleurs que sur un projet : filtrer le log par projet'],
   ['/', 'Rechercher dans le log (titre, contenu, ticket)'],
   ['?', 'Cette aide'],
@@ -37,13 +37,13 @@ interface ToolbarProps {
   favoritesOnly: boolean;
   onFavoritesOnly: () => void;
   archived: number; // nombre de projets archivés
-  showArchived: boolean;
-  onShowArchived: () => void;
+  archivedOnly: boolean;
+  onArchivedOnly: () => void;
   helpOpen: boolean;
   onHelpOpen: (open: boolean) => void;
 }
 
-export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, favorites, favoritesOnly, onFavoritesOnly, archived, showArchived, onShowArchived, helpOpen, onHelpOpen }: ToolbarProps) {
+export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, favorites, favoritesOnly, onFavoritesOnly, archived, archivedOnly, onArchivedOnly, helpOpen, onHelpOpen }: ToolbarProps) {
   const { act, toast, navigate } = useActions();
   const dbInput = useRef<HTMLInputElement>(null);
   const mdInput = useRef<HTMLInputElement>(null);
@@ -119,14 +119,14 @@ export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, favorites, favo
             {jiraPending} {jiraPending > 1 ? 'tâches' : 'tâche'} à reporter
           </Button>
         )}
-        {(archived > 0 || showArchived) && (
+        {(archived > 0 || archivedOnly) && (
           <Button
-            id="show-archived"
-            variant={showArchived ? 'default' : 'outline'}
+            id="archived-only"
+            variant={archivedOnly ? 'default' : 'outline'}
             size="sm"
-            aria-pressed={showArchived}
-            title="Afficher aussi les projets archivés"
-            onClick={onShowArchived}
+            aria-pressed={archivedOnly}
+            title="Afficher seulement les projets archivés"
+            onClick={onArchivedOnly}
           >
             <Archive aria-hidden /> Archivés
           </Button>

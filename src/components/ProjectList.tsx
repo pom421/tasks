@@ -171,15 +171,15 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
 
 interface ProjectListProps {
   projects: Project[];
-  showArchived: boolean;
+  archivedOnly: boolean;
   jiraOnly: boolean; // filtre « à reporter dans Jira »
   favoritesOnly: boolean;
 }
 
-export function ProjectList({ projects, showArchived, jiraOnly, favoritesOnly }: ProjectListProps) {
+export function ProjectList({ projects, archivedOnly, jiraOnly, favoritesOnly }: ProjectListProps) {
   const { act } = useActions();
   const visible = projects
-    .filter((p) => showArchived || !p.archived_at)
+    .filter((p) => Boolean(p.archived_at) === archivedOnly) // Archivés : seulement eux
     .filter((p) => !favoritesOnly || p.favorite_at)
     .map((p) => (jiraOnly ? { ...p, tasks: p.tasks.filter((t) => jiraState(t) === 'wanted') } : p))
     .filter((p) => !jiraOnly || p.tasks.length > 0);
@@ -247,9 +247,11 @@ export function ProjectList({ projects, showArchived, jiraOnly, favoritesOnly }:
           <p className="empty mt-3 italic text-muted-foreground">
             {jiraOnly
               ? 'Aucune tâche à faire à reporter.'
-              : favoritesOnly
-                ? 'Aucun projet favori : cliquez sur le cœur d’un projet.'
-                : 'Aucun projet. Créez-en un ci-dessous.'}
+              : archivedOnly
+                ? 'Aucun projet archivé.'
+                : favoritesOnly
+                  ? 'Aucun projet favori : cliquez sur le cœur d’un projet.'
+                  : 'Aucun projet. Créez-en un ci-dessous.'}
           </p>
         )}
       </section>

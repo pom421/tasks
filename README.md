@@ -36,17 +36,20 @@ Vérifications :
 ## Utilisation
 
 - Cocher une tâche → elle passe dans le Log, datée du jour. La décocher → elle revient dans son projet.
-- Log (en bas, un cadre par jour) : par défaut, aujourd'hui (même vide). `<` / `>` passent au jour précédent / suivant qui a des entrées (désactivés en bout de liste) ; le bouton « Aujourd’hui », tout à droite, y ramène (désactivé si on y est déjà). Filtres par période (du… au…, bornes incluses) et par projet. Renseigner le début met la même date en fin : une journée entière.
-- Recherche dans le Log (`/`) : toutes les journées contenant une tâche dont le titre, le contenu ou le ticket contient le texte (sans tenir compte des majuscules ni des accents). Le nombre de résultats s'affiche au centre : « 5 tâches trouvées dans 2 journées ». `Échap` vide le champ.
+- Log (en bas, un cadre par jour) : fonctionne seul, les boutons de la zone des projets n'y touchent pas. Par défaut, aujourd'hui (même vide). Sur la ligne du titre, trois filtres :
+  - recherche (`/`) : toutes les journées contenant une tâche dont le titre, le contenu ou le ticket contient le texte (sans tenir compte des majuscules ni des accents). `Échap` vide le champ ;
+  - journée (`d`) : le Log de ce jour. Pendant une recherche, elle la limite à ce jour ; vide = toutes les journées ;
+  - projet (`f`).
+  - `<` / `>` passent au jour précédent / suivant qui a des entrées (désactivés en bout de liste et pendant une recherche) ; « Aujourd’hui », tout à droite, y ramène. Le nombre de résultats s'affiche au centre : « 5 tâches trouvées dans 2 journées ».
 - Nouveau projet → curseur directement sur la saisie de sa première tâche.
 - Projet : cœur ♡ = favori (plein et rouge quand actif, `f`). Au survol d'un projet : icônes archive (archiver / désarchiver, `a`) et corbeille (supprimer, `x` `x`), avec leur nom en info-bulle. Tout est annulable (`u`), y compris la suppression : le projet revient avec toutes ses tâches, Log compris.
-- Sous la barre d'outils, alignés à droite : « N tâches à reporter », « Archivés » (affiche aussi les projets archivés), « Favoris » (seulement les favoris, `*`). Chacun n'apparaît que s'il sert (au moins une tâche à reporter, un projet archivé, un favori) ; plein quand il est actif.
+- Sous la barre d'outils, alignés à droite, trois filtres de la **zone des projets** (sans effet sur le Log), combinables : « N tâches à reporter » (`r`), « Archivés » (seulement les projets archivés), « Favoris » (seulement les favoris, `*`). Chacun n'apparaît que s'il sert (au moins une tâche à faire à reporter, un projet archivé, un favori) ; plein quand il est actif.
 - Souris : clic sur un nom pour le modifier. Titre trop long : coupé par « … », affiché en entier au survol (ou au focus clavier).
 - Fiche d'une tâche (`Maj+Entrée`, `o` ou icône 🗒) : titre complet, identifiant du ticket (`PROJ-123`), puis contenu en Markdown. L'icône 🗒 signale une tâche qui a du contenu.
   - Lecture seule par défaut. `e` (comme GitLab) passe tout en édition : titre, puis `Tab` → ticket, puis `Tab` → contenu. Double-clic sur le contenu : édition directement dedans.
   - `Ctrl+Entrée` (ou `Entrée` dans le titre / le ticket) enregistre et repasse en lecture seule ; un second `Ctrl+Entrée` (ou `Échap`) ferme. Enregistrement automatique.
   - Ouverte par `L` (ou `J` → reporté), la fiche démarre en édition sur le ticket et `Entrée` la ferme.
-- Report : une tâche passe « à reporter », puis « reporté » (badge après le titre, avec l'identifiant du ticket). Le bouton « N tâches à reporter », sous la barre d'outils, n'apparaît que s'il en reste et filtre la liste.
+- Report : une tâche passe « à reporter », puis « reporté » (badge après le titre, avec l'identifiant du ticket).
 - Réglages (icône ⚙, page `/admin`, `Échap` pour revenir) : URL de base des tickets (ex. `https://entreprise.atlassian.net`), qui transforme les identifiants en liens (`URL/browse/PROJ-123`). Conservée en base.
 
 Clavier (`?` affiche l'aide) :
@@ -63,14 +66,14 @@ Clavier (`?` affiche l'aide) :
 | `e` | Ouvrir la fiche directement en édition (titre, `Tab` → ticket, `Tab` → contenu) |
 | `J` (majuscule) | Report : à reporter → reporté (fiche proposée pour le ticket) → rien |
 | `L` (majuscule) | Ouvrir la fiche sur le champ « Ticket » |
-| `r` | Afficher seulement les tâches à reporter (ou clic sur « N tâches à reporter ») |
+| `r` | Projets : afficher seulement les tâches à reporter (ou clic sur « N tâches à reporter ») |
 | `*` | Afficher seulement les projets favoris (ou clic sur « Favoris ») |
 | `f` sur un projet | Favori / plus favori (ailleurs, `f` filtre le Log par projet) |
 | `a` sur un projet | Archiver / désarchiver |
 | `x` puis `x` | Supprimer la tâche ou le projet : le 1er appui affiche ce qui va être supprimé, le 2e supprime (`Échap` annule). `Suppr` marche aussi |
 | `u` | Annuler la dernière action : sur une tâche cocher / décocher, renommer, supprimer ; sur un projet favori, archivage, suppression (une seule, pas les modifications faites dans la fiche). Le curseur revient sur l'élément |
 | `p` / `n` | Nouveau projet / nouvelle tâche |
-| `d` / `f` | Filtre du Log par période / par projet (`f` hors projet sélectionné) |
+| `d` / `f` | Filtre du Log par journée / par projet (`f` hors projet sélectionné) |
 | `/` | Rechercher dans le Log |
 
 Import / export :
