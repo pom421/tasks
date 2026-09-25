@@ -21,14 +21,18 @@ async function pressDown(page: Page, n: number) {
   for (let i = 0; i < n; i++) await page.keyboard.press('ArrowDown');
 }
 
-// `data` : jeu de données créé en base, page ouverte dessus.
+// `data` : jeu de données créé en base, page ouverte dessus. Automatique :
+// chaque test de ce fichier part de cet état, même sans demander `data`.
 const test = base.extend<{ data: ReturnType<typeof seed> }>({
-  data: async ({ page, store }, use) => {
-    const data = seed(store);
-    await page.goto('/');
-    await expect(page.locator('.project')).toHaveCount(2);
-    await use(data);
-  },
+  data: [
+    async ({ page, store }, use) => {
+      const data = seed(store);
+      await page.goto('/');
+      await expect(page.locator('.project')).toHaveCount(2);
+      await use(data);
+    },
+    { auto: true },
+  ],
 });
 
 test('↑/↓ parcourent projets, tâches et champs d’ajout ; Début/Fin', async ({ page, data }) => {
@@ -145,16 +149,64 @@ test('champ d’ajout : on tape directement, Entrée ajoute, Échap vide', async
   expect(await current(page)).toBe(`project:${data.beta.id}`);
 });
 
-test('Suppr supprime la tâche après confirmation', async ({ page, store, data }) => {
-  page.on('dialog', (d) => d.accept());
+test('x puis x supprime la tâche ; le focus passe à la suivante', async ({ page, store, data }) => {
   await pressDown(page, 2);
-  await page.keyboard.press('Delete');
+  await page.keyboard.press('x');
+  await expect(page.locator('.confirm-delete')).toBeVisible();
+  expect(store.state().projects[0].tasks).toHaveLength(2); // pas encore supprimée
+  await page.keyboard.press('x');
   await expect(page.locator('#projects .name', { hasText: /^Une$/ })).toHaveCount(0);
   expect(store.state().projects[0].tasks.map((t) => t.title)).toEqual(['Deux']);
   expect(await current(page)).toBe(`task:${data.tasks.deux.id}`);
 });
 
-test('nouveau projet : le focus va sur la saisie de sa première tâche', async ({ page, store, data: _ }) => {
+test('x puis Échap, ou x puis déplacement : suppression annulée', async ({ page, store }) => {
+  await pressDown(page, 2);
+  await page.keyboard.press('x');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.confirm-delete')).toHaveCount(0);
+  await page.keyboard.press('x');
+  await page.keyboard.press('j'); // descend sur « Deux »
+  await page.keyboard.press('x'); // nouvelle demande, sur « Deux »
+  await expect(page.locator('.confirm-delete')).toHaveCount(1);
+  await page.keyboard.press('Escape');
+  expect(store.state().projects[0].tasks.map((t) => t.title)).toEqual(['Une', 'Deux']);
+});
+
+test('Suppr fonctionne comme x (double appui)', async ({ page, store }) => {
+  await pressDown(page, 2);
+  await page.keyboard.press('Delete');
+  await page.keyboard.press('Delete');
+  await expect(page.locator('#projects .name', { hasText: /^Une$/ })).toHaveCount(0);
+  expect(store.state().projects[0].tasks.map((t) => t.title)).toEqual(['Deux']);
+});
+
+test('j / k naviguent comme ↓ / ↑, mais s’écrivent dans un champ', async ({ page, data }) => {
+  await page.keyboard.press('j');
+  expect(await current(page)).toBe(`project:${data.alpha.id}`);
+  await page.keyboard.press('j');
+  await page.keyboard.press('j');
+  expect(await current(page)).toBe(`task:${data.tasks.deux.id}`);
+  await page.keyboard.press('k');
+  expect(await current(page)).toBe(`task:${data.tasks.une.id}`);
+  // Dans le champ d'ajout, j et k sont des lettres.
+  await page.keyboard.press('j');
+  await page.keyboard.press('j');
+  expect(await current(page)).toBe(`add:${data.alpha.id}`);
+  await page.keyboard.type('jk');
+  await expect(page.locator(`[data-nav-key="add:${data.alpha.id}"]`)).toHaveValue('jk');
+});
+
+test('raccourcis actifs même quand le focus est sur la case à cocher', async ({ page, store }) => {
+  await page.locator('#projects li.task').first().getByRole('checkbox').focus();
+  await page.keyboard.press('Shift+J');
+  await expect(page.locator('#projects li.task').first().locator('svg.jira')).toBeVisible();
+  await page.keyboard.press('Shift+J');
+  await expect(page.locator('#projects li.task').first().locator('svg.jira')).toHaveCount(0);
+  expect(store.state().projects[0].tasks[0].jira_at).toBeNull();
+});
+
+test('nouveau projet : le focus va sur la saisie de sa première tâche', async ({ page, store }) => {
   await page.keyboard.press('p');
   await page.keyboard.type('Gamma');
   await page.keyboard.press('Enter');
@@ -169,32 +221,32 @@ test('nouveau projet : le focus va sur la saisie de sa première tâche', async 
   await expect(page.locator(`[data-nav-key="add:${gamma.id}"]`)).toBeFocused();
 });
 
-test('j bascule l’icône Jira après le texte de la tâche', async ({ page, store, data }) => {
+test('J bascule l’icône Jira après le texte de la tâche', async ({ page, store, data }) => {
   const icon = page.locator(`li.task:has([data-nav-key="task:${data.tasks.une.id}"]) svg.jira`);
   await pressDown(page, 2);
-  await page.keyboard.press('j');
+  await page.keyboard.press('Shift+J');
   await expect(icon).toBeVisible();
   expect(store.state().projects[0].tasks[0].jira_at).toBeTruthy();
   // Le focus reste sur la tâche : on peut rebasculer aussitôt.
   expect(await current(page)).toBe(`task:${data.tasks.une.id}`);
 
-  await page.keyboard.press('j');
+  await page.keyboard.press('Shift+J');
   await expect(icon).toHaveCount(0);
   expect(store.state().projects[0].tasks[0].jira_at).toBeNull();
 });
 
-test('j en édition : saisi comme une lettre, pas de bascule', async ({ page, store, data }) => {
+test('J en édition : saisi comme une lettre, pas de bascule', async ({ page, store, data }) => {
   await pressDown(page, 2);
   await page.keyboard.press('Enter');
   await page.keyboard.press('End');
-  await page.keyboard.type(' jj');
+  await page.keyboard.type(' JJ');
   await page.keyboard.press('Enter');
-  await expect(page.locator('#projects .name', { hasText: 'Une jj' })).toBeVisible();
+  await expect(page.locator('#projects .name', { hasText: 'Une JJ' })).toBeVisible();
   expect(store.state().projects[0].tasks[0].jira_at).toBeNull();
   expect(await current(page)).toBe(`task:${data.tasks.une.id}`);
 });
 
-test('icône Jira conservée dans le journal, et j y fonctionne aussi', async ({ page, store, data }) => {
+test('icône Jira conservée dans le journal, et J y fonctionne aussi', async ({ page, store, data }) => {
   store.updateTask(data.tasks.trois.id, { jira: true });
   await page.reload();
   const row = page.locator(`li.task:has([data-nav-key="task:${data.tasks.trois.id}"])`);
@@ -206,7 +258,7 @@ test('icône Jira conservée dans le journal, et j y fonctionne aussi', async ({
   // Focus resté à la même place (champ d'ajout de Beta) : descendre jusqu'au journal.
   await pressDown(page, 2);
   expect(await current(page)).toBe(`task:${data.tasks.trois.id}`);
-  await page.keyboard.press('j');
+  await page.keyboard.press('Shift+J');
   await expect(row.locator('svg.jira')).toHaveCount(0);
   expect(store.journal({ projectId: data.beta.id }).days[0].tasks[0].jira_at).toBeNull();
 });

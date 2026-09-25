@@ -6,12 +6,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 
 const SHORTCUTS: [string, string][] = [
-  ['↑ ↓', 'Se déplacer (Début / Fin : premier / dernier)'],
+  ['↑ ↓  j k', 'Se déplacer (Début / Fin : premier / dernier)'],
   ['Entrée', 'Modifier le nom sélectionné / valider'],
   ['Échap', "Quitter l'édition, retour à la navigation"],
   ['Espace', 'Cocher / décocher la tâche'],
-  ['j', 'Marquer / démarquer « reportée dans Jira »'],
-  ['Suppr', 'Supprimer la tâche'],
+  ['J', 'Marquer / démarquer « reportée dans Jira » (majuscule)'],
+  ['x x', 'Supprimer la tâche (x une 2e fois pour confirmer)'],
   ['p', 'Nouveau projet'],
   ['n', 'Nouvelle tâche (dernier projet utilisé)'],
   ['d', 'Filtrer le journal par période (début, puis fin)'],

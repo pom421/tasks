@@ -44,12 +44,12 @@ Clavier (`?` affiche l'aide) :
 
 | Touche | Action |
 |---|---|
-| `↑` `↓` | Passer d'un projet, d'une tâche ou d'un champ « + Ajouter » à l'autre (`Début` / `Fin` : premier / dernier) |
+| `↑` `↓` ou `j` `k` | Passer d'un projet, d'une tâche ou d'un champ « + Ajouter » à l'autre (`Début` / `Fin` : premier / dernier) |
 | `Entrée` | Modifier le nom sélectionné, puis `Entrée` pour enregistrer |
 | `Échap` | Quitter l'édition sans enregistrer, retour à la navigation |
 | `Espace` | Cocher / décocher la tâche |
-| `j` | Marquer / démarquer la tâche « reportée dans Jira » (icône après le texte) |
-| `Suppr` | Supprimer la tâche |
+| `J` (majuscule) | Marquer / démarquer la tâche « reportée dans Jira » (icône après le texte) |
+| `x` puis `x` | Supprimer la tâche : le 1er appui demande confirmation, le 2e supprime (`Échap` annule). `Suppr` marche aussi |
 | `p` / `n` | Nouveau projet / nouvelle tâche |
 | `d` / `f` | Filtre du journal par période / par projet |
 - **Exporter** télécharge la base `.sqlite`. **Importer .sqlite** remplace toute la base.

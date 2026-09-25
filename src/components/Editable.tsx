@@ -1,18 +1,16 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 interface EditableNameProps {
   value: string;
   navKey: string;
   onSave: (value: string) => void;
-  // Touches supplémentaires hors édition (Espace, j, Suppr…).
-  onKeyDown?: (e: KeyboardEvent<HTMLSpanElement>) => void;
   className?: string;
 }
 
 // Nom navigable au clavier. Clic ou Entrée -> champ d'édition :
 // Entrée enregistre, Échap annule, dans les deux cas le focus revient au nom.
-export function EditableName({ value, navKey, onSave, onKeyDown, className }: EditableNameProps) {
+export function EditableName({ value, navKey, onSave, className }: EditableNameProps) {
   const [editing, setEditing] = useState(false);
   const refocus = useRef(false);
   const span = useRef<HTMLSpanElement>(null);
@@ -67,7 +65,7 @@ export function EditableName({ value, navKey, onSave, onKeyDown, className }: Ed
         if (e.key === 'Enter') {
           e.preventDefault();
           setEditing(true);
-        } else onKeyDown?.(e);
+        }
       }}
     >
       {value}

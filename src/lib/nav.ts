@@ -61,10 +61,14 @@ function ownsArrows(el: Element) {
 
 export function handleNavKey(e: KeyboardEvent) {
   if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
-  if (document.querySelector('[role="dialog"]') || ownsArrows(e.target as Element)) return;
+  const target = e.target as Element;
+  if (document.querySelector('[role="dialog"]') || ownsArrows(target)) return;
   const moves: Record<string, number> = { ArrowDown: 1, ArrowUp: -1 };
-  // Début/fin : seulement hors champ texte, où ces touches déplacent le curseur.
-  if (!(e.target as Element).matches('input')) Object.assign(moves, { Home: -Infinity, End: Infinity });
+  // Hors champ texte seulement (où ces touches servent à écrire ou déplacer
+  // le curseur) : Début / Fin, et j / k à la manière de vim.
+  if (!target.matches('input:not([type="checkbox"]), textarea')) {
+    Object.assign(moves, { Home: -Infinity, End: Infinity, j: 1, k: -1 });
+  }
   if (e.key in moves) {
     e.preventDefault();
     move(moves[e.key]);
