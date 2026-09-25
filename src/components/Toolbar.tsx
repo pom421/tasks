@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 
 const SHORTCUTS: [string, string][] = [
   ['↑ ↓  j k', 'Se déplacer (Début / Fin : premier / dernier)'],
-  ['Maj+Entrée  o', 'Ouvrir la fiche ; dans la fiche : e modifie, Ctrl+Entrée repasse en lecture'],
+  ['Maj+Entrée  o', 'Ouvrir la fiche ; e : tout modifier (Tab : champ suivant), Ctrl+Entrée : lecture'],
   ['Entrée', 'Modifier le nom sélectionné / valider'],
   ['Échap', "Quitter l'édition, retour à la navigation"],
   ['Espace', 'Cocher / décocher la tâche'],

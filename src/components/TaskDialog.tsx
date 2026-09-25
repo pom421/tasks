@@ -20,46 +20,70 @@ interface TaskDialogProps {
   onClose: (changed: boolean) => void;
 }
 
+type Field = 'title' | 'ticket' | 'notes';
+
 const ticketOf = (t: Task) => t.jira_key ?? t.jira_url ?? '';
 const isValidTicket = (s: string) => !s || JIRA_KEY_RE.test(s.toUpperCase()) || /^https?:\/\/\S+$/i.test(s);
 
-// Fiche d'une tâche : contenu en Markdown et identifiant du ticket.
-// Contenu : aperçu par défaut ; e (comme GitLab), double-clic ou Entrée pour éditer ;
-// Ctrl+Entrée revient à l'aperçu (et enregistre), un second Ctrl+Entrée ferme.
-// Échap ferme aussi. Tout est enregistré automatiquement, rien n'est perdu.
+// Fiche d'une tâche, façon GitLab : lecture seule par défaut ; e passe tout en
+// édition (titre, puis Tab : ticket, puis contenu Markdown) ; Ctrl+Entrée
+// enregistre et repasse en lecture ; un second Ctrl+Entrée (ou Échap) ferme.
+// Tout est enregistré automatiquement, rien n'est perdu.
 // Accessibilité : focus piégé, titre et description annoncés (Radix),
 // libellés reliés aux champs, erreurs annoncées.
 export function TaskDialog({ task, projectName, field, open, onClose }: TaskDialogProps) {
   const id = useId();
-  const [notes, setNotes] = useState(task.notes ?? '');
-  const [ticket, setTicket] = useState(ticketOf(task));
-  const [editing, setEditing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const saved = useRef({ notes: task.notes ?? '', ticket: ticketOf(task), changed: false });
-  const preview = useRef<HTMLDivElement>(null);
-  const ticketInput = useRef<HTMLInputElement>(null);
-  const html = useMemo(() => renderMarkdown(notes), [notes]);
+  const [values, setValues] = useState({ title: task.title, ticket: ticketOf(task), notes: task.notes ?? '' });
+  // Ouverte sur le ticket (L, ou J → reporté) : directement en édition.
+  const [editing, setEditing] = useState(field === 'jira');
+  const [error, setError] = useState<{ field: Field; message: string } | null>(null);
+  const saved = useRef({ ...values, changed: false });
+  const refs = {
+    title: useRef<HTMLInputElement>(null),
+    ticket: useRef<HTMLInputElement>(null),
+    notes: useRef<HTMLTextAreaElement>(null),
+  };
+  const reader = useRef<HTMLDivElement>(null);
+  const html = useMemo(() => renderMarkdown(values.notes), [values.notes]);
+  const set = (key: Field) => (e: { target: { value: string } }) => setValues((v) => ({ ...v, [key]: e.target.value }));
 
-  // Enregistre ce qui a changé. false si le ticket est invalide (la fiche reste ouverte).
-  const persist = async (): Promise<boolean> => {
-    const trimmed = { notes: notes.trim(), ticket: ticket.trim() };
-    if (!isValidTicket(trimmed.ticket)) {
-      setError('Identifiant attendu, ex. PROJ-123');
-      ticketInput.current?.focus();
-      return false;
-    }
+  // En édition, un champ en erreur est corrigé sur place ; en lecture, on y revient.
+  const fail = (f: Field, message: string) => {
+    setError({ field: f, message });
+    setEditing(true);
+    requestAnimationFrame(() => refs[f].current?.focus());
+    return false;
+  };
+
+  // Enregistrements en file : deux Ctrl+Entrée rapides (lecture puis fermeture)
+  // ne lancent pas deux enregistrements concurrents.
+  const queue = useRef<Promise<boolean>>(Promise.resolve(true));
+  const persist = (): Promise<boolean> => (queue.current = queue.current.then(save, save));
+
+  // Enregistre ce qui a changé. false en cas d'erreur (la fiche reste ouverte).
+  const save = async (): Promise<boolean> => {
+    const ticket = values.ticket.trim();
+    const next = {
+      title: values.title.trim(),
+      // Identifiant normalisé comme côté serveur (proj-5 → PROJ-5).
+      ticket: JIRA_KEY_RE.test(ticket.toUpperCase()) ? ticket.toUpperCase() : ticket,
+      notes: values.notes.trim(),
+    };
+    if (!next.title) return fail('title', 'Le titre est obligatoire');
+    if (!isValidTicket(next.ticket)) return fail('ticket', 'Identifiant attendu, ex. PROJ-123');
     const patch: Parameters<typeof api.updateTask>[1] = {};
-    if (trimmed.notes !== saved.current.notes.trim()) patch.notes = trimmed.notes || null;
-    if (trimmed.ticket !== saved.current.ticket) patch.jira_ticket = trimmed.ticket || null;
+    if (next.title !== saved.current.title) patch.title = next.title;
+    if (next.ticket !== saved.current.ticket) patch.jira_ticket = next.ticket || null;
+    if (next.notes !== saved.current.notes.trim()) patch.notes = next.notes || null;
     if (!Object.keys(patch).length) return true;
     try {
       await api.updateTask(task.id, patch);
-      saved.current = { notes, ticket: trimmed.ticket, changed: true };
+      saved.current = { ...next, changed: true };
+      setValues((v) => ({ ...v, ticket: next.ticket }));
       setError(null);
       return true;
     } catch (err) {
-      setError((err as Error).message);
-      return false;
+      return fail(patch.jira_ticket !== undefined ? 'ticket' : 'title', (err as Error).message);
     }
   };
 
@@ -67,15 +91,27 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
     if (await persist()) onClose(saved.current.changed);
   };
 
-  const startEditing = () => setEditing(true);
+  const startEditing = (focus: Field = 'title') => {
+    setEditing(true);
+    requestAnimationFrame(() => refs[focus].current?.focus());
+  };
+  // Passage en lecture immédiat ; une erreur d'enregistrement ramène en édition.
   const stopEditing = async () => {
     setEditing(false);
+    requestAnimationFrame(() => reader.current?.focus());
     await persist();
-    requestAnimationFrame(() => preview.current?.focus());
+  };
+
+  // Entrée dans le titre ou le ticket : comme Ctrl+Entrée. Fiche ouverte juste
+  // pour saisir le ticket (L, J → reporté) : Entrée enregistre et ferme.
+  const onInputEnter = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter' || e.ctrlKey || e.metaKey) return;
+    e.preventDefault();
+    if (field === 'jira') close();
+    else stopEditing();
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    // e : éditer le contenu, depuis n'importe où dans la fiche sauf un champ de saisie.
     const inField = (e.target as HTMLElement).matches('input, textarea');
     if (e.key === 'e' && !editing && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault();
@@ -90,20 +126,30 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
   };
 
   const state = 'done_at' in task ? `faite le ${task.done_at.split('-').reverse().join('/')}` : 'à faire';
+  const errorFor = (f: Field) =>
+    error?.field === f && (
+      <p id={`${id}-${f}-error`} role="alert" className="text-sm text-destructive">
+        {error.message}
+      </p>
+    );
+  const invalid = (f: Field) => ({
+    'aria-invalid': error?.field === f,
+    'aria-describedby': error?.field === f ? `${id}-${f}-error` : undefined,
+  });
 
   return (
     <Dialog open={open} onOpenChange={(value) => !value && close()}>
       <DialogContent
         className="task-dialog flex max-h-[90vh] flex-col gap-4 sm:max-w-3xl"
         onKeyDown={onKeyDown}
-        // Échap : fermer en enregistrant (et rester ouvert si le ticket est invalide).
+        // Échap : fermer en enregistrant (et rester ouvert en cas d'erreur).
         onEscapeKeyDown={(e) => {
           e.preventDefault();
           close();
         }}
         onOpenAutoFocus={(e) => {
           e.preventDefault();
-          (field === 'jira' ? ticketInput.current : preview.current)?.focus();
+          (editing ? refs.ticket.current : reader.current)?.focus();
         }}
         // À la fermeture, retour sur la tâche dans la liste pour reprendre la navigation.
         onCloseAutoFocus={(e) => {
@@ -111,79 +157,89 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
           focusByKey(`task:${task.id}`);
         }}
       >
-        <DialogTitle className="pr-6 leading-snug [overflow-wrap:anywhere]">{task.title}</DialogTitle>
+        {/* Titre annoncé par Radix ; en édition, il laisse la place au champ. */}
+        <DialogTitle className={cn('pr-6 leading-snug [overflow-wrap:anywhere]', editing && 'sr-only')}>
+          {values.title}
+        </DialogTitle>
         <DialogDescription>
           {projectName} · {state}
         </DialogDescription>
 
-        <div className="grid gap-1.5 sm:max-w-xs">
-          <Label htmlFor={`${id}-ticket`}>Ticket</Label>
-          <Input
-            ref={ticketInput}
-            id={`${id}-ticket`}
-            placeholder="PROJ-123"
-            autoComplete="off"
-            value={ticket}
-            onChange={(e) => setTicket(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !e.ctrlKey && !e.metaKey && close()}
-            aria-invalid={Boolean(error)}
-            aria-describedby={error ? `${id}-error` : undefined}
-          />
-        </div>
-
-        {error && (
-          <p id={`${id}-error`} role="alert" className="text-sm text-destructive">
-            {error}
-          </p>
+        {editing ? (
+          <>
+            <div className="grid gap-1.5">
+              <Label htmlFor={`${id}-title`}>Titre</Label>
+              <Input
+                ref={refs.title}
+                id={`${id}-title`}
+                autoComplete="off"
+                value={values.title}
+                onChange={set('title')}
+                onKeyDown={onInputEnter}
+                {...invalid('title')}
+              />
+              {errorFor('title')}
+            </div>
+            <div className="grid gap-1.5 sm:max-w-xs">
+              <Label htmlFor={`${id}-ticket`}>Ticket</Label>
+              <Input
+                ref={refs.ticket}
+                id={`${id}-ticket`}
+                placeholder="PROJ-123"
+                autoComplete="off"
+                value={values.ticket}
+                onChange={set('ticket')}
+                onKeyDown={onInputEnter}
+                {...invalid('ticket')}
+              />
+              {errorFor('ticket')}
+            </div>
+            <div className="grid min-h-0 flex-1 gap-1.5">
+              <Label htmlFor={`${id}-notes`}>Contenu</Label>
+              <Textarea
+                ref={refs.notes}
+                id={`${id}-notes`}
+                className="min-h-[45vh] font-mono text-sm"
+                value={values.notes}
+                onChange={set('notes')}
+                aria-describedby={`${id}-hint`}
+              />
+            </div>
+          </>
+        ) : (
+          <div
+            ref={reader}
+            tabIndex={-1}
+            className="reader grid min-h-0 flex-1 gap-4 outline-none"
+            aria-describedby={`${id}-hint`}
+          >
+            <p className="text-sm">
+              <span className="text-muted-foreground">Ticket : </span>
+              <span className="ticket-value font-mono">{values.ticket || 'aucun'}</span>
+            </p>
+            <div
+              className={cn(
+                'notes-preview markdown min-h-[45vh] overflow-y-auto rounded-md border px-3 py-2 text-sm',
+                !values.notes.trim() && 'text-muted-foreground italic',
+              )}
+              onDoubleClick={() => startEditing('notes')}
+              {...(values.notes.trim() ? { dangerouslySetInnerHTML: { __html: html } } : { children: 'Aucun contenu.' })}
+            />
+          </div>
         )}
 
-        <div className="grid min-h-0 flex-1 gap-1.5">
-          <Label id={`${id}-notes-label`} htmlFor={editing ? `${id}-notes` : undefined}>
-            Contenu
-          </Label>
-          {editing ? (
-            <Textarea
-              id={`${id}-notes`}
-              className="min-h-[50vh] font-mono text-sm"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              autoFocus
-              aria-describedby={`${id}-notes-hint`}
-            />
-          ) : (
-            <div
-              ref={preview}
-              tabIndex={0}
-              role="document"
-              aria-labelledby={`${id}-notes-label`}
-              aria-describedby={`${id}-notes-hint`}
-              className={cn(
-                'notes-preview markdown min-h-[50vh] overflow-y-auto rounded-md border px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
-                !notes.trim() && 'text-muted-foreground italic',
-              )}
-              onDoubleClick={startEditing}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) {
-                  e.preventDefault();
-                  startEditing();
-                }
-              }}
-              {...(notes.trim() ? { dangerouslySetInnerHTML: { __html: html } } : { children: 'Aucun contenu.' })}
-            />
-          )}
-          <p id={`${id}-notes-hint`} className="text-xs text-muted-foreground">
+        <div className="flex items-center justify-between gap-2">
+          <p id={`${id}-hint`} className="text-xs text-muted-foreground">
             {editing
-              ? 'Markdown · Ctrl+Entrée : aperçu'
+              ? 'Tab : champ suivant · Ctrl+Entrée : enregistrer et repasser en lecture'
               : 'e : modifier · Ctrl+Entrée ou Échap : fermer'}
           </p>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={close}>
+              Fermer
+            </Button>
+          </DialogFooter>
         </div>
-
-
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={close}>
-            Fermer
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

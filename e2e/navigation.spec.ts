@@ -355,21 +355,27 @@ test('fiche : identifiant invalide annoncé, la fiche reste ouverte', async ({ p
   expect(store.state().projects[0].tasks[0]).toMatchObject({ jira_key: null, jira_url: null });
 });
 
-test('fiche Markdown : Entrée édite, Ctrl+Entrée aperçu puis fermeture ; icône « détails »', async ({ page, store, data }) => {
+test('fiche Markdown : e édite (titre → Tab → ticket → Tab → contenu), Ctrl+Entrée lecture puis fermeture', async ({ page, store, data }) => {
   await pressDown(page, 3); // « Deux »
   await page.keyboard.press('Shift+Enter');
   const dialog = page.getByRole('dialog', { name: 'Deux' });
   const preview = dialog.locator('.notes-preview');
-  await expect(preview).toBeFocused();
+  await expect(dialog.locator('.reader')).toBeFocused();
   await expect(preview).toHaveText('Aucun contenu.');
+  await expect(dialog.locator('.ticket-value')).toHaveText('aucun');
 
-  await page.keyboard.press('Enter'); // édition
+  await page.keyboard.press('e');
+  await expect(dialog.getByLabel('Titre')).toBeFocused();
+  await expect(dialog.getByLabel('Titre')).toHaveValue('Deux');
+  await page.keyboard.press('Tab');
+  await expect(dialog.getByLabel('Ticket', { exact: true })).toBeFocused();
+  await page.keyboard.press('Tab');
   const editor = dialog.getByLabel('Contenu');
   await expect(editor).toBeFocused();
   // Les raccourcis de la liste ne s'appliquent pas dans la fiche (x, J, Espace…).
   await page.keyboard.type('## Contexte\nVoir x et J avec **Paul** : [spec](https://docs.exemple.fr/specs)');
-  await page.keyboard.press('ControlOrMeta+Enter'); // aperçu (et enregistrement)
-  await expect(preview).toBeFocused();
+  await page.keyboard.press('ControlOrMeta+Enter'); // lecture (et enregistrement)
+  await expect(dialog.locator('.reader')).toBeFocused();
   await expect(preview.getByRole('heading', { name: 'Contexte' })).toBeVisible();
   await expect(preview.locator('strong')).toHaveText('Paul');
   const specLink = preview.getByRole('link', { name: 'spec' });
@@ -385,10 +391,11 @@ test('fiche Markdown : Entrée édite, Ctrl+Entrée aperçu puis fermeture ; ic�
   await expect(deux.getByRole('button', { name: 'Voir les détails' })).toBeVisible();
   await expect.poll(() => current(page)).toBe(`task:${data.tasks.deux.id}`);
 
-  // Double-clic sur l'aperçu : édition ; Échap ferme en enregistrant.
+  // Double-clic sur le contenu : édition directement dans le contenu ; Échap ferme en enregistrant.
   await deux.getByRole('button', { name: 'Voir les détails' }).click();
   await page.getByRole('dialog', { name: 'Deux' }).locator('.notes-preview').dblclick();
-  await page.getByRole('dialog', { name: 'Deux' }).getByLabel('Contenu').press('ControlOrMeta+End');
+  await expect(page.getByRole('dialog', { name: 'Deux' }).getByLabel('Contenu')).toBeFocused();
+  await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.type(' (fin)');
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -457,7 +464,7 @@ test('compteur « à reporter » : filtre la liste et le journal (r ou clic)', a
 test('fiche rouverte : contenu relu depuis les données à jour', async ({ page, data }) => {
   await pressDown(page, 2);
   await page.keyboard.press('o');
-  await page.keyboard.press('Enter');
+  await page.keyboard.press('e');
   await page.getByRole('dialog', { name: 'Une' }).getByLabel('Contenu').fill('premier jet');
   await page.keyboard.press('Escape'); // enregistré à la fermeture
   await expect.poll(() => current(page)).toBe(`task:${data.tasks.une.id}`);
@@ -465,7 +472,7 @@ test('fiche rouverte : contenu relu depuis les données à jour', async ({ page,
   await page.keyboard.press('Shift+J'); // reportée : la fiche s'ouvre sur le ticket
   const dialog = page.getByRole('dialog', { name: 'Une' });
   await expect(dialog.getByLabel('Ticket', { exact: true })).toBeFocused();
-  await expect(dialog.locator('.notes-preview')).toHaveText('premier jet'); // relu depuis la base
+  await expect(dialog.getByLabel('Contenu')).toHaveValue('premier jet'); // relu depuis la base
 });
 
 test('bouton « tâches à reporter » : place réservée, rien ne bouge quand il apparaît', async ({ page, data }) => {
@@ -515,27 +522,36 @@ test('ligne épurée et fiche ordonnée : titre, ticket, contenu', async ({ page
   await pressDown(page, 2);
   await page.keyboard.press('Shift+Enter');
   const dialog = page.getByRole('dialog', { name: 'Une' });
+  await page.keyboard.press('e');
   const labels = await dialog.locator('label').allTextContents();
-  expect(labels).toEqual(['Ticket', 'Contenu']);
+  expect(labels).toEqual(['Titre', 'Ticket', 'Contenu']);
 });
 
-test('fiche : e passe en édition (comme GitLab), Ctrl+Entrée repasse en lecture seule', async ({ page, store }) => {
+test('fiche : e modifie aussi le titre et le ticket ; Entrée dans un champ = enregistrer', async ({ page, store, data }) => {
   await pressDown(page, 2);
-  await page.keyboard.press('Shift+Enter');
+  await page.keyboard.press('o');
   const dialog = page.getByRole('dialog', { name: 'Une' });
-  await expect(dialog.locator('.notes-preview')).toBeFocused();
   await page.keyboard.press('e');
-  const editor = dialog.getByLabel('Contenu');
-  await expect(editor).toBeFocused();
-  await expect(editor).toHaveValue(''); // le « e » n'a pas été saisi
-  await page.keyboard.type('Texte avec des e');
-  await page.keyboard.press('ControlOrMeta+Enter');
-  await expect(dialog.locator('.notes-preview')).toHaveText('Texte avec des e');
-  expect(store.state().projects[0].tasks[0].notes).toBe('Texte avec des e');
+  const title = dialog.getByLabel('Titre');
+  await expect(title).toHaveValue('Une'); // le « e » n'a pas été saisi
+  await title.fill('Une, renommée');
+  await page.keyboard.press('Tab');
+  await page.keyboard.type('proj-5');
+  await page.keyboard.press('Enter'); // enregistre et repasse en lecture
+  const renamed = page.getByRole('dialog', { name: 'Une, renommée' });
+  await expect(renamed.locator('.ticket-value')).toHaveText('PROJ-5');
+  expect(store.state().projects[0].tasks[0]).toMatchObject({ title: 'Une, renommée', jira_key: 'PROJ-5' });
 
-  // Dans le champ Ticket, e est une lettre comme une autre.
-  await dialog.getByLabel('Ticket', { exact: true }).click();
-  await page.keyboard.type('e');
-  await expect(dialog.getByLabel('Ticket', { exact: true })).toHaveValue('e');
-  await expect(dialog.locator('textarea')).toHaveCount(0); // toujours en lecture seule
+  // Titre vide refusé, erreur annoncée sous le champ (la fiche porte alors un nom vide).
+  await page.keyboard.press('e');
+  const any = page.getByRole('dialog');
+  await any.getByLabel('Titre').fill('  ');
+  await page.keyboard.press('ControlOrMeta+Enter');
+  await expect(any.getByRole('alert')).toHaveText('Le titre est obligatoire');
+  await expect(any.getByLabel('Titre')).toHaveAttribute('aria-invalid', 'true');
+  await any.getByLabel('Titre').fill('Une');
+  await page.keyboard.press('ControlOrMeta+Enter');
+  await page.keyboard.press('ControlOrMeta+Enter');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.locator(`[data-nav-key="task:${data.tasks.une.id}"]`)).toHaveText('Une');
 });
