@@ -184,6 +184,17 @@ export function ProjectList({ projects, archivedOnly, jiraOnly, favoritesOnly }:
     .map((p) => (jiraOnly ? { ...p, tasks: p.tasks.filter((t) => jiraState(t) === 'wanted') } : p))
     .filter((p) => !jiraOnly || p.tasks.length > 0);
 
+  // Liste vide : message propre au filtre actif ; plusieurs filtres combinés :
+  // message générique (tâches si « à reporter » en fait partie, sinon projets).
+  const emptyMessage = () => {
+    const active = [jiraOnly, archivedOnly, favoritesOnly].filter(Boolean).length;
+    if (active > 1) return jiraOnly ? 'Aucune tâche avec les filtres demandés.' : 'Aucun projet avec les filtres demandés.';
+    if (jiraOnly) return 'Aucune tâche à faire à reporter.';
+    if (archivedOnly) return 'Aucun projet archivé.';
+    if (favoritesOnly) return 'Aucun projet favori : cliquez sur le cœur d’un projet.';
+    return 'Aucun projet. Créez-en un ci-dessous.';
+  };
+
   // Monte / descend d'un cran. En bord de projet, la tâche passe dans le
   // projet visible voisin : à la fin du précédent, en tête du suivant.
   const moving = useRef(false);
@@ -245,13 +256,7 @@ export function ProjectList({ projects, archivedOnly, jiraOnly, favoritesOnly }:
         ))}
         {!visible.length && (
           <p className="empty mt-3 italic text-muted-foreground">
-            {jiraOnly
-              ? 'Aucune tâche à faire à reporter.'
-              : archivedOnly
-                ? 'Aucun projet archivé.'
-                : favoritesOnly
-                  ? 'Aucun projet favori : cliquez sur le cœur d’un projet.'
-                  : 'Aucun projet. Créez-en un ci-dessous.'}
+            {emptyMessage()}
           </p>
         )}
       </section>

@@ -404,11 +404,24 @@ test('filtres combinés (ET) : aucun bouton ne disparaît quand un autre est act
   await expect(tasks).toHaveText(['G à reporter']);
   await expect(buttons).toHaveCount(3);
 
+  // Liste vide avec plusieurs filtres : message générique.
+  const empty = page.locator('#projects .empty');
   await page.locator('#archived-only').click(); // favoris ET à reporter, non archivés : aucun
   await expect(heads).toHaveCount(0);
+  await expect(empty).toHaveText('Aucune tâche avec les filtres demandés.');
   await expect(buttons).toHaveCount(3);
   await page.locator('#favorites-only').click(); // à reporter seulement
   await expect(heads).toHaveText(['Beta']);
+  await page.locator('#jira-pending').click();
+
+  // Sans « à reporter » : il s'agit de projets.
+  store.updateProject(gamma.id, { favorite: false });
+  await reload(page);
+  await page.locator('#archived-only').click();
+  await page.locator('#favorites-only').click(); // archivés ET favoris : aucun
+  await expect(empty).toHaveText('Aucun projet avec les filtres demandés.');
+  await page.locator('#archived-only').click(); // Favoris seul : Alpha
+  await expect(heads).toHaveText(['Alpha']);
 });
 
 test('barre d’outils : filtres à la place de l’export / import, qui sont dans les réglages', async ({ page }) => {
