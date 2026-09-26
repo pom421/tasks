@@ -169,12 +169,11 @@ test('champ d’ajout : on tape directement, Entrée ajoute, Échap vide et sort
   await page.keyboard.type('brouillon');
   await page.keyboard.press('Escape');
   await expect(page.locator(`[data-nav-key="add:${data.alpha.id}"]`)).toHaveValue('');
-  // Hors du champ, sur la tâche au-dessus : les raccourcis marchent (p = nouveau projet).
+  // Hors du champ, sur la tâche au-dessus : les raccourcis marchent (p = priorité).
   const quatre = store.state().projects[0].tasks[2].id;
   await expect.poll(() => current(page)).toBe(`task:${quatre}`);
   await page.keyboard.press('p');
-  await expect(page.locator('#new-project')).toBeFocused();
-  await expect(page.locator('#new-project')).toHaveValue('');
+  await expect(page.locator(`#projects li.task:has([data-nav-key="task:${quatre}"]) button.priority`)).toHaveAttribute('aria-label', 'Priorité 1');
   await expect(page.locator(`[data-nav-key="add:${data.alpha.id}"]`)).toHaveValue('');
 });
 

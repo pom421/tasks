@@ -22,7 +22,7 @@ import { PriorityButton, usePriority } from './Priority';
 // L l'ouvre sur l'identifiant du ticket,
 // t lance / met en pause le chrono, T l'arrête et le remet à zéro (tâches à faire),
 // s l'ajoute au plan journée ou l'en retire (tâches à faire),
-// 1, 2, 3 donnent la priorité (la même touche la retire),
+// p fait tourner la priorité (aucune → 1 → 2 → 3 → aucune),
 // x ou Suppr demande la suppression, un second appui la confirme,
 // Alt+↑ / Alt+↓ (ou Alt+k / Alt+j) déplacent la tâche (onMove, tâches à faire).
 export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (direction: -1 | 1) => void }) {

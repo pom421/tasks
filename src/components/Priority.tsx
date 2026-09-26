@@ -1,6 +1,5 @@
 import type { KeyboardEvent } from 'react';
-import { Flag } from 'lucide-react';
-import { PRIORITIES, type Priority, type Task } from '../../shared/types.ts';
+import type { Priority, Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
 import { useActions } from '@/lib/actions';
 import { cn } from '@/lib/utils';
@@ -13,37 +12,49 @@ const COLOR: Record<Priority, string> = {
   3: 'text-sky-600 dark:text-sky-400',
 };
 
-// Priorité d'une tâche, partagée par la ligne et la fiche : 1, 2 ou 3 la
-// donne ; la même touche une 2e fois la retire ; un clic sur l'icône passe à
-// la suivante (aucune → P1 → P2 → P3 → aucune). Annulable (u).
+// Priorité d'une tâche, partagée par la ligne et la fiche : p (ou clic sur
+// l'icône) passe à la suivante : aucune → 1 → 2 → 3 → aucune. Annulable (u).
 export function usePriority(task: Task) {
   const { act, setUndo } = useActions();
-  const set = (p: Priority | null) => {
+  const cycle = () => {
     const before = task.priority;
-    const next = before === p ? null : p;
+    const next = before === 3 ? null : (((before ?? 0) + 1) as Priority);
     return act(async () => {
       await api.updateTask(task.id, { priority: next });
       setUndo({
-        label: next ? `priorité P${next}` : 'retrait de la priorité',
+        label: next ? `priorité ${next}` : 'retrait de la priorité',
         run: () => api.updateTask(task.id, { priority: before }),
         focus: `task:${task.id}`,
       });
     });
   };
-  // Touches 1, 2, 3 ; true si la touche a été traitée.
+  // Touche p ; true si elle a été traitée.
   const onKey = (e: KeyboardEvent) => {
-    const p = Number(e.key) as Priority;
-    if (!PRIORITIES.includes(p)) return false;
+    if (e.key !== 'p') return false;
     e.preventDefault();
-    set(p);
+    cycle();
     return true;
   };
-  const cycle = () => set(task.priority === 3 ? null : (((task.priority ?? 0) + 1) as Priority));
-  return { set, cycle, onKey };
+  return { cycle, onKey };
 }
 
-// Icône drapeau : pleine et colorée avec une priorité (toujours visible),
-// sinon atténuée, vide, visible au survol de la ligne (hidden).
+// Icône « chiffre » (carré arrondi) : pleine, colorée, chiffre en blanc avec
+// une priorité ; sans priorité, carré vide.
+function PriorityIcon({ priority }: { priority: Priority | null }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden>
+      <rect x="2" y="2" width="20" height="20" rx="5" fill={priority ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" />
+      {priority && (
+        <text x="12" y="17.5" textAnchor="middle" fontSize="16" fontWeight="700" fill="white">
+          {priority}
+        </text>
+      )}
+    </svg>
+  );
+}
+
+// Bouton de priorité : toujours visible avec une priorité, sinon atténué et
+// visible au survol de la ligne (hidden).
 export function PriorityButton({ priority, onClick, hidden }: { priority: Priority | null; onClick: () => void; hidden?: boolean }) {
   return (
     <Button
@@ -54,11 +65,11 @@ export function PriorityButton({ priority, onClick, hidden }: { priority: Priori
         priority ? COLOR[priority] : 'text-muted-foreground',
         !priority && hidden && 'invisible group-hover:visible group-focus-within:visible',
       )}
-      aria-label={priority ? `Priorité P${priority}` : 'Priorité'}
-      title={`${priority ? `P${priority}` : 'Priorité'} (1 2 3)`}
+      aria-label={priority ? `Priorité ${priority}` : 'Priorité'}
+      title={`${priority ? `Priorité ${priority}` : 'Priorité'} (p)`}
       onClick={onClick}
     >
-      <Flag aria-hidden fill={priority ? 'currentColor' : 'none'} />
+      <PriorityIcon priority={priority} />
     </Button>
   );
 }
