@@ -33,6 +33,7 @@ Rien.
 
 ## Fait (récent)
 
+- [x] « + Ajouter » en écriture : `Échap` vide le champ et le repasse en lecture (au lieu d'en sortir vers l'élément au-dessus)
 - [x] Aide `?` : raccourcis groupés par thème, en colonnes, tout visible sur un écran courant (la liste défile sinon), sans texte d’explication ; ménage : doublon `e` retiré, ajout de `Alt+↑` / `Alt+↓` sur un projet, `Suppr`, `Échap` du Log, `Ctrl+Entrée` qui ferme la fiche
 - [x] Place de la barre de défilement réservée : plus de décalage quand un filtre la fait apparaître ou disparaître
 - [x] « + Ajouter » atteint par `j` / `k` : en lecture, `Entrée` pour écrire (`n`, `n` `n` ou clic : écriture directe)

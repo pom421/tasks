@@ -156,7 +156,7 @@ test('Espace dans le journal décoche la tâche', async ({ page, store, data }) 
   expect(store.state().projects[1].tasks[0].title).toBe('Trois');
 });
 
-test('champ d’ajout : Entrée pour écrire, Entrée ajoute, Échap vide et sort du champ', async ({ page, store, data }) => {
+test('champ d’ajout : Entrée pour écrire, Entrée ajoute, Échap vide et repasse en lecture', async ({ page, store, data }) => {
   await pressDown(page, 4);
   expect(await current(page)).toBe(`add:${data.alpha.id}`);
   await page.keyboard.press('Enter'); // atteint par la navigation : en lecture, Entrée pour écrire
@@ -169,10 +169,20 @@ test('champ d’ajout : Entrée pour écrire, Entrée ajoute, Échap vide et sor
 
   await page.keyboard.type('brouillon');
   await page.keyboard.press('Escape');
-  await expect(page.locator(`[data-nav-key="add:${data.alpha.id}"]`)).toHaveValue('');
-  // Hors du champ, sur la tâche au-dessus : les raccourcis marchent (n n = nouveau projet).
+  // Vidé, toujours sur le champ, en lecture : les touches naviguent (j, k)
+  // et les raccourcis marchent (n n = nouveau projet).
+  const add = page.locator(`[data-nav-key="add:${data.alpha.id}"]`);
+  await expect(add).toHaveValue('');
+  await expect(add).toHaveAttribute('readonly', '');
+  await expect(add).toBeFocused();
+  await page.keyboard.press('k');
   const quatre = store.state().projects[0].tasks[2].id;
-  await expect.poll(() => current(page)).toBe(`task:${quatre}`);
+  expect(await current(page)).toBe(`task:${quatre}`);
+  await page.keyboard.press('j');
+  await expect(add).toHaveAttribute('readonly', '');
+  // Échap en lecture : rien de propre au champ, le curseur reste.
+  await page.keyboard.press('Escape');
+  await expect(add).toBeFocused();
   await page.keyboard.press('n');
   await page.keyboard.press('n');
   await expect(page.locator('#new-project')).toBeFocused();
@@ -323,8 +333,11 @@ test('« + Ajouter » : n ou clic = écriture directe ; n sur le champ en lectur
   await add.click();
   await page.keyboard.type('x');
   await expect(add).toHaveValue('x');
-  await page.keyboard.press('Escape');
-  await pressDown(page, 1); // retour sur « + Ajouter » par la navigation : lecture
+  await page.keyboard.press('Escape'); // vidé, repasse en lecture
+  expect(await current(page)).toBe(`add:${data.alpha.id}`);
+  await expect(add).toHaveAttribute('readonly', '');
+  await pressDown(page, 1);
+  await page.keyboard.press('k'); // retour sur « + Ajouter » par la navigation : lecture
   expect(await current(page)).toBe(`add:${data.alpha.id}`);
   await expect(add).toHaveAttribute('readonly', '');
   await page.keyboard.press('n');

@@ -82,7 +82,7 @@ Clavier (`?` affiche l'aide, groupée par thème : navigation, fiche, tâche, pr
 | `↑` `↓` ou `j` `k` | Passer d'un projet, d'une tâche ou d'un champ « + Ajouter » à l'autre (`Début` / `Fin` ou `g` `g` / `G` : premier / dernier). Un champ « + Ajouter » atteint ainsi reste en lecture : `Entrée` pour écrire (par `n`, `n` `n` ou un clic : écriture directe) |
 | `Maj+↑` `Maj+↓` | En-tête du projet précédent / suivant |
 | `Entrée` | Modifier le nom sélectionné, puis `Entrée` pour enregistrer |
-| `Échap` | Quitter l'édition sans enregistrer, retour à la navigation ; dans un champ « + Ajouter » : le vide et en sort (curseur sur l'élément au-dessus, `n` utilisable) |
+| `Échap` | Quitter l'édition sans enregistrer, retour à la navigation ; dans un champ « + Ajouter » en écriture : le vide et le repasse en lecture (curseur sur le champ, `j` / `k` et `n` utilisables) |
 | `Échap` puis `Échap` | Retirer tous les filtres : report, priorité, Archivés, Favoris et ceux du Log (deux appuis rapprochés, hors champ de saisie) |
 | `Espace` | Cocher / décocher la tâche |
 | `Alt+↑` `Alt+↓` (ou `Alt+k` `Alt+j`) | Monter / descendre la tâche (priorité). En bord de projet, elle passe dans le projet voisin |
