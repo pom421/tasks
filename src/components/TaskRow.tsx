@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { EditableName } from './Editable';
 import { ReportBadge } from './ReportBadge';
 import { moveDirection } from '@/lib/nav';
-import { RESET_MESSAGE, TimeSpent, TimerButtons, useTimer } from './Timer';
+import { TimerButtons, useTimer } from './Timer';
 
 // Ligne de tâche, à faire (liste des projets) ou faite (journal).
 // Clavier, où que soit le focus dans la ligne (hors champ de saisie) :
@@ -18,7 +18,7 @@ import { RESET_MESSAGE, TimeSpent, TimerButtons, useTimer } from './Timer';
 // (rien -> à reporter -> reporté -> rien), o ou Maj+Entrée ouvre la fiche,
 // e l'ouvre directement en édition,
 // L l'ouvre sur l'identifiant du ticket,
-// t lance / met en pause le chrono, T T l'arrête et le remet à zéro (tâches à faire),
+// t lance / met en pause le chrono, T l'arrête et le remet à zéro (tâches à faire),
 // x ou Suppr demande la suppression, un second appui la confirme,
 // Alt+↑ / Alt+↓ (ou Alt+k / Alt+j) déplacent la tâche (onMove, tâches à faire).
 export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (direction: -1 | 1) => void }) {
@@ -89,7 +89,6 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
     }
     if (e.key === 'x' || e.key === 'Delete') {
       e.preventDefault();
-      timer.cancel();
       if (confirmDelete) remove();
       else setConfirmDelete(true);
       return;
@@ -98,10 +97,8 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
       setConfirmDelete(false);
       return;
     }
-    if ((confirmDelete || timer.confirmReset) && e.key === 'Escape') e.stopPropagation();
-    // Toute autre touche annule les demandes en cours.
-    setConfirmDelete(false);
-    timer.cancel();
+    if (confirmDelete && e.key === 'Escape') e.stopPropagation();
+    setConfirmDelete(false); // toute autre touche annule la demande
     if (e.key === ' ' && target.getAttribute('role') !== 'checkbox') {
       // Sur la case elle-même, Espace la coche nativement.
       e.preventDefault();
@@ -117,18 +114,16 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
     }
   };
 
-  // Le focus quitte la ligne : les demandes (suppression, remise à zéro) sont abandonnées.
+  // Le focus quitte la ligne : la demande de suppression est abandonnée.
   const onBlur = (e: FocusEvent<HTMLLIElement>) => {
-    if (e.currentTarget.contains(e.relatedTarget)) return;
-    setConfirmDelete(false);
-    timer.cancel();
+    if (!e.currentTarget.contains(e.relatedTarget)) setConfirmDelete(false);
   };
 
   return (
     <li
       className={cn(
         'task group flex min-w-0 items-center gap-2 rounded px-1 py-0.5 text-sm hover:bg-accent has-[.name:focus]:bg-accent has-[.name:focus]:shadow-[inset_3px_0_var(--color-primary)]',
-        (confirmDelete || timer.confirmReset) && 'bg-destructive/10 has-[.name:focus]:bg-destructive/10 has-[.name:focus]:shadow-[inset_3px_0_var(--color-destructive)]',
+        confirmDelete && 'bg-destructive/10 has-[.name:focus]:bg-destructive/10 has-[.name:focus]:shadow-[inset_3px_0_var(--color-destructive)]',
       )}
       onKeyDown={onKeyDown}
       onBlur={onBlur}
@@ -146,29 +141,24 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
         />
         <ReportBadge task={task} />
         {hasDetails(task) && (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon-xs"
             tabIndex={-1}
-            className="details flex-none text-muted-foreground hover:text-foreground"
+            className="details flex-none text-muted-foreground"
             title="Voir le contenu (o ou Maj+Entrée)"
             aria-label="Voir les détails"
             onClick={() => openTask(task, 'notes')}
           >
-            <NotebookText className="size-3.5" aria-hidden />
-          </button>
+            <NotebookText aria-hidden />
+          </Button>
         )}
       </span>
-      {(timer.running || timer.seconds > 0) && <TimeSpent seconds={timer.seconds} running={timer.running} />}
-      {timer.confirmReset && (
-        <span className="confirm-reset flex-none text-xs text-destructive" role="alert">
-          {RESET_MESSAGE}
-        </span>
-      )}
       {/* Chrono : visible au survol, toujours visible en marche (icône pause pleine). */}
       {!done && !confirmDelete && (
         <TimerButtons
           timer={timer}
-          className={timer.running || timer.confirmReset ? undefined : 'invisible group-hover:visible group-focus-within:visible'}
+          className={timer.running ? undefined : 'invisible group-hover:visible group-focus-within:visible'}
         />
       )}
       {confirmDelete ? (

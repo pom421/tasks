@@ -14,7 +14,7 @@ const SHORTCUTS: [string, string][] = [
   ['J', 'Report : à reporter → reporté → rien (majuscule)'],
   ['L', 'Ouvrir la fiche sur l’identifiant du ticket (majuscule)'],
   ['t', 'Chrono de la tâche : lancer / mettre en pause (aussi dans la fiche)'],
-  ['T T', 'Arrêter le chrono et le remettre à zéro (T une 2e fois pour confirmer)'],
+  ['T', 'Remettre le chrono à zéro'],
   ['r', 'Afficher seulement les tâches à reporter (projets)'],
   ['*', 'Afficher seulement les projets favoris'],
   ['x x', 'Supprimer la tâche ou le projet (x une 2e fois pour confirmer)'],

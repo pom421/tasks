@@ -67,7 +67,8 @@ Chaque session démarre dans un conteneur neuf : les dépendances doivent y êtr
   - Lecture seule par défaut. `e` (comme GitLab) passe tout en édition : titre, puis `Tab` → ticket, puis `Tab` → contenu. Double-clic sur le contenu : édition directement dedans.
   - `Ctrl+Entrée` (ou `Entrée` dans le titre / le ticket) enregistre et repasse en lecture seule ; un second `Ctrl+Entrée` (ou `Échap`) ferme. Enregistrement automatique.
   - Ouverte par `L` (ou `J` → reporté), la fiche démarre en édition sur le ticket et `Entrée` la ferme.
-- Chrono d'une tâche à faire : au survol de la ligne (et dans la fiche), ▷ lance le chrono (`t`) ; en marche, l'icône devient une pause pleine, toujours visible, et le temps passé s'affiche (« 12 min », puis « 2h34 » à partir d'une heure). ↻ arrête le chrono et le remet à zéro, en deux temps (`T` `T`, ou ↻ deux fois ; `Échap` annule). Un seul chrono en marche à la fois : en lancer un met l'autre en pause. Cocher la tâche arrête son chrono ; le temps passé reste affiché dans le Log. Annulable (`u`).
+- Chrono d'une tâche à faire : au survol de la ligne (et dans la fiche), ▷ lance le chrono (`t`) ; en marche, l'icône devient une pause pleine, toujours visible. Temps passé dans l'info-bulle de l'icône (« 12 min », puis « 2h34 »). ↻ remet à zéro (`T`, sans confirmation, annulable par `u`). Un seul chrono en marche à la fois. Cocher la tâche arrête son chrono.
+- Icônes d'une tâche : toutes à droite, même style (atténuées et vides ; pleines quand actives, et alors toujours visibles).
 - Report : une tâche passe « à reporter », puis « reporté » (badge après le titre : l'identifiant du ticket s'il y en a un, « reporté » sinon ; date du report en info-bulle).
 - Réglages (icône ⚙, page `/admin`, `Échap` pour revenir) : URL de base des tickets (ex. `https://entreprise.atlassian.net`), qui transforme les identifiants en liens (`URL/browse/PROJ-123`), conservée en base ; export / import des données.
 
@@ -86,7 +87,7 @@ Clavier (`?` affiche l'aide) :
 | `J` (majuscule) | Report : à reporter → reporté (fiche proposée pour le ticket) → rien |
 | `L` (majuscule) | Ouvrir la fiche sur le champ « Ticket » |
 | `t` | Chrono de la tâche : lancer / mettre en pause (aussi dans la fiche) |
-| `T` puis `T` | Arrêter le chrono et le remettre à zéro : le 1er appui affiche un message, le 2e remet à zéro (`Échap` annule) |
+| `T` (majuscule) | Remettre le chrono à zéro (annulable par `u`) |
 | `r` | Projets : afficher seulement les tâches à reporter (ou clic sur « N tâches à reporter ») |
 | `*` | Afficher seulement les projets favoris (ou clic sur « Favoris ») |
 | `f` sur un projet | Favori / plus favori (ailleurs, `f` filtre le Log par projet) |

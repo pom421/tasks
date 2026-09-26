@@ -7,7 +7,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-- [~] Chrono par tâche (branche d'expérimentation `claude/chrono-ixjyv7`, pas encore sur `main`) : ▷ / pause pleine (`t`), ↻ arrêter et remettre à zéro (`T` `T`), temps passé « 12 min » / « 2h34 », sur la ligne et dans la fiche ; migration 9
+- [~] Chrono par tâche (branche d'expérimentation `claude/chrono-ixjyv7`, pas encore sur `main`) : ▷ / pause pleine (`t`), ↻ remise à zéro (`T`, sans confirmation), temps passé en info-bulle, sur la ligne et dans la fiche ; migration 9
 
 ## Décisions attendues
 
@@ -17,7 +17,6 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 - [?] Filtre « Archivés » actif : icône archive pleine = bloc noir (le trait
   intérieur disparaît). Remplissage gris clair à la place ?
 
-- [?] Chrono : « stop » et « reset » compris comme une seule icône ↻ (arrêter + remettre à zéro). Un stop distinct (arrêter en gardant le temps) ferait doublon avec la pause.
 - [?] Chrono : un seul en marche à la fois (en lancer un met l'autre en pause). À garder ?
 - [?] Branches d'expérimentation (chrono, priorité, sélection du jour) : chacune ajoute la migration 9. À la fusion, renuméroter la 2e et la 3e (10, 11).
 

@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } f
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { RESET_MESSAGE, TimeSpent, TimerButtons, useTimer } from './Timer';
+import { TimerButtons, useTimer } from './Timer';
 
 interface TaskDialogProps {
   task: Task | DoneTask;
@@ -29,7 +29,7 @@ const isValidTicket = (s: string) => !s || JIRA_KEY_RE.test(s.toUpperCase()) || 
 // Fiche d'une tâche, façon GitLab : lecture seule par défaut ; e passe tout en
 // édition (titre, puis Tab : ticket, puis contenu Markdown) ; Ctrl+Entrée
 // enregistre et repasse en lecture ; un second Ctrl+Entrée (ou Échap) ferme.
-// Chrono comme sur la ligne : t lance / met en pause, T T remet à zéro.
+// Chrono comme sur la ligne : t lance / met en pause, T remet à zéro.
 // Tout est enregistré automatiquement, rien n'est perdu.
 // Accessibilité : focus piégé, titre et description annoncés (Radix),
 // libellés reliés aux champs, erreurs annoncées.
@@ -142,8 +142,6 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const inField = (e.target as HTMLElement).matches('input, textarea');
     if (!inField && !done && !e.ctrlKey && !e.metaKey && !e.altKey && timer.onKey(e)) return;
-    // Toute autre touche annule la demande de remise à zéro (Échap : voir onEscapeKeyDown).
-    if (e.key !== 'Escape') timer.cancel();
     if (e.key === 'e' && !editing && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault();
       startEditing();
@@ -176,8 +174,6 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
         // Échap : fermer en enregistrant (et rester ouvert en cas d'erreur).
         onEscapeKeyDown={(e) => {
           e.preventDefault();
-          // Remise à zéro demandée : Échap l'annule, la fiche reste ouverte.
-          if (timer.confirmRef.current) return timer.cancel();
           close();
         }}
         onOpenAutoFocus={(e) => {
@@ -194,22 +190,13 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
         <DialogTitle className={cn('pr-6 leading-snug [overflow-wrap:anywhere]', editing && 'sr-only')}>
           {values.title}
         </DialogTitle>
-        <DialogDescription>
-          {projectName} · {state}
-        </DialogDescription>
-
-        {(!done || timer.seconds > 0) && (
-          <div className="timer-line flex min-h-6 flex-wrap items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Temps passé :</span>
-            <TimeSpent seconds={timer.seconds} running={timer.running} className="text-sm" />
-            {!done && <TimerButtons timer={timer} />}
-            {timer.confirmReset && (
-              <span className="confirm-reset text-xs text-destructive" role="alert">
-                {RESET_MESSAGE}
-              </span>
-            )}
-          </div>
-        )}
+        {/* Icônes de la tâche à droite, comme sur la ligne. */}
+        <div className="flex min-h-6 items-center justify-between gap-2">
+          <DialogDescription>
+            {projectName} · {state}
+          </DialogDescription>
+          {!done && <TimerButtons timer={timer} />}
+        </div>
 
         {editing ? (
           <>
@@ -278,7 +265,7 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
           <p id={`${id}-hint`} className="text-xs text-muted-foreground">
             {editing
               ? 'Tab : champ suivant · Ctrl+Entrée : enregistrer et repasser en lecture'
-              : `e : modifier${done ? '' : ' · t : chrono'} · Ctrl+Entrée ou Échap : fermer`}
+              : 'e : modifier · Ctrl+Entrée ou Échap : fermer'}
           </p>
           <DialogFooter>
             <Button type="button" onClick={close}>
