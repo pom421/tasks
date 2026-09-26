@@ -81,10 +81,27 @@ function ownsArrows(el: Element) {
 // Instant du dernier g seul : un 2e g rapproché (gg) va au premier élément.
 let lastG = 0;
 
+// Maj+↑ / Maj+↓ : en-tête du projet précédent / suivant (depuis un projet, une
+// de ses tâches ou son champ d'ajout ; hors projet : dernier / premier).
+function moveProject(delta: -1 | 1) {
+  const heads = navItems().filter((item) => item.dataset.navKey?.startsWith('project:'));
+  const here = document.activeElement?.closest('.project')?.querySelector<HTMLElement>('[data-nav-key^="project:"]');
+  const i = here ? heads.indexOf(here) : delta > 0 ? -1 : heads.length;
+  focusItem(heads[Math.min(Math.max(i + delta, 0), heads.length - 1)]);
+}
+
 export function handleNavKey(e: KeyboardEvent) {
-  if (e.ctrlKey || e.metaKey || e.altKey || (e.shiftKey && e.key !== 'G')) return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
   const target = e.target as Element;
   if (document.querySelector('[role="dialog"]') || ownsArrows(target)) return;
+  if (e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+    // Dans un champ texte, Maj+flèche sélectionne : on n'y touche pas.
+    if (target.matches('input:not([type="checkbox"]), textarea')) return;
+    e.preventDefault();
+    moveProject(e.key === 'ArrowUp' ? -1 : 1);
+    return;
+  }
+  if (e.shiftKey && e.key !== 'G') return;
   const moves: Record<string, number> = { ArrowDown: 1, ArrowUp: -1 };
   // Hors champ texte seulement (où ces touches servent à écrire ou déplacer
   // le curseur) : Début / Fin, et à la manière de vim j / k, gg / G.

@@ -35,7 +35,7 @@ test('☀ au survol : ajoute au plan (soleil plein, toujours visible), puis reti
   await une.hover();
   const sun = une.getByRole('button', { name: 'Plan journée' });
   await expect(sun).toHaveAttribute('aria-pressed', 'false');
-  await expect(sun).toHaveAttribute('title', 'Ajouter au plan (s)');
+  await expect(sun).toHaveAttribute('title', 'Ajouter au plan (t)');
   await sun.click();
   await expect(sun).toHaveAttribute('aria-pressed', 'true');
   await expect(sun.locator('svg')).toHaveAttribute('fill', 'currentColor');
@@ -90,32 +90,32 @@ test('au-delà du maximum : 6/5 tâches en rouge ; maximum réglable', async ({ 
   await expect(count).not.toHaveClass(/text-destructive/);
 });
 
-test('clavier : s ajoute / retire, v change d’onglet, u annule', async ({ page, store, data }) => {
+test('clavier : t ajoute / retire, T change d’onglet, u annule', async ({ page, store, data }) => {
   await open(page);
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('ArrowDown'); // sur « Une »
-  await page.keyboard.press('s');
+  await page.keyboard.press('t');
   await expect(row(page, 'Une').getByRole('button', { name: 'Plan journée' })).toHaveAttribute('aria-pressed', 'true');
 
-  await page.keyboard.press('v');
+  await page.keyboard.press('T');
   await expect(tab(page, 'Plan journée')).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('#day li.task .name')).toHaveText(['Une']);
 
   // Retirée depuis l'onglet : elle disparaît ; u la remet.
   await page.locator('#day li.task .name').first().focus();
-  await page.keyboard.press('s');
+  await page.keyboard.press('t');
   await expect(page.locator('#day li.task')).toHaveCount(0);
   await expect(page.locator('#day .empty')).toHaveText('Rien de prévu.');
   await expect(page.locator('#day .day-count')).toHaveText('0/5 tâche');
   await page.keyboard.press('u');
   await expect(page.locator('#day li.task .name')).toHaveText(['Une']);
 
-  await page.keyboard.press('v');
+  await page.keyboard.press('T');
   await expect(tab(page, 'Projets')).toHaveAttribute('aria-selected', 'true');
   expect(store.db.prepare('SELECT day_at FROM task WHERE id = ?').get(data.une.id)).toEqual({ day_at: TODAY });
 });
 
-test('fiche : ☀ et s ajoutent au plan / en retirent', async ({ page, store, data }) => {
+test('fiche : ☀ et t ajoutent au plan / en retirent', async ({ page, store, data }) => {
   await open(page);
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('ArrowDown'); // sur « Une »
@@ -127,9 +127,9 @@ test('fiche : ☀ et s ajoutent au plan / en retirent', async ({ page, store, da
   await expect(sun).toHaveAttribute('aria-pressed', 'true');
   expect(store.db.prepare('SELECT day_at FROM task WHERE id = ?').get(data.une.id)).toEqual({ day_at: TODAY });
   await dialog.locator('.reader').focus();
-  await page.keyboard.press('s');
+  await page.keyboard.press('t');
   await expect(sun).toHaveAttribute('aria-pressed', 'false');
-  await page.keyboard.press('s');
+  await page.keyboard.press('t');
   await expect(sun).toHaveAttribute('aria-pressed', 'true');
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
@@ -164,8 +164,19 @@ test('non-régression : Log sans ☀, filtres des projets inchangés dans l’on
   const logged = page.locator('#journal li.task', { hasText: 'Deux' });
   await logged.hover();
   await expect(logged.getByRole('button', { name: 'Plan journée' })).toHaveCount(0);
-  await page.keyboard.press('v');
+  await page.keyboard.press('T');
   await expect(page.locator('#favorites-only')).toHaveCount(0);
-  await page.keyboard.press('v');
+  await page.keyboard.press('T');
   await expect(page.locator('#favorites-only')).toBeVisible();
+});
+
+test('non-régression : s et v n’ont plus d’effet (remplacés par t et T)', async ({ page, store, data }) => {
+  await open(page);
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown'); // sur « Une »
+  await page.keyboard.press('s');
+  await page.keyboard.press('v');
+  await expect(tab(page, 'Projets')).toHaveAttribute('aria-selected', 'true');
+  await expect(row(page, 'Une').getByRole('button', { name: 'Plan journée' })).toHaveAttribute('aria-pressed', 'false');
+  expect(store.db.prepare('SELECT day_at FROM task WHERE id = ?').get(data.une.id)).toEqual({ day_at: null });
 });

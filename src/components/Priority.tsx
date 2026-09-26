@@ -60,6 +60,7 @@ export function PriorityButton({ priority, onClick, hidden }: { priority: Priori
     <Button
       variant="ghost"
       size="icon-xs"
+      tabIndex={-1}
       className={cn(
         'priority flex-none',
         priority ? COLOR[priority] : 'text-muted-foreground',

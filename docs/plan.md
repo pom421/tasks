@@ -8,6 +8,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 ## En cours
 
 - [~] Priorité des tâches (fusionnée sur `main`, CI à vérifier) : icônes 1 2 3 à droite, `p` ou clic ; migration 11
+- [~] Raccourcis : `t` plan journée, `T` onglet Plan journée (remplacent `s` / `v`), chrono `c` / `C` (au lieu de `t` / `T`) ; `Maj+↑` / `Maj+↓` projet précédent / suivant ; fiche : même disposition en lecture et en édition (titre en haut), ancrée en haut de l'écran ; icônes hors de l'ordre de `Tab` (touches dédiées)
 
 ## Décisions attendues
 
@@ -22,6 +23,13 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 - [?] Priorité : trier ou filtrer par priorité ?
 - [?] Branches d'expérimentation (chrono, priorité, sélection du jour) : chacune ajoute la migration 9. À la fusion, renuméroter la 2e et la 3e (10, 11).
+
+- [?] Raccourcis, règle proposée : minuscule = action sur l'élément, majuscule = voir / filtrer la même chose. Écarts actuels et propositions :
+  - `f` a deux sens (favori sur un projet, filtre du Log ailleurs) → `f` favori, `F` filtre Favoris (remplace `*`), `l` filtre du Log par projet ;
+  - `a` archiver → `A` filtre Archivés (aujourd'hui sans raccourci) ;
+  - report : action `J`, filtre `r` → `r` à reporter / reporté / rien, `R` filtre « à reporter » ;
+  - `p` a deux sens (priorité sur une tâche, nouveau projet ailleurs) → `n` nouvelle tâche, `N` nouveau projet ;
+  - `C` (remise à zéro du chrono) reste une exception : pas de filtre chrono.
 
 ## Idées / plus tard
 

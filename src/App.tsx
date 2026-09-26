@@ -180,7 +180,7 @@ export function App() {
         // Filtres de la zone des projets : sans effet dans l'onglet Plan journée.
         r: () => !dayView && setJiraOnly((v) => !v),
         '*': () => !dayView && setFavoritesOnly((v) => !v),
-        v: () => navigate(dayView ? '/' : '/plan'),
+        T: () => navigate(dayView ? '/' : '/plan'),
         u: undo,
         '?': () => setHelpOpen(true),
         // Échap (hors élément de la liste) : réinitialise les filtres du Log.
@@ -255,7 +255,7 @@ export function App() {
                   type="button"
                   role="tab"
                   aria-selected={tab.selected}
-                  title="Projets / Plan journée (v)"
+                  title="Projets / Plan journée (T)"
                   className={cn(
                     'border-b-2 font-semibold',
                     tab.selected ? 'border-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',

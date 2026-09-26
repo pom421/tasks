@@ -7,7 +7,7 @@ import { localToday } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
-// Plan journée d'une tâche à faire, partagé par la ligne et la fiche : s (ou ☀)
+// Plan journée d'une tâche à faire, partagé par la ligne et la fiche : t (ou ☀)
 // l'ajoute au plan du jour (date du navigateur) ou l'en retire. Annulable (u).
 // stay : dans l'onglet Plan journée, la ligne retirée disparaît, le curseur reste en place.
 export function usePlan(task: Task) {
@@ -26,7 +26,7 @@ export function usePlan(task: Task) {
       { stay: true },
     );
   const onKey = (e: KeyboardEvent) => {
-    if (e.key !== 's') return false;
+    if (e.key !== 't') return false;
     e.preventDefault();
     toggle();
     return true;
@@ -41,6 +41,7 @@ export function PlanButton({ plan, hidden }: { plan: ReturnType<typeof usePlan>;
     <Button
       variant="ghost"
       size="icon-xs"
+      tabIndex={-1}
       className={cn(
         'day-toggle flex-none',
         plan.inPlan ? 'text-amber-500' : 'text-muted-foreground',
@@ -48,7 +49,7 @@ export function PlanButton({ plan, hidden }: { plan: ReturnType<typeof usePlan>;
       )}
       aria-label="Plan journée"
       aria-pressed={plan.inPlan}
-      title={plan.inPlan ? 'Retirer du plan (s)' : 'Ajouter au plan (s)'}
+      title={plan.inPlan ? 'Retirer du plan (t)' : 'Ajouter au plan (t)'}
       onClick={plan.toggle}
     >
       <Sun aria-hidden fill={plan.inPlan ? 'currentColor' : 'none'} />

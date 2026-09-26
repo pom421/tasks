@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 
 const SHORTCUTS: [string, string][] = [
   ['↑ ↓  j k', 'Se déplacer (Début / Fin ou g g / G : premier / dernier)'],
+  ['Maj+↑ Maj+↓', 'Projet précédent / suivant'],
   ['Maj+Entrée  o', 'Ouvrir la fiche ; e : tout modifier (Tab : champ suivant), Ctrl+Entrée : lecture'],
   ['e', 'Ouvrir la fiche directement en édition'],
   ['Entrée', 'Modifier le nom sélectionné / valider'],
@@ -13,10 +14,10 @@ const SHORTCUTS: [string, string][] = [
   ['Alt+↑ Alt+↓', 'Monter / descendre la tâche, jusque dans le projet voisin (Alt+k / Alt+j)'],
   ['J', 'Report : à reporter → reporté → rien (majuscule)'],
   ['L', 'Ouvrir la fiche sur l’identifiant du ticket (majuscule)'],
-  ['t', 'Chrono de la tâche : lancer / mettre en pause (aussi dans la fiche)'],
-  ['T', 'Remettre le chrono à zéro'],
-  ['s', 'Ajouter la tâche au plan journée / l’en retirer (aussi dans la fiche)'],
-  ['v', 'Onglet Projets / Plan journée'],
+  ['c', 'Chrono de la tâche : lancer / mettre en pause (aussi dans la fiche)'],
+  ['C', 'Remettre le chrono à zéro'],
+  ['t', 'Ajouter la tâche au plan journée / l’en retirer (aussi dans la fiche)'],
+  ['T', 'Onglet Projets / Plan journée'],
   ['p', 'Sur une tâche : priorité suivante, aucune → 1 → 2 → 3 → aucune (aussi dans la fiche)'],
   ['r', 'Afficher seulement les tâches à reporter (projets)'],
   ['*', 'Afficher seulement les projets favoris'],

@@ -12,7 +12,7 @@ interface DayViewProps {
 }
 
 // Onglet « Plan journée » : seulement les tâches à faire du plan du jour
-// (s ou ☀), groupées par projet, sous le compteur « 3/5 tâches » (rouge au-delà
+// (t ou ☀), groupées par projet, sous le compteur « 3/5 tâches » (rouge au-delà
 // du maximum). Les tâches faites partent dans le Log mais restent comptées.
 export function DayView({ projects, dayDone, capacity }: DayViewProps) {
   const today = localToday();

@@ -31,8 +31,8 @@ const isValidTicket = (s: string) => !s || JIRA_KEY_RE.test(s.toUpperCase()) || 
 // Fiche d'une tâche, façon GitLab : lecture seule par défaut ; e passe tout en
 // édition (titre, puis Tab : ticket, puis contenu Markdown) ; Ctrl+Entrée
 // enregistre et repasse en lecture ; un second Ctrl+Entrée (ou Échap) ferme.
-// Chrono comme sur la ligne : t lance / met en pause, T remet à zéro.
-// Plan journée comme sur la ligne : s ou ☀.
+// Chrono comme sur la ligne : c lance / met en pause, C remet à zéro.
+// Plan journée comme sur la ligne : t ou ☀.
 // Priorité comme sur la ligne : p (ou clic sur l'icône).
 // Tout est enregistré automatiquement, rien n'est perdu.
 // Accessibilité : focus piégé, titre et description annoncés (Radix),
@@ -177,7 +177,7 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
   return (
     <Dialog open={open} onOpenChange={(value) => !value && close()}>
       <DialogContent
-        className="task-dialog flex max-h-[90vh] flex-col gap-4 sm:max-w-3xl"
+        className="task-dialog top-[5vh] flex max-h-[90vh] translate-y-0 flex-col gap-4 sm:max-w-3xl"
         onKeyDown={onKeyDown}
         // Échap : fermer en enregistrant (et rester ouvert en cas d'erreur).
         onEscapeKeyDown={(e) => {
@@ -194,10 +194,28 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
           focusByKey(`task:${task.id}`);
         }}
       >
-        {/* Titre annoncé par Radix ; en édition, il laisse la place au champ. */}
+        {/* Même disposition en lecture et en édition : titre en haut (jusqu'à la
+            croix), puis projet et icônes. En édition, le champ prend la place du
+            titre, qui reste annoncé par Radix. */}
         <DialogTitle className={cn('pr-6 leading-snug [overflow-wrap:anywhere]', editing && 'sr-only')}>
           {values.title}
         </DialogTitle>
+        {editing && (
+          <div className="grid gap-1.5 pr-6">
+            <Input
+              ref={refs.title}
+              id={`${id}-title`}
+              aria-label="Titre"
+              autoComplete="off"
+              className="h-auto rounded-none border-0 border-b bg-transparent px-0 py-0 text-lg leading-snug font-semibold shadow-none focus-visible:border-primary focus-visible:ring-0 md:text-lg dark:bg-transparent"
+              value={values.title}
+              onChange={set('title')}
+              onKeyDown={onInputEnter}
+              {...invalid('title')}
+            />
+            {errorFor('title')}
+          </div>
+        )}
         {/* Icônes de la tâche à droite, comme sur la ligne. */}
         <div className="flex min-h-6 items-center justify-between gap-2">
           <DialogDescription>
@@ -212,19 +230,6 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
 
         {editing ? (
           <>
-            <div className="grid gap-1.5">
-              <Label htmlFor={`${id}-title`}>Titre</Label>
-              <Input
-                ref={refs.title}
-                id={`${id}-title`}
-                autoComplete="off"
-                value={values.title}
-                onChange={set('title')}
-                onKeyDown={onInputEnter}
-                {...invalid('title')}
-              />
-              {errorFor('title')}
-            </div>
             <div className="grid gap-1.5 sm:max-w-xs">
               <Label htmlFor={`${id}-ticket`}>Ticket</Label>
               <Input

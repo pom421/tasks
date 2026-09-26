@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
 // Chrono d'une tâche à faire, partagé par la ligne et la fiche :
-// t lance / met en pause, T arrête et remet à zéro. Annulable (u).
+// c lance / met en pause, C arrête et remet à zéro. Annulable (u).
 export function useTimer(task: Task) {
   const { act, setUndo } = useActions();
   const running = Boolean(task.timer_started_at);
@@ -33,8 +33,8 @@ export function useTimer(task: Task) {
 
   // Touches du chrono ; true si la touche a été traitée.
   const onKey = (e: KeyboardEvent) => {
-    if (e.key === 't') toggle();
-    else if (e.key === 'T' && (running || seconds > 0)) reset();
+    if (e.key === 'c') toggle();
+    else if (e.key === 'C' && (running || seconds > 0)) reset();
     else return false;
     e.preventDefault();
     return true;
@@ -54,10 +54,11 @@ export function TimerButtons({ timer, className }: { timer: TimerState; classNam
       <Button
         variant="ghost"
         size="icon-xs"
+        tabIndex={-1}
         className={cn('timer-toggle', timer.running ? 'text-foreground' : 'text-muted-foreground')}
         aria-label="Chrono"
         aria-pressed={timer.running}
-        title={`${time}${timer.running ? 'Pause' : 'Lancer le chrono'} (t)`}
+        title={`${time}${timer.running ? 'Pause' : 'Lancer le chrono'} (c)`}
         onClick={timer.toggle}
       >
         {timer.running ? <Pause aria-hidden fill="currentColor" /> : <Play aria-hidden />}
@@ -66,9 +67,10 @@ export function TimerButtons({ timer, className }: { timer: TimerState; classNam
         <Button
           variant="ghost"
           size="icon-xs"
+          tabIndex={-1}
           className="timer-reset text-muted-foreground"
           aria-label="Remettre le chrono à zéro"
-          title="Remettre à zéro (T)"
+          title="Remettre à zéro (C)"
           onClick={timer.reset}
         >
           <RotateCcw aria-hidden />

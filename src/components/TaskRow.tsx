@@ -20,8 +20,8 @@ import { PriorityButton, usePriority } from './Priority';
 // (rien -> à reporter -> reporté -> rien), o ou Maj+Entrée ouvre la fiche,
 // e l'ouvre directement en édition,
 // L l'ouvre sur l'identifiant du ticket,
-// t lance / met en pause le chrono, T l'arrête et le remet à zéro (tâches à faire),
-// s l'ajoute au plan journée ou l'en retire (tâches à faire),
+// c lance / met en pause le chrono, C l'arrête et le remet à zéro (tâches à faire),
+// t l'ajoute au plan journée ou l'en retire (tâches à faire),
 // p fait tourner la priorité (aucune → 1 → 2 → 3 → aucune),
 // x ou Suppr demande la suppression, un second appui la confirme,
 // Alt+↑ / Alt+↓ (ou Alt+k / Alt+j) déplacent la tâche (onMove, tâches à faire).

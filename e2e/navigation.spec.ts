@@ -903,8 +903,10 @@ test('ligne épurée et fiche ordonnée : titre, ticket, contenu', async ({ page
   await page.keyboard.press('Shift+Enter');
   const dialog = page.getByRole('dialog', { name: 'Une' });
   await page.keyboard.press('e');
+  // Titre en haut (champ nommé « Titre », sans libellé visible), puis ticket et contenu.
+  await expect(dialog.getByLabel('Titre')).toBeFocused();
   const labels = await dialog.locator('label').allTextContents();
-  expect(labels).toEqual(['Titre', 'Ticket', 'Contenu']);
+  expect(labels).toEqual(['Ticket', 'Contenu']);
 });
 
 test('fiche : e modifie aussi le titre et le ticket ; Entrée dans un champ = enregistrer', async ({ page, store, data }) => {
@@ -1102,4 +1104,38 @@ test('Alt+↑ / Alt+↓ sur un projet : il passe au-dessus du précédent / sous
   await expect(names()).toHaveText(['Alpha', 'Beta']);
   await reload(page);
   await expect(names()).toHaveText(['Alpha', 'Beta']);
+});
+
+test('Maj+↑ / Maj+↓ : en-tête du projet précédent / suivant ; dans un champ, sélection du texte', async ({ page, data }) => {
+  const { alpha, beta, tasks } = data;
+  await pressDown(page, 3); // « Deux », dans Alpha
+  expect(await current(page)).toBe(`task:${tasks.deux.id}`);
+  await page.keyboard.press('Shift+ArrowDown');
+  expect(await current(page)).toBe(`project:${beta.id}`);
+  await page.keyboard.press('Shift+ArrowDown'); // dernier projet : on reste
+  expect(await current(page)).toBe(`project:${beta.id}`);
+  await page.keyboard.press('ArrowDown'); // « Trois »
+  await page.keyboard.press('Shift+ArrowUp');
+  expect(await current(page)).toBe(`project:${alpha.id}`);
+  // Champ « + Nouveau projet » (hors projet) : Maj+↑ ne quitte pas le champ.
+  await page.locator('#new-project').focus();
+  await page.keyboard.type('abc');
+  await page.keyboard.press('Shift+ArrowUp');
+  expect(await current(page)).toBe('new-project');
+});
+
+test('fiche : même disposition en lecture et en édition (titre en haut, icônes dessous)', async ({ page }) => {
+  await pressDown(page, 2);
+  await page.keyboard.press('o');
+  const dialog = page.getByRole('dialog');
+  const readTitle = (await dialog.getByRole('heading', { name: 'Une' }).boundingBox())!;
+  const readIcons = (await dialog.locator('.timer').boundingBox())!;
+  await page.keyboard.press('e');
+  const input = (await dialog.getByLabel('Titre').boundingBox())!;
+  const editIcons = (await dialog.locator('.timer').boundingBox())!;
+  expect(Math.abs(input.y - readTitle.y)).toBeLessThan(6);
+  expect(Math.abs(editIcons.y - readIcons.y)).toBeLessThan(6);
+  // Icônes sous le titre, pas à la hauteur de la croix.
+  const close = (await dialog.locator('button:has(> span.sr-only)').boundingBox())!;
+  expect(editIcons.y).toBeGreaterThan(close.y + close.height);
 });
