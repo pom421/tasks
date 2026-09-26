@@ -11,6 +11,9 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
   const id = useId();
   const [jiraBaseUrl, setJiraBaseUrl] = useState('');
   const [status, setStatus] = useState<{ ok?: string; error?: string }>({});
+  // Plan journée : maximum de tâches par jour (texte saisi, vérifié par le serveur).
+  const [capacity, setCapacity] = useState('');
+  const [dayStatus, setDayStatus] = useState<{ ok?: string; error?: string }>({});
   // Import .sqlite en deux temps (il remplace toute la base) : 1er clic = message,
   // 2e clic = choix du fichier. Pas de fenêtre de confirmation.
   const [confirmImport, setConfirmImport] = useState(false);
@@ -31,7 +34,10 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
     api
       .settings()
       // Saisie déjà commencée pendant le chargement : on ne l'écrase pas.
-      .then((s) => setJiraBaseUrl((v) => v || (s.jira_base_url ?? '')))
+      .then((s) => {
+        setJiraBaseUrl((v) => v || (s.jira_base_url ?? ''));
+        setCapacity((v) => v || String(s.day_capacity));
+      })
       .catch((err) => setStatus({ error: err.message }));
   }, []);
 
@@ -73,6 +79,18 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
       setStatus({ ok: 'Réglages enregistrés.' });
     } catch (err) {
       setStatus({ error: (err as Error).message });
+    }
+  };
+
+  const saveCapacity = async (e: FormEvent) => {
+    e.preventDefault();
+    setDayStatus({});
+    try {
+      const saved = await api.updateSettings({ day_capacity: Number(capacity) });
+      setCapacity(String(saved.day_capacity));
+      setDayStatus({ ok: 'Réglages enregistrés.' });
+    } catch (err) {
+      setDayStatus({ error: (err as Error).message });
     }
   };
 
@@ -122,6 +140,36 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
           {status.error && (
             <p role="alert" className="text-sm text-destructive">
               {status.error}
+            </p>
+          )}
+        </form>
+      </section>
+
+      <section aria-labelledby={`${id}-day`} className="mt-10">
+        <h2 id={`${id}-day`} className="font-semibold">
+          Plan journée
+        </h2>
+        <form className="mt-3 grid max-w-lg gap-2" onSubmit={saveCapacity} noValidate>
+          <Label htmlFor={`${id}-capacity`}>Nombre de tâches maximum par jour</Label>
+          <Input
+            id={`${id}-capacity`}
+            type="number"
+            min={1}
+            max={50}
+            value={capacity}
+            onChange={(e) => setCapacity(e.target.value)}
+            className="h-8 w-24"
+            aria-invalid={Boolean(dayStatus.error)}
+          />
+          <div className="mt-2 flex items-center gap-3">
+            <Button type="submit">Enregistrer</Button>
+            <p role="status" className="text-sm text-muted-foreground">
+              {dayStatus.ok}
+            </p>
+          </div>
+          {dayStatus.error && (
+            <p role="alert" className="text-sm text-destructive">
+              {dayStatus.error}
             </p>
           )}
         </form>

@@ -7,7 +7,8 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-- [~] Chrono par tâche (branche d'expérimentation `claude/chrono-ixjyv7`, pas encore sur `main`) : ▷ / pause pleine (`t`), ↻ remise à zéro (`T`, sans confirmation), temps passé en info-bulle, sur la ligne et dans la fiche ; migration 9
+- [~] Chrono par tâche (fusionné sur `main`, CI à vérifier) : ▷ / pause pleine (`t`), ↻ remise à zéro (`T`, sans confirmation), temps passé en info-bulle, sur la ligne et dans la fiche ; migration 9
+- [~] Plan journée (fusionné sur `main`, CI à vérifier) : ☀ / `s` sur la ligne et dans la fiche, onglet « Plan journée » (`v`, `/plan`), compteur « 3/5 tâches » rouge au-delà du maximum (Réglages) ; migration 10
 
 ## Décisions attendues
 
@@ -16,9 +17,9 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
   le Log pour ne pas les oublier ?
 - [?] Filtre « Archivés » actif : icône archive pleine = bloc noir (le trait
   intérieur disparaît). Remplissage gris clair à la place ?
-
 - [?] Chrono : un seul en marche à la fois (en lancer un met l'autre en pause). À garder ?
-- [?] Branches d'expérimentation (chrono, priorité, sélection du jour) : chacune ajoute la migration 9. À la fusion, renuméroter la 2e et la 3e (10, 11).
+- [?] Plan journée : une tâche du plan mais pas faite disparaît le lendemain. La reporter automatiquement au jour suivant ?
+- [?] Plan journée : compteur rouge seulement **au-delà** du maximum (6/5), pas à 5/5. Orange à 5/5 ?
 
 ## Idées / plus tard
 

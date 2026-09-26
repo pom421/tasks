@@ -11,6 +11,7 @@ import { EditableName } from './Editable';
 import { ReportBadge } from './ReportBadge';
 import { moveDirection } from '@/lib/nav';
 import { TimerButtons, useTimer } from './Timer';
+import { PlanButton, usePlan } from './Plan';
 
 // Ligne de tâche, à faire (liste des projets) ou faite (journal).
 // Clavier, où que soit le focus dans la ligne (hors champ de saisie) :
@@ -19,6 +20,7 @@ import { TimerButtons, useTimer } from './Timer';
 // e l'ouvre directement en édition,
 // L l'ouvre sur l'identifiant du ticket,
 // t lance / met en pause le chrono, T l'arrête et le remet à zéro (tâches à faire),
+// s l'ajoute au plan journée ou l'en retire (tâches à faire),
 // x ou Suppr demande la suppression, un second appui la confirme,
 // Alt+↑ / Alt+↓ (ou Alt+k / Alt+j) déplacent la tâche (onMove, tâches à faire).
 export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (direction: -1 | 1) => void }) {
@@ -28,6 +30,7 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
   const [confirmDelete, setConfirmDelete] = useState(false);
   const navKey = `task:${task.id}`;
   const timer = useTimer(task);
+  const plan = usePlan(task);
 
   const patch = (body: TaskPatch, stay = false) => act(() => api.updateTask(task.id, body), { stay });
 
@@ -104,6 +107,7 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
       e.preventDefault();
       toggleDone();
     }
+    if (!done && plan.onKey(e)) return;
     if (e.key === 'J') {
       e.preventDefault();
       cycleJira();
@@ -161,6 +165,7 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
           className={timer.running ? undefined : 'invisible group-hover:visible group-focus-within:visible'}
         />
       )}
+      {!done && !confirmDelete && <PlanButton plan={plan} hidden />}
       {confirmDelete ? (
         <span className="confirm-delete flex-none text-xs text-destructive" role="alert">
           x pour supprimer · Échap pour annuler

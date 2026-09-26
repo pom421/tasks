@@ -14,6 +14,7 @@ import type {
   Task,
   TimerAction,
 } from '../shared/types.ts';
+import { DEFAULT_DAY_CAPACITY } from '../shared/types.ts';
 
 export interface TaskPatch {
   title?: string;
@@ -25,6 +26,7 @@ export interface TaskPatch {
   timer?: TimerAction;
   timeSpent?: number; // annulation : valeurs du chrono remises telles quelles
   timerStartedAt?: string | null;
+  dayAt?: string | null;
 }
 import type { ImportItem } from './markdown.ts';
 import { LATEST_VERSION, migrate, schemaVersion, type MigrationReport } from './migrations.ts';
@@ -142,18 +144,23 @@ export class Store {
 
   // --- Lecture -------------------------------------------------------------
 
-  state(): State {
+  // day : journée de « Plan journée » ('YYYY-MM-DD', celle du navigateur), pour
+  // compter les tâches choisies déjà faites.
+  state(day?: string): State {
     const projects = this.db.prepare('SELECT id, name, archived_at, favorite_at FROM project ORDER BY position, id').all() as Omit<
       Project,
       'tasks'
     >[];
     const tasks = this.db
-      .prepare('SELECT id, project_id, title, jira_wanted_at, jira_at, jira_key, jira_url, notes, time_spent, timer_started_at FROM task WHERE done_at IS NULL ORDER BY position, id')
+      .prepare('SELECT id, project_id, title, jira_wanted_at, jira_at, jira_key, jira_url, notes, time_spent, timer_started_at, day_at FROM task WHERE done_at IS NULL ORDER BY position, id')
       .all() as unknown as Task[];
     const byProject = new Map<number, Project>(projects.map((p) => [p.id, { ...p, tasks: [] }]));
     for (const t of tasks) byProject.get(t.project_id)?.tasks.push({ ...t });
     const { n } = this.db.prepare(`SELECT count(*) AS n FROM task WHERE ${JIRA_PENDING}`).get() as { n: number };
-    return { projects: [...byProject.values()], jiraPending: n, settings: this.settings() };
+    const dayDone = day
+      ? (this.db.prepare('SELECT count(*) AS n FROM task WHERE day_at = ? AND done_at IS NOT NULL').get(day) as { n: number }).n
+      : 0;
+    return { projects: [...byProject.values()], jiraPending: n, dayDone, settings: this.settings() };
   }
 
   // Période [from, to] incluse, bornes facultatives ('YYYY-MM-DD').
@@ -201,7 +208,7 @@ export class Store {
     const rows = this.db
       .prepare(
         `SELECT t.id, t.title, t.done_at, t.jira_wanted_at, t.jira_at, t.jira_key, t.jira_url, t.notes,
-                t.time_spent, t.timer_started_at, t.project_id, p.name AS project_name
+                t.time_spent, t.timer_started_at, t.day_at, t.project_id, p.name AS project_name
          FROM task t JOIN project p ON p.id = t.project_id
          WHERE ${where.join(' AND ')}
          ORDER BY t.done_at DESC, p.id, t.id`,
@@ -288,9 +295,10 @@ export class Store {
   // doneAt : 'YYYY-MM-DD' pour marquer faite, null pour remettre à faire.
   // jira : état du suivi Jira ('none' efface aussi le ticket) ;
   // jiraKey / jiraUrl : ticket (clé ou lien complet) ; notes : détails (Markdown).
-  // timer : chrono (un seul en marche à la fois ; une tâche faite l'arrête).
+  // timer : chrono (un seul en marche à la fois ; une tâche faite l'arrête) ;
+  // dayAt : au plan de cette journée (Plan journée), null = retirée.
   updateTask(id: number, patch: TaskPatch) {
-    const { title, doneAt, jira, jiraKey, jiraUrl, notes, timer, timeSpent, timerStartedAt } = patch;
+    const { title, doneAt, jira, jiraKey, jiraUrl, notes, timer, timeSpent, timerStartedAt, dayAt } = patch;
     if (title !== undefined) this.db.prepare('UPDATE task SET title = ? WHERE id = ?').run(title, id);
     if (doneAt) this.db.prepare(`UPDATE task SET ${PAUSE} WHERE id = ? AND timer_started_at IS NOT NULL`).run(id);
     if (doneAt !== undefined) this.db.prepare('UPDATE task SET done_at = ? WHERE id = ?').run(doneAt, id);
@@ -315,6 +323,7 @@ export class Store {
     if (jiraKey !== undefined) this.db.prepare('UPDATE task SET jira_key = ? WHERE id = ?').run(jiraKey, id);
     if (jiraUrl !== undefined) this.db.prepare('UPDATE task SET jira_url = ? WHERE id = ?').run(jiraUrl, id);
     if (notes !== undefined) this.db.prepare('UPDATE task SET notes = ? WHERE id = ?').run(notes, id);
+    if (dayAt !== undefined) this.db.prepare('UPDATE task SET day_at = ? WHERE id = ?').run(dayAt, id);
     return this.task(id);
   }
 
@@ -374,12 +383,12 @@ export class Store {
     this.db
       .prepare(
         `INSERT INTO task (id, project_id, title, created_at, done_at, position, notes,
-                           jira_wanted_at, jira_at, jira_key, jira_url, time_spent, timer_started_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                           jira_wanted_at, jira_at, jira_key, jira_url, time_spent, timer_started_at, day_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         row.id, row.project_id, row.title, row.created_at, row.done_at, row.position, row.notes,
-        row.jira_wanted_at, row.jira_at, row.jira_key, row.jira_url, row.time_spent, row.timer_started_at,
+        row.jira_wanted_at, row.jira_at, row.jira_key, row.jira_url, row.time_spent, row.timer_started_at, row.day_at,
       );
     return this.task(row.id)!;
   }
@@ -430,14 +439,17 @@ export class Store {
   settings(): Settings {
     const rows = this.db.prepare('SELECT key, value FROM setting').all() as { key: string; value: string | null }[];
     const map = new Map(rows.map((r) => [r.key, r.value]));
-    return { jira_base_url: map.get('jira_base_url') ?? null };
+    return {
+      jira_base_url: map.get('jira_base_url') ?? null,
+      day_capacity: Number(map.get('day_capacity')) || DEFAULT_DAY_CAPACITY,
+    };
   }
 
   updateSettings(patch: Partial<Settings>): Settings {
     const upsert = this.db.prepare(
       'INSERT INTO setting (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value',
     );
-    for (const [key, value] of Object.entries(patch)) upsert.run(key, value ?? null);
+    for (const [key, value] of Object.entries(patch)) upsert.run(key, value === null || value === undefined ? null : String(value));
     return this.settings();
   }
 
