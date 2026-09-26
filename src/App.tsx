@@ -65,6 +65,8 @@ export function App() {
   const lastUndo = useRef<Undo | null>(null);
   // Instant du dernier n : un 2e n rapproché (n n) ouvre « Nouveau projet ».
   const lastN = useRef(0);
+  // Instant du dernier Échap : un 2e rapproché (Échap Échap) retire tous les filtres.
+  const lastEscape = useRef(0);
 
   const toast = useCallback((msg: string) => setMessage(msg), []);
   useEffect(() => {
@@ -195,7 +197,21 @@ export function App() {
         u: undo,
         '?': () => setHelpOpen(true),
         // Échap (hors élément de la liste) : réinitialise les filtres du Log.
-        Escape: () => target.dataset.nav === undefined && changeFilter(NO_FILTER),
+        // Échap Échap (rapprochés, où que soit le curseur hors champ) : tous les
+        // filtres, projets et Log.
+        Escape: () => {
+          if (Date.now() - lastEscape.current < 800) {
+            lastEscape.current = 0;
+            setJiraFilter('none');
+            setPriorityFilter(null);
+            setArchivedOnly(false);
+            setFavoritesOnly(false);
+            changeFilter(NO_FILTER);
+            return;
+          }
+          lastEscape.current = Date.now();
+          if (target.dataset.nav === undefined) changeFilter(NO_FILTER);
+        },
       };
       if (keys[e.key]) {
         e.preventDefault();

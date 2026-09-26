@@ -1201,3 +1201,32 @@ test('fiche : même disposition en lecture et en édition (titre en haut, icône
   const close = (await dialog.locator('button:has(> span.sr-only)').boundingBox())!;
   expect(editIcons.y).toBeGreaterThan(close.y + close.height);
 });
+
+test('Échap Échap : retire tous les filtres (projets et Log) ; un seul Échap ne touche pas aux projets', async ({ page, store, data }) => {
+  store.updateProject(data.alpha.id, { favorite: true });
+  store.updateTask(data.tasks.une.id, { jira: 'wanted', priority: 1 });
+  store.updateProject(store.createProject('Gamma').id, { archived: true });
+  store.updateTask(store.createTask(data.beta.id, 'Une ancienne').id, { doneAt: '2026-09-01' });
+  await reload(page);
+  await page.locator('#log-search').fill('Une');
+  await expect(page.locator('#journal .name')).toHaveText(['Une ancienne']); // recherche appliquée
+  await page.locator(`[data-nav-key="task:${data.tasks.une.id}"]`).focus();
+  await page.keyboard.press('R');
+  await page.keyboard.press('P');
+  await page.keyboard.press('F');
+  const pressed = (id: string) => page.locator(id);
+  for (const id of ['#jira-pending', '#priority-filter', '#favorites-only']) await expect(pressed(id)).toHaveAttribute('aria-pressed', 'true');
+  await page.keyboard.press('A');
+  await expect(pressed('#archived-only')).toHaveAttribute('aria-pressed', 'true');
+
+  // Un Échap : les filtres des projets restent.
+  await page.locator('body').press('Escape');
+  await expect(pressed('#favorites-only')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('body').press('Escape');
+  for (const id of ['#jira-pending', '#priority-filter', '#favorites-only', '#archived-only']) {
+    await expect(pressed(id), id).toHaveAttribute('aria-pressed', 'false');
+  }
+  await expect(page.locator('#log-search')).toHaveValue('');
+  await expect(page.locator('#journal .name')).toHaveCount(0); // Log revenu à aujourd'hui
+  await expect(page.locator('#projects .project-head .name')).toHaveText(['Alpha', 'Beta']);
+});

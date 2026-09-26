@@ -83,6 +83,7 @@ Clavier (`?` affiche l'aide) :
 | `Maj+↑` `Maj+↓` | En-tête du projet précédent / suivant |
 | `Entrée` | Modifier le nom sélectionné, puis `Entrée` pour enregistrer |
 | `Échap` | Quitter l'édition sans enregistrer, retour à la navigation ; dans un champ « + Ajouter » : le vide et en sort (curseur sur l'élément au-dessus, `n` utilisable) |
+| `Échap` puis `Échap` | Retirer tous les filtres : report, priorité, Archivés, Favoris et ceux du Log (deux appuis rapprochés, hors champ de saisie) |
 | `Espace` | Cocher / décocher la tâche |
 | `Alt+↑` `Alt+↓` (ou `Alt+k` `Alt+j`) | Monter / descendre la tâche (priorité). En bord de projet, elle passe dans le projet voisin |
 | `Alt+↑` `Alt+↓` sur un projet | Monter / descendre tout le projet (avant / après le projet voisin) |

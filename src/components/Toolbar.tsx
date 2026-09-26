@@ -13,6 +13,7 @@ const SHORTCUTS: [string, string][] = [
   ['e', 'Ouvrir la fiche directement en édition'],
   ['Entrée', 'Modifier le nom sélectionné / valider'],
   ['Échap', "Quitter l'édition ou un champ « + Ajouter », retour à la navigation"],
+  ['Échap Échap', 'Retirer tous les filtres (projets et Log)'],
   ['Espace', 'Cocher / décocher la tâche'],
   ['Alt+↑ Alt+↓', 'Monter / descendre la tâche, jusque dans le projet voisin (Alt+k / Alt+j)'],
   ['r', 'Report : à reporter → reporté (fiche sur le ticket) → rien'],
