@@ -7,7 +7,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-Rien.
+- [~] Priorité des tâches (branche d'expérimentation `claude/priorite-ixjyv7`, pas encore sur `main`) : P1 rouge, P2 orange, P3 bleu ; `1` `2` `3` sur la ligne et dans la fiche ; migration 9
 
 ## Décisions attendues
 
@@ -16,6 +16,9 @@ Rien.
   le Log pour ne pas les oublier ?
 - [?] Filtre « Archivés » actif : icône archive pleine = bloc noir (le trait
   intérieur disparaît). Remplissage gris clair à la place ?
+
+- [?] Priorité : badge placé devant le titre (repérage rapide) plutôt qu'après, comme le badge de report. Trier ou filtrer par priorité ?
+- [?] Branches d'expérimentation (chrono, priorité, sélection du jour) : chacune ajoute la migration 9. À la fusion, renuméroter la 2e et la 3e (10, 11).
 
 ## Idées / plus tard
 

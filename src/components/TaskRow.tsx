@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { EditableName } from './Editable';
 import { ReportBadge } from './ReportBadge';
 import { moveDirection } from '@/lib/nav';
+import { PriorityBadge, usePriority } from './Priority';
 
 // Ligne de tâche, à faire (liste des projets) ou faite (journal).
 // Clavier, où que soit le focus dans la ligne (hors champ de saisie) :
@@ -17,6 +18,7 @@ import { moveDirection } from '@/lib/nav';
 // (rien -> à reporter -> reporté -> rien), o ou Maj+Entrée ouvre la fiche,
 // e l'ouvre directement en édition,
 // L l'ouvre sur l'identifiant du ticket,
+// 1, 2, 3 donnent la priorité (la même touche la retire),
 // x ou Suppr demande la suppression, un second appui la confirme,
 // Alt+↑ / Alt+↓ (ou Alt+k / Alt+j) déplacent la tâche (onMove, tâches à faire).
 export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (direction: -1 | 1) => void }) {
@@ -25,6 +27,7 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
   const [editingDate, setEditingDate] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const navKey = `task:${task.id}`;
+  const priority = usePriority(task);
 
   const patch = (body: TaskPatch, stay = false) => act(() => api.updateTask(task.id, body), { stay });
 
@@ -92,6 +95,7 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
     }
     if (confirmDelete && e.key === 'Escape') e.stopPropagation();
     setConfirmDelete(false); // toute autre touche annule la demande
+    if (priority.onKey(e)) return;
     if (e.key === ' ' && target.getAttribute('role') !== 'checkbox') {
       // Sur la case elle-même, Espace la coche nativement.
       e.preventDefault();
@@ -123,6 +127,7 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
     >
       <Checkbox checked={done} onCheckedChange={toggleDone} title={done ? 'Remettre à faire' : 'Marquer comme faite'} />
       <span className="title flex min-w-0 flex-1 items-center gap-1.5">
+        <PriorityBadge priority={task.priority} />
         <EditableName
           value={task.title}
           navKey={navKey}

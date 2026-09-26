@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { type DeletedProject, type ProjectPatch, type ProjectRow, type Store, type TaskPatch, type TaskRow, isDate, today } from './db.ts';
-import { JIRA_KEY_RE, type JiraState, type Settings } from '../shared/types.ts';
+import { JIRA_KEY_RE, PRIORITIES, type JiraState, type Priority, type Settings } from '../shared/types.ts';
 import { parseMarkdown } from './markdown.ts';
 
 type Req = IncomingMessage;
@@ -112,6 +112,13 @@ function int(v: unknown, label: string): number {
   return v as number;
 }
 
+// Priorité : 1, 2 ou 3 ; null (ou absente) = aucune.
+function priority(v: unknown): Priority | null {
+  if (v === null || v === undefined) return null;
+  if (!PRIORITIES.includes(v as Priority)) throw new HttpError(400, 'Priorité invalide : 1, 2 ou 3 attendu');
+  return v as Priority;
+}
+
 function timestamp(v: unknown, label: string): string | null {
   if (v === null || v === undefined) return null;
   if (typeof v !== 'string' || !TIMESTAMP_RE.test(v)) throw new HttpError(400, `${label} invalide`);
@@ -136,6 +143,7 @@ function restoredTask(body: Body): TaskRow {
     jira_at: timestamp(body.jira_at, 'Date de report'),
     jira_key: key as string | null,
     jira_url: httpUrl(body.jira_url ?? null),
+    priority: priority(body.priority),
   };
 }
 
@@ -314,6 +322,7 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
         if ((patch.jiraKey || patch.jiraUrl) && !('jira' in body)) patch.jira = 'done';
       }
       if ('notes' in body) patch.notes = optionalText(body.notes, 'Notes', 20_000);
+      if ('priority' in body) patch.priority = priority(body.priority);
       const task = store.updateTask(Number(id), patch);
       if (!task) throw new HttpError(404, 'Tâche introuvable');
       send(res, 200, task);

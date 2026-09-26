@@ -12,7 +12,11 @@ export interface Task {
   jira_key: string | null; // clé du ticket (PROJ-123), lien construit avec l'URL Jira d'entreprise
   jira_url: string | null; // ou lien complet vers le ticket (http/https)
   notes: string | null; // détails, en Markdown
+  priority: Priority | null; // P1 (la plus haute) à P3, null = aucune
 }
+
+export const PRIORITIES = [1, 2, 3] as const;
+export type Priority = (typeof PRIORITIES)[number];
 
 export interface Settings {
   jira_base_url: string | null; // ex. https://entreprise.atlassian.net

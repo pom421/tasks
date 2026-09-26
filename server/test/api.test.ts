@@ -229,7 +229,7 @@ test('migration : une base v1 (sans jira_at) est mise à niveau à l’ouverture
            PRAGMA user_version = 1;`);
   v1.close();
   const old = new Store(file);
-  assert.deepEqual(old.state().projects[0].tasks[0], { id: 1, project_id: 1, title: 'Tâche v1', jira_wanted_at: null, jira_at: null, jira_key: null, jira_url: null, notes: null });
+  assert.deepEqual(old.state().projects[0].tasks[0], { id: 1, project_id: 1, title: 'Tâche v1', jira_wanted_at: null, jira_at: null, jira_key: null, jira_url: null, notes: null, priority: null });
   assert.ok(old.updateTask(1, { jira: 'done' })?.jira_at);
   old.close();
 });
@@ -491,7 +491,7 @@ test('versions du schéma : base v2 → dernière version (3, 4, 5, 6…), sauve
   // Données conservées et transformées par les migrations.
   assert.deepEqual(store2.state().projects[0].tasks[0], {
     id: 1, project_id: 1, title: 'Reportée en v2', jira_wanted_at: '2026-01-01 09:00:00',
-    jira_at: '2026-01-01 09:00:00', jira_key: null, jira_url: null, notes: null,
+    jira_at: '2026-01-01 09:00:00', jira_key: null, jira_url: null, notes: null, priority: null,
   });
   store2.close();
 
@@ -557,4 +557,23 @@ test('déplacement de projet : index parmi tous les projets', async () => {
   assert.equal((await all()).at(-1), p4.id);
   assert.equal((await call('POST', `/api/projects/${ids[0]}/move`, { index: -1 })).status, 400);
   assert.equal((await call('POST', '/api/projects/99999/move', { index: 0 })).status, 404);
+});
+
+test('priorité : P1 à P3, aucune, validation, conservée à la restauration', async () => {
+  const { body: p } = await call('POST', '/api/projects', { name: 'Priorités' });
+  const { body: t } = await call('POST', '/api/tasks', { project_id: p.id, title: 'Urgente' });
+  assert.equal(t.priority, null);
+  assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { priority: 1 })).body.priority, 1);
+  assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { priority: 3 })).body.priority, 3);
+  for (const bad of [0, 4, '1', 1.5]) assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { priority: bad })).status, 400);
+  // Liste et Log exposent la priorité.
+  const { body: state } = await call('GET', '/api/state');
+  assert.equal(state.projects.find((x: any) => x.id === p.id).tasks[0].priority, 3);
+  await call('PATCH', `/api/tasks/${t.id}`, { done: true, done_at: '2026-08-01' });
+  const { body: j } = await call('GET', '/api/journal?from=2026-08-01&to=2026-08-01');
+  assert.equal(j.days[0].tasks[0].priority, 3);
+  // Suppression puis restauration : la priorité est conservée.
+  const { body: deleted } = await call('DELETE', `/api/tasks/${t.id}`);
+  assert.equal((await call('POST', '/api/tasks/restore', deleted)).body.priority, 3);
+  assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { priority: null })).body.priority, null);
 });

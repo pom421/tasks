@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } f
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { PriorityButtons, usePriority } from './Priority';
 
 interface TaskDialogProps {
   task: Task | DoneTask;
@@ -28,11 +29,13 @@ const isValidTicket = (s: string) => !s || JIRA_KEY_RE.test(s.toUpperCase()) || 
 // Fiche d'une tâche, façon GitLab : lecture seule par défaut ; e passe tout en
 // édition (titre, puis Tab : ticket, puis contenu Markdown) ; Ctrl+Entrée
 // enregistre et repasse en lecture ; un second Ctrl+Entrée (ou Échap) ferme.
+// Priorité comme sur la ligne : 1, 2, 3 (la même touche la retire).
 // Tout est enregistré automatiquement, rien n'est perdu.
 // Accessibilité : focus piégé, titre et description annoncés (Radix),
 // libellés reliés aux champs, erreurs annoncées.
 export function TaskDialog({ task, projectName, field, open, onClose }: TaskDialogProps) {
   const id = useId();
+  const priority = usePriority(task);
   const [values, setValues] = useState({ title: task.title, ticket: ticketOf(task), notes: task.notes ?? '' });
   // Ouverte par e (édition complète) ou sur le ticket (L, J → reporté) : directement en édition.
   const [editing, setEditing] = useState(field !== 'notes');
@@ -137,6 +140,7 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const inField = (e.target as HTMLElement).matches('input, textarea');
+    if (!inField && !e.ctrlKey && !e.metaKey && !e.altKey && priority.onKey(e)) return;
     if (e.key === 'e' && !editing && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault();
       startEditing();
@@ -188,6 +192,11 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
         <DialogDescription>
           {projectName} · {state}
         </DialogDescription>
+
+        <div className="priority-line flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Priorité :</span>
+          <PriorityButtons task={task} onSet={priority.set} />
+        </div>
 
         {editing ? (
           <>
@@ -256,7 +265,7 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
           <p id={`${id}-hint`} className="text-xs text-muted-foreground">
             {editing
               ? 'Tab : champ suivant · Ctrl+Entrée : enregistrer et repasser en lecture'
-              : 'e : modifier · Ctrl+Entrée ou Échap : fermer'}
+              : 'e : modifier · 1 2 3 : priorité · Ctrl+Entrée ou Échap : fermer'}
           </p>
           <DialogFooter>
             <Button type="button" onClick={close}>
