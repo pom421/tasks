@@ -7,7 +7,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-Rien.
+- [~] Raccourcis : `f` favori (projet) / `F` filtre Favoris (remplace `*`) ; `r` report (remplace `J`) / `R` filtre à reporter → reportées → tous (remplace `r`) ; priorité `1` `2` `3` (remplace `p`) ; plus de `f` pour le Log (`/` puis `Tab`)
 
 ## Décisions attendues
 
@@ -19,16 +19,8 @@ Rien.
 - [?] Chrono : un seul en marche à la fois (en lancer un met l'autre en pause). À garder ?
 - [?] Plan journée : une tâche du plan mais pas faite disparaît le lendemain. La reporter automatiquement au jour suivant ?
 - [?] Plan journée : compteur rouge seulement **au-delà** du maximum (6/5), pas à 5/5. Orange à 5/5 ?
-
 - [?] Priorité : trier ou filtrer par priorité ?
-- [?] Branches d'expérimentation (chrono, priorité, sélection du jour) : chacune ajoute la migration 9. À la fusion, renuméroter la 2e et la 3e (10, 11).
-
-- [?] Raccourcis, règle proposée : minuscule = action sur l'élément, majuscule = voir / filtrer la même chose. Écarts actuels et propositions :
-  - `f` a deux sens (favori sur un projet, filtre du Log ailleurs) → `f` favori, `F` filtre Favoris (remplace `*`), `l` filtre du Log par projet ;
-  - `a` archiver → `A` filtre Archivés (aujourd'hui sans raccourci) ;
-  - report : action `J`, filtre `r` → `r` à reporter / reporté / rien, `R` filtre « à reporter » ;
-  - `p` a deux sens (priorité sur une tâche, nouveau projet ailleurs) → `n` nouvelle tâche, `N` nouveau projet ;
-  - `C` (remise à zéro du chrono) reste une exception : pas de filtre chrono.
+- [?] Raccourcis restants de la règle « minuscule = action, majuscule = filtre » : `A` pour le filtre Archivés ? `N` pour nouveau projet ?
 
 ## Idées / plus tard
 

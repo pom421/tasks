@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { DEFAULT_DAY_CAPACITY, jiraState, type JournalDay, type Project, type Settings, type Task } from '../shared/types.ts';
+import { DEFAULT_DAY_CAPACITY, jiraState, type JiraState, type JournalDay, type Project, type Settings, type Task } from '../shared/types.ts';
 import { api } from '@/lib/api';
 import { ActionsContext, type Actions, type TaskField, type Undo } from '@/lib/actions';
 import { focusByKey, handleNavKey, restore, snapshot, type FocusSnapshot } from '@/lib/nav';
@@ -29,6 +29,8 @@ interface PendingFocus {
   applied: () => void; // termine l'action une fois le focus appliqué
 }
 
+const NEXT_JIRA_FILTER: Record<JiraState, JiraState> = { none: 'wanted', wanted: 'done', done: 'none' };
+
 export function App() {
   const [data, setData] = useState<Data>({
     projects: [],
@@ -45,7 +47,9 @@ export function App() {
   const [openTask, setOpenTask] = useState<{ id: number; field: TaskField; open: boolean; opening: number } | null>(null);
   const [filter, setFilter] = useState<Filter>(NO_FILTER);
   // Filtres de la zone des projets (boutons sous la barre d'outils) : sans effet sur le Log.
-  const [jiraOnly, setJiraOnly] = useState(false);
+  // Filtre report (R) : aucun → à reporter → reportées → aucun.
+  const [jiraFilter, setJiraFilter] = useState<JiraState>('none');
+  const cycleJiraFilter = () => setJiraFilter((f) => NEXT_JIRA_FILTER[f]);
   const [archivedOnly, setArchivedOnly] = useState(false);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -175,11 +179,10 @@ export function App() {
         p: () => document.getElementById('new-project')?.focus(),
         n: focusAdd,
         d: () => document.getElementById('filter-date')?.focus(),
-        f: () => document.getElementById('filter-project')?.focus(),
         '/': () => document.getElementById('log-search')?.focus(),
         // Filtres de la zone des projets : sans effet dans l'onglet Plan journée.
-        r: () => !dayView && setJiraOnly((v) => !v),
-        '*': () => !dayView && setFavoritesOnly((v) => !v),
+        R: () => !dayView && cycleJiraFilter(),
+        F: () => !dayView && setFavoritesOnly((v) => !v),
         T: () => navigate(dayView ? '/' : '/plan'),
         u: undo,
         '?': () => setHelpOpen(true),
@@ -229,9 +232,10 @@ export function App() {
       <div className="mx-auto max-w-2xl px-4 lg:max-w-6xl">
         <Toolbar
           // Compteurs sur tous les projets : un bouton ne disparaît pas selon les autres filtres.
-          jiraPending={data.projects.flatMap((p) => p.tasks).filter((t) => jiraState(t) === 'wanted').length}
-          jiraFilter={jiraOnly}
-          onJiraFilter={() => setJiraOnly((v) => !v)}
+          jiraWanted={data.projects.flatMap((p) => p.tasks).filter((t) => jiraState(t) === 'wanted').length}
+          jiraDone={data.projects.flatMap((p) => p.tasks).filter((t) => jiraState(t) === 'done').length}
+          jiraFilter={jiraFilter}
+          onJiraFilter={cycleJiraFilter}
           favorites={data.projects.filter((p) => p.favorite_at).length}
           favoritesOnly={favoritesOnly}
           onFavoritesOnly={() => setFavoritesOnly((v) => !v)}
@@ -269,7 +273,7 @@ export function App() {
             {dayView ? (
               <DayView projects={data.projects} dayDone={data.dayDone} capacity={data.settings.day_capacity} />
             ) : (
-              <ProjectList projects={data.projects} archivedOnly={archivedOnly} jiraOnly={jiraOnly} favoritesOnly={favoritesOnly} />
+              <ProjectList projects={data.projects} archivedOnly={archivedOnly} jiraFilter={jiraFilter} favoritesOnly={favoritesOnly} />
             )}
           </div>
           <Journal days={data.days} dates={data.dates} projects={data.projects} filter={filter} onFilter={changeFilter} />

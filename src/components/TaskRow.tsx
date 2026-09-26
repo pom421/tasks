@@ -16,13 +16,13 @@ import { PriorityButton, usePriority } from './Priority';
 
 // Ligne de tâche, à faire (liste des projets) ou faite (journal).
 // Clavier, où que soit le focus dans la ligne (hors champ de saisie) :
-// Espace coche / décoche, J (majuscule) fait tourner le suivi du report
+// Espace coche / décoche, r fait tourner le suivi du report
 // (rien -> à reporter -> reporté -> rien), o ou Maj+Entrée ouvre la fiche,
 // e l'ouvre directement en édition,
 // L l'ouvre sur l'identifiant du ticket,
 // c lance / met en pause le chrono, C l'arrête et le remet à zéro (tâches à faire),
 // t l'ajoute au plan journée ou l'en retire (tâches à faire),
-// p fait tourner la priorité (aucune → 1 → 2 → 3 → aucune),
+// 1, 2, 3 donnent la priorité (le même chiffre la retire),
 // x ou Suppr demande la suppression, un second appui la confirme,
 // Alt+↑ / Alt+↓ (ou Alt+k / Alt+j) déplacent la tâche (onMove, tâches à faire).
 export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (direction: -1 | 1) => void }) {
@@ -53,7 +53,7 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
   const rename = (title: string) =>
     undoable('renommage', () => api.updateTask(task.id, { title }), () => api.updateTask(task.id, { title: task.title }));
   const NEXT: Record<JiraState, JiraState> = { none: 'wanted', wanted: 'done', done: 'none' };
-  // J tapé plusieurs fois vite : chaque appui part du dernier état demandé
+  // r tapé plusieurs fois vite : chaque appui part du dernier état demandé
   // (pas de celui encore affiché) et les requêtes s'enchaînent dans l'ordre.
   const jira = useRef({ state: jiraState(task), pending: 0, queue: Promise.resolve() });
   if (!jira.current.pending) jira.current.state = jiraState(task);
@@ -112,7 +112,7 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
       toggleDone();
     }
     if (!done && plan.onKey(e)) return;
-    if (e.key === 'J') {
+    if (e.key === 'r') {
       e.preventDefault();
       cycleJira();
     }

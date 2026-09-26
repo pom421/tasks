@@ -1,4 +1,5 @@
 import { Archive, Flag, Heart, Settings as SettingsIcon } from 'lucide-react';
+import type { JiraState } from '../../shared/types.ts';
 import { useActions } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -12,30 +13,30 @@ const SHORTCUTS: [string, string][] = [
   ['Échap', "Quitter l'édition ou un champ « + Ajouter », retour à la navigation"],
   ['Espace', 'Cocher / décocher la tâche'],
   ['Alt+↑ Alt+↓', 'Monter / descendre la tâche, jusque dans le projet voisin (Alt+k / Alt+j)'],
-  ['J', 'Report : à reporter → reporté → rien (majuscule)'],
+  ['r', 'Report : à reporter → reporté (fiche sur le ticket) → rien'],
+  ['R', 'Afficher seulement les tâches à reporter → reportées → toutes (projets)'],
   ['L', 'Ouvrir la fiche sur l’identifiant du ticket (majuscule)'],
   ['c', 'Chrono de la tâche : lancer / mettre en pause (aussi dans la fiche)'],
   ['C', 'Remettre le chrono à zéro'],
   ['t', 'Ajouter la tâche au plan journée / l’en retirer (aussi dans la fiche)'],
   ['T', 'Onglet Projets / Plan journée'],
-  ['p', 'Sur une tâche : priorité suivante, aucune → 1 → 2 → 3 → aucune (aussi dans la fiche)'],
-  ['r', 'Afficher seulement les tâches à reporter (projets)'],
-  ['*', 'Afficher seulement les projets favoris'],
+  ['1 2 3', 'Priorité 1, 2 ou 3 ; le même chiffre la retire (aussi dans la fiche)'],
   ['x x', 'Supprimer la tâche ou le projet (x une 2e fois pour confirmer)'],
   ['f', 'Sur un projet : favori / plus favori'],
+  ['F', 'Afficher seulement les projets favoris'],
   ['a', 'Sur un projet : archiver / désarchiver'],
   ['u', 'Annuler la dernière action (cocher, renommer, supprimer, chrono, plan journée, priorité, favori, archivage)'],
-  ['p', 'Ailleurs que sur une tâche : nouveau projet'],
+  ['p', 'Nouveau projet'],
   ['n', 'Nouvelle tâche (projet courant, sinon dernier utilisé)'],
   ['d', 'Filtrer le log sur une journée'],
-  ['f', 'Ailleurs que sur un projet : filtrer le log par projet'],
-  ['/', 'Rechercher dans le log (titre, contenu, ticket)'],
+  ['/', 'Rechercher dans le log (titre, contenu, ticket) ; Tab : journée, projet'],
   ['?', 'Cette aide'],
 ];
 
 interface ToolbarProps {
-  jiraPending: number;
-  jiraFilter: boolean;
+  jiraWanted: number; // tâches à faire à reporter
+  jiraDone: number; // tâches à faire reportées
+  jiraFilter: JiraState;
   onJiraFilter: () => void;
   favorites: number;
   favoritesOnly: boolean;
@@ -51,7 +52,7 @@ interface ToolbarProps {
 // Actif : texte à pleine intensité ; inactif : atténué.
 const filterClass = (active: boolean) => (active ? 'text-foreground' : 'text-muted-foreground');
 
-export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, favorites, favoritesOnly, onFavoritesOnly, archived, archivedOnly, onArchivedOnly, showFilters, helpOpen, onHelpOpen }: ToolbarProps) {
+export function Toolbar({ jiraWanted, jiraDone, jiraFilter, onJiraFilter, favorites, favoritesOnly, onFavoritesOnly, archived, archivedOnly, onArchivedOnly, showFilters, helpOpen, onHelpOpen }: ToolbarProps) {
   const { navigate } = useActions();
 
   // Filtres de la zone des projets, combinables (ET logique). Chacun n'est
@@ -63,16 +64,19 @@ export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, favorites, favo
     <header className="flex flex-wrap items-center justify-between gap-2 pt-6 pb-2">
       <h1 className="text-2xl font-bold">Tâches</h1>
       <nav className="flex flex-wrap items-center gap-1.5">
-        {showFilters && (jiraPending > 0 || jiraFilter) && (
+        {/* Report : un clic (ou R) passe à la suite : à reporter → reportées → tous. */}
+        {showFilters && (jiraWanted > 0 || jiraDone > 0 || jiraFilter !== 'none') && (
           <Button
             id="jira-pending"
-            className={filterClass(jiraFilter)}
-            aria-pressed={jiraFilter}
-            title="Afficher seulement les tâches à reporter (r)"
+            className={filterClass(jiraFilter !== 'none')}
+            aria-pressed={jiraFilter !== 'none'}
+            title="À reporter → reportées → toutes (R)"
             onClick={onJiraFilter}
           >
-            <Flag aria-hidden fill={jiraFilter ? 'currentColor' : 'none'} />
-            {jiraPending} {jiraPending > 1 ? 'tâches' : 'tâche'} à reporter
+            <Flag aria-hidden fill={jiraFilter !== 'none' ? 'currentColor' : 'none'} />
+            {jiraFilter === 'done' || (jiraFilter === 'none' && !jiraWanted)
+              ? `${jiraDone} ${jiraDone > 1 ? 'tâches reportées' : 'tâche reportée'}`
+              : `${jiraWanted} ${jiraWanted > 1 ? 'tâches' : 'tâche'} à reporter`}
           </Button>
         )}
         {showFilters && (archived > 0 || archivedOnly) && (
@@ -91,7 +95,7 @@ export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, favorites, favo
             id="favorites-only"
             className={filterClass(favoritesOnly)}
             aria-pressed={favoritesOnly}
-            title="Afficher seulement les projets favoris (*)"
+            title="Afficher seulement les projets favoris (F)"
             onClick={onFavoritesOnly}
           >
             <Heart aria-hidden className="text-red-600" fill={favoritesOnly ? 'currentColor' : 'none'} /> Favoris

@@ -4,7 +4,7 @@ import { test, expect } from './fixtures.ts';
 const row = (page: Page, title: string) => page.locator('#projects li.task', { hasText: title });
 const icon = (page: Page, title: string) => row(page, title).locator('button.priority');
 
-test('clavier : p fait tourner la priorité (aucune → 1 → 2 → 3 → aucune), u annule', async ({ page, store }) => {
+test('clavier : 1 / 2 / 3 donnent la priorité, le même chiffre la retire, u annule', async ({ page, store }) => {
   const alpha = store.createProject('Alpha');
   const une = store.createTask(alpha.id, 'Une');
   store.createTask(alpha.id, 'Deux');
@@ -14,20 +14,22 @@ test('clavier : p fait tourner la priorité (aucune → 1 → 2 → 3 → aucune
   await page.keyboard.press('ArrowDown'); // sur « Une »
 
   await expect(icon(page, 'Une')).toHaveAttribute('aria-label', 'Priorité');
-  for (const [label, color] of [['Priorité 1', /text-red-600/], ['Priorité 2', /text-amber-500/], ['Priorité 3', /text-sky-600/]] as const) {
-    await page.keyboard.press('p');
-    await expect(icon(page, 'Une')).toHaveAttribute('aria-label', label);
-    await expect(icon(page, 'Une')).toHaveClass(color);
-  }
+  await page.keyboard.press('2');
+  await expect(icon(page, 'Une')).toHaveAttribute('aria-label', 'Priorité 2');
+  await expect(icon(page, 'Une')).toHaveClass(/text-amber-500/);
+  await page.keyboard.press('1');
+  await expect(icon(page, 'Une')).toHaveAttribute('aria-label', 'Priorité 1');
+  await expect(icon(page, 'Une')).toHaveClass(/text-red-600/);
+  await page.keyboard.press('3');
+  await expect(icon(page, 'Une')).toHaveClass(/text-sky-600/);
   await expect(icon(page, 'Une').locator('text')).toHaveText('3');
-  await page.keyboard.press('p');
+  // Même chiffre : retirée ; u : rétablie.
+  await page.keyboard.press('3');
   await expect(icon(page, 'Une')).toHaveAttribute('aria-label', 'Priorité');
   await expect(icon(page, 'Une').locator('text')).toHaveCount(0);
   await page.keyboard.press('u');
   await expect(icon(page, 'Une')).toHaveAttribute('aria-label', 'Priorité 3');
   expect(store.db.prepare('SELECT priority FROM task WHERE id = ?').get(une.id)).toEqual({ priority: 3 });
-  // p sur une tâche ne crée pas de projet.
-  await expect(page.locator('#new-project')).not.toBeFocused();
 
   // À droite, visible sans survol quand elle est donnée ; sinon au survol seulement.
   await page.mouse.move(0, 0);
@@ -51,7 +53,7 @@ test('souris : clic sur l’icône, aucune → 1 → 2 → 3 → aucune', async 
   }
 });
 
-test('fiche : même icône, même touche', async ({ page, store }) => {
+test('fiche : même icône, mêmes touches', async ({ page, store }) => {
   const alpha = store.createProject('Alpha');
   const une = store.createTask(alpha.id, 'Une');
   store.updateTask(une.id, { priority: 2 });
@@ -67,27 +69,31 @@ test('fiche : même icône, même touche', async ({ page, store }) => {
   await expect(button).toHaveAttribute('aria-label', 'Priorité 3');
 
   await dialog.locator('.reader').focus();
-  await page.keyboard.press('p');
+  await page.keyboard.press('1');
+  await expect(button).toHaveAttribute('aria-label', 'Priorité 1');
+  await page.keyboard.press('1');
   await expect(button).toHaveAttribute('aria-label', 'Priorité');
 
-  // En édition, p s'écrit dans le champ.
+  // En édition, les chiffres s'écrivent dans le champ.
   await page.keyboard.press('e');
   await page.keyboard.press('End');
-  await page.keyboard.press('p');
-  await expect(dialog.getByLabel('Titre')).toHaveValue('Unep');
+  await page.keyboard.press('2');
+  await expect(dialog.getByLabel('Titre')).toHaveValue('Une2');
   await expect(button).toHaveAttribute('aria-label', 'Priorité');
 
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
-  await expect(row(page, 'Unep')).toBeVisible();
+  await expect(row(page, 'Une2')).toBeVisible();
 });
 
-test('non-régression : priorité gardée dans le Log ; p hors tâche = nouveau projet', async ({ page, store }) => {
+test('non-régression : priorité gardée dans le Log ; p sur une tâche = nouveau projet', async ({ page, store }) => {
   const alpha = store.createProject('Alpha');
   const une = store.createTask(alpha.id, 'Une');
+  store.createTask(alpha.id, 'Deux');
   store.updateTask(une.id, { priority: 1, doneAt: '2026-09-25' });
   await page.goto('/');
   await expect(page.locator('.day li.task', { hasText: 'Une' }).locator('button.priority')).toHaveAttribute('aria-label', 'Priorité 1');
-  await page.locator('body').press('p');
+  await row(page, 'Deux').locator('.name').focus();
+  await page.keyboard.press('p');
   await expect(page.locator('#new-project')).toBeFocused();
 });

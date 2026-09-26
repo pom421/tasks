@@ -148,7 +148,7 @@ export function Journal({ days, dates, projects, filter, onFilter }: JournalProp
           className={fieldClass}
           onChange={(e) => changeDay(e.target.value)}
         />
-        <select id="filter-project" aria-label="Filtrer par projet" title="Projet (f)" className={fieldClass} value={filter.project} onChange={(e) => onFilter({ ...filter, project: e.target.value })}>
+        <select id="filter-project" aria-label="Filtrer par projet" title="Projet" className={fieldClass} value={filter.project} onChange={(e) => onFilter({ ...filter, project: e.target.value })}>
           <option value="">Tous les projets</option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>

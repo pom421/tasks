@@ -1,5 +1,5 @@
 import type { KeyboardEvent } from 'react';
-import type { Priority, Task } from '../../shared/types.ts';
+import { PRIORITIES, type Priority, type Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
 import { useActions } from '@/lib/actions';
 import { cn } from '@/lib/utils';
@@ -12,13 +12,13 @@ const COLOR: Record<Priority, string> = {
   3: 'text-sky-600 dark:text-sky-400',
 };
 
-// Priorité d'une tâche, partagée par la ligne et la fiche : p (ou clic sur
-// l'icône) passe à la suivante : aucune → 1 → 2 → 3 → aucune. Annulable (u).
+// Priorité d'une tâche, partagée par la ligne et la fiche : 1, 2 ou 3 la
+// donne, le même chiffre la retire ; un clic sur l'icône passe à la suivante
+// (aucune → 1 → 2 → 3 → aucune). Annulable (u).
 export function usePriority(task: Task) {
   const { act, setUndo } = useActions();
-  const cycle = () => {
+  const set = (next: Priority | null) => {
     const before = task.priority;
-    const next = before === 3 ? null : (((before ?? 0) + 1) as Priority);
     return act(async () => {
       await api.updateTask(task.id, { priority: next });
       setUndo({
@@ -28,11 +28,13 @@ export function usePriority(task: Task) {
       });
     });
   };
-  // Touche p ; true si elle a été traitée.
+  const cycle = () => set(task.priority === 3 ? null : (((task.priority ?? 0) + 1) as Priority));
+  // Touches 1, 2, 3 ; true si la touche a été traitée.
   const onKey = (e: KeyboardEvent) => {
-    if (e.key !== 'p') return false;
+    const p = Number(e.key) as Priority;
+    if (!PRIORITIES.includes(p)) return false;
     e.preventDefault();
-    cycle();
+    set(task.priority === p ? null : p);
     return true;
   };
   return { cycle, onKey };
@@ -67,7 +69,7 @@ export function PriorityButton({ priority, onClick, hidden }: { priority: Priori
         !priority && hidden && 'invisible group-hover:visible group-focus-within:visible',
       )}
       aria-label={priority ? `Priorité ${priority}` : 'Priorité'}
-      title={`${priority ? `Priorité ${priority}` : 'Priorité'} (p)`}
+      title={`${priority ? `Priorité ${priority}` : 'Priorité'} (1 2 3)`}
       onClick={onClick}
     >
       <PriorityIcon priority={priority} />

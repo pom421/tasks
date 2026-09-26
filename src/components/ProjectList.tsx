@@ -1,6 +1,6 @@
 import { useRef, useState, type FocusEvent, type KeyboardEvent } from 'react';
 import { Archive, ArchiveRestore, Heart, Trash2 } from 'lucide-react';
-import { jiraState, type Project, type Task } from '../../shared/types.ts';
+import { jiraState, type JiraState, type Project, type Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
 import { useActions } from '@/lib/actions';
 import { moveDirection } from '@/lib/nav';
@@ -71,7 +71,6 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
     }
     if (confirmDelete && e.key === 'Escape') e.stopPropagation();
     setConfirmDelete(false); // toute autre touche annule la demande
-    // preventDefault : f n'ouvre pas en plus le filtre du Log (raccourci global).
     if (e.key === 'f') {
       e.preventDefault();
       toggleFavorite();
@@ -180,16 +179,17 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
 interface ProjectListProps {
   projects: Project[];
   archivedOnly: boolean;
-  jiraOnly: boolean; // filtre « à reporter dans Jira »
+  jiraFilter: JiraState; // filtre report : 'none' = aucun, sinon tâches à reporter / reportées
   favoritesOnly: boolean;
 }
 
-export function ProjectList({ projects, archivedOnly, jiraOnly, favoritesOnly }: ProjectListProps) {
+export function ProjectList({ projects, archivedOnly, jiraFilter, favoritesOnly }: ProjectListProps) {
+  const jiraOnly = jiraFilter !== 'none';
   const { act } = useActions();
   const visible = projects
     .filter((p) => Boolean(p.archived_at) === archivedOnly) // Archivés : seulement eux
     .filter((p) => !favoritesOnly || p.favorite_at)
-    .map((p) => (jiraOnly ? { ...p, tasks: p.tasks.filter((t) => jiraState(t) === 'wanted') } : p))
+    .map((p) => (jiraOnly ? { ...p, tasks: p.tasks.filter((t) => jiraState(t) === jiraFilter) } : p))
     .filter((p) => !jiraOnly || p.tasks.length > 0);
 
   // Liste vide : message propre au filtre actif ; plusieurs filtres combinés :
@@ -197,7 +197,7 @@ export function ProjectList({ projects, archivedOnly, jiraOnly, favoritesOnly }:
   const emptyMessage = () => {
     const active = [jiraOnly, archivedOnly, favoritesOnly].filter(Boolean).length;
     if (active > 1) return jiraOnly ? 'Aucune tâche avec les filtres demandés.' : 'Aucun projet avec les filtres demandés.';
-    if (jiraOnly) return 'Aucune tâche à faire à reporter.';
+    if (jiraOnly) return jiraFilter === 'wanted' ? 'Aucune tâche à faire à reporter.' : 'Aucune tâche à faire reportée.';
     if (archivedOnly) return 'Aucun projet archivé.';
     if (favoritesOnly) return 'Aucun projet favori : cliquez sur le cœur d’un projet.';
     return 'Aucun projet. Créez-en un ci-dessous.';

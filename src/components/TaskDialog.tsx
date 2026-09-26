@@ -33,7 +33,7 @@ const isValidTicket = (s: string) => !s || JIRA_KEY_RE.test(s.toUpperCase()) || 
 // enregistre et repasse en lecture ; un second Ctrl+Entrée (ou Échap) ferme.
 // Chrono comme sur la ligne : c lance / met en pause, C remet à zéro.
 // Plan journée comme sur la ligne : t ou ☀.
-// Priorité comme sur la ligne : p (ou clic sur l'icône).
+// Priorité comme sur la ligne : 1, 2, 3 (le même chiffre la retire) ou clic.
 // Tout est enregistré automatiquement, rien n'est perdu.
 // Accessibilité : focus piégé, titre et description annoncés (Radix),
 // libellés reliés aux champs, erreurs annoncées.
@@ -44,7 +44,7 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
   const plan = usePlan(task);
   const priority = usePriority(task);
   const [values, setValues] = useState({ title: task.title, ticket: ticketOf(task), notes: task.notes ?? '' });
-  // Ouverte par e (édition complète) ou sur le ticket (L, J → reporté) : directement en édition.
+  // Ouverte par e (édition complète) ou sur le ticket (L, r → reporté) : directement en édition.
   const [editing, setEditing] = useState(field !== 'notes');
   const [error, setError] = useState<{ field: Field; message: string } | null>(null);
   const saved = useRef({ ...values, changed: false });
@@ -137,7 +137,7 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
   };
 
   // Entrée dans le titre ou le ticket : comme Ctrl+Entrée. Fiche ouverte juste
-  // pour saisir le ticket (L, J → reporté) : Entrée enregistre et ferme.
+  // pour saisir le ticket (L, r → reporté) : Entrée enregistre et ferme.
   const onInputEnter = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter' || e.ctrlKey || e.metaKey) return;
     e.preventDefault();

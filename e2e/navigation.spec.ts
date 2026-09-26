@@ -169,11 +169,12 @@ test('champ d’ajout : on tape directement, Entrée ajoute, Échap vide et sort
   await page.keyboard.type('brouillon');
   await page.keyboard.press('Escape');
   await expect(page.locator(`[data-nav-key="add:${data.alpha.id}"]`)).toHaveValue('');
-  // Hors du champ, sur la tâche au-dessus : les raccourcis marchent (p = priorité).
+  // Hors du champ, sur la tâche au-dessus : les raccourcis marchent (p = nouveau projet).
   const quatre = store.state().projects[0].tasks[2].id;
   await expect.poll(() => current(page)).toBe(`task:${quatre}`);
   await page.keyboard.press('p');
-  await expect(page.locator(`#projects li.task:has([data-nav-key="task:${quatre}"]) button.priority`)).toHaveAttribute('aria-label', 'Priorité 1');
+  await expect(page.locator('#new-project')).toBeFocused();
+  await expect(page.locator('#new-project')).toHaveValue('');
   await expect(page.locator(`[data-nav-key="add:${data.alpha.id}"]`)).toHaveValue('');
 });
 
@@ -305,7 +306,7 @@ test('j / k naviguent comme ↓ / ↑, mais s’écrivent dans un champ', async 
 
 test('raccourcis actifs même quand le focus est sur la case à cocher', async ({ page, store }) => {
   await page.locator('#projects li.task').first().getByRole('checkbox').focus();
-  await page.keyboard.press('Shift+J');
+  await page.keyboard.press('r');
   await expect(page.locator('#projects li.task').first().locator('.report-wanted')).toBeVisible();
   expect(store.state().projects[0].tasks[0].jira_wanted_at).toBeTruthy();
 });
@@ -348,7 +349,7 @@ test('badge « reporté » conservé dans le journal, et J y fonctionne aussi', 
   // Plus de tâche dans Beta : le focus remonte sur le projet ; descendre jusqu'au Log.
   await pressDown(page, 3);
   expect(await current(page)).toBe(`task:${data.tasks.trois.id}`);
-  await page.keyboard.press('Shift+J');
+  await page.keyboard.press('r');
   await expect(row.locator('.report')).toHaveCount(0);
   expect(store.journal({ projectId: data.beta.id }).days[0].tasks[0].jira_at).toBeNull();
 });
@@ -422,10 +423,10 @@ test('cœur : projet favori (plein, rouge) ; bouton Favoris et * filtrent', asyn
   await expect(page.locator('.project')).toHaveCount(1);
   await expect(page.locator('.project .name').first()).toHaveText('Beta');
 
-  // * au clavier : bascule le filtre.
-  await page.keyboard.press('*');
+  // F au clavier : bascule le filtre.
+  await page.keyboard.press('F');
   await expect(page.locator('.project')).toHaveCount(2);
-  await page.keyboard.press('*');
+  await page.keyboard.press('F');
   await expect(page.locator('.project')).toHaveCount(1);
 });
 
@@ -604,11 +605,11 @@ const row = (page: Page, taskId: number) => page.locator(`li.task:has([data-nav-
 test('J fait tourner : à reporter (contour) → reportée (plein, fiche proposée) → rien', async ({ page, store, data }) => {
   const une = row(page, data.tasks.une.id);
   await pressDown(page, 2);
-  await page.keyboard.press('Shift+J');
+  await page.keyboard.press('r');
   await expect(une.locator('.report-wanted')).toBeVisible();
   expect(store.state().jiraPending).toBe(1);
 
-  await page.keyboard.press('Shift+J');
+  await page.keyboard.press('r');
   await expect(une.locator('.report-done')).toHaveText('reporté'); // sans identifiant : le mot, visible
   // Fiche proposée sur le champ du ticket ; Échap la ferme et rend le focus à la tâche.
   const dialog = page.getByRole('dialog', { name: 'Une' });
@@ -617,7 +618,7 @@ test('J fait tourner : à reporter (contour) → reportée (plein, fiche propos�
   await expect(dialog).toHaveCount(0);
   await expect.poll(() => current(page)).toBe(`task:${data.tasks.une.id}`);
 
-  await page.keyboard.press('Shift+J');
+  await page.keyboard.press('r');
   await expect(une.locator('.report')).toHaveCount(0);
   expect(store.state().projects[0].tasks[0]).toMatchObject({ jira_wanted_at: null, jira_at: null, jira_key: null });
 });
@@ -778,7 +779,7 @@ test('réglages : Importer .sqlite en deux temps, sans fenêtre de confirmation 
   expect(dialogs).toBe(0);
 });
 
-test('compteur « à reporter » : filtre la zone des projets seulement (r ou clic)', async ({ page, store, data }) => {
+test('compteur « à reporter » : filtre la zone des projets seulement (R ou clic)', async ({ page, store, data }) => {
   store.updateTask(data.tasks.deux.id, { jira: 'wanted' });
   const faite = store.createTask(data.beta.id, 'Faite à reporter');
   store.updateTask(faite.id, { doneAt: '2026-09-25', jira: 'wanted' });
@@ -787,14 +788,46 @@ test('compteur « à reporter » : filtre la zone des projets seulement (r ou cl
 
   const counter = page.locator('#jira-pending');
   await expect(counter).toHaveText('1 tâche à reporter'); // tâches à faire des projets
-  await page.keyboard.press('r');
+  await page.keyboard.press('R');
   await expect(counter).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#projects .name')).toHaveText(['Alpha', 'Deux']);
   await expect(page.locator('#journal .name')).toHaveText(['Trois', 'Faite à reporter']); // Log inchangé
 
+  // 2e appui : les reportées (aucune ici) ; 3e : plus de filtre.
   await counter.click();
+  await expect(counter).toHaveText('0 tâche reportée');
+  await expect(page.locator('#projects .empty')).toHaveText('Aucune tâche à faire reportée.');
+  await counter.click();
+  await expect(counter).toHaveAttribute('aria-pressed', 'false');
   await expect(page.locator('#projects .name')).toHaveText(['Alpha', 'Une', 'Deux', 'Beta']);
   await expect(page.locator('#journal .name')).toHaveText(['Trois', 'Faite à reporter']);
+});
+
+test('R : à reporter → reportées → toutes ; bouton visible avec des reportées seulement', async ({ page, store, data }) => {
+  store.updateTask(data.tasks.une.id, { jira: 'wanted' });
+  store.updateTask(data.tasks.trois.id, { jira: 'done' });
+  await reload(page);
+  const counter = page.locator('#jira-pending');
+  await expect(counter).toHaveText('1 tâche à reporter');
+  await page.keyboard.press('R');
+  await expect(page.locator('#projects .name')).toHaveText(['Alpha', 'Une']);
+  await page.keyboard.press('R');
+  await expect(counter).toHaveText('1 tâche reportée');
+  await expect(page.locator('#projects .name')).toHaveText(['Beta', 'Trois']);
+  await page.keyboard.press('R');
+  await expect(counter).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#projects .name')).toHaveText(['Alpha', 'Une', 'Deux', 'Beta', 'Trois']);
+
+  // Plus de tâche à reporter, mais une reportée : le bouton reste, sur les reportées.
+  store.updateTask(data.tasks.une.id, { jira: 'none' });
+  await reload(page);
+  await expect(counter).toHaveText('1 tâche reportée');
+  // Anciennes touches sans effet : * et f (hors projet) ; r hors tâche.
+  await page.locator('body').press('*');
+  await page.locator('body').press('f');
+  await page.locator('body').press('r');
+  await expect(counter).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#filter-project')).not.toBeFocused();
 });
 
 // Non-régression : les boutons sous la barre d'outils ne touchent qu'à la zone des projets.
@@ -827,11 +860,17 @@ test('boutons à reporter, Archivés, Favoris : le Log ne change pas', async ({ 
     await expect.poll(() => page.locator('#projects .project').count(), id).not.toBe(projects); // la zone des projets change
     expect(await snapshot(), id).toEqual(before); // le Log, non
     await button.click();
+    if (id === '#jira-pending') {
+      // Report : à reporter → reportées → tous ; le Log ne change toujours pas.
+      await expect(button).toHaveText('0 tâche reportée');
+      expect(await snapshot(), id).toEqual(before);
+      await button.click();
+    }
     await expect(button).toHaveAttribute('aria-pressed', 'false');
   }
-  // Au clavier (r, *), combinés.
-  await page.keyboard.press('r');
-  await page.keyboard.press('*');
+  // Au clavier (R, F), combinés.
+  await page.keyboard.press('R');
+  await page.keyboard.press('F');
   await expect(page.locator('#projects .name')).toHaveText(['Alpha', 'Une']);
   expect(await snapshot()).toEqual(before);
 
@@ -848,8 +887,8 @@ test('fiche rouverte : contenu relu depuis les données à jour', async ({ page,
   await page.getByRole('dialog', { name: 'Une' }).getByLabel('Contenu').fill('premier jet');
   await page.keyboard.press('Escape'); // enregistré à la fermeture
   await expect.poll(() => current(page)).toBe(`task:${data.tasks.une.id}`);
-  await page.keyboard.press('Shift+J'); // à reporter
-  await page.keyboard.press('Shift+J'); // reportée : la fiche s'ouvre sur le ticket
+  await page.keyboard.press('r'); // à reporter
+  await page.keyboard.press('r'); // reportée : la fiche s'ouvre sur le ticket
   const dialog = page.getByRole('dialog', { name: 'Une' });
   await expect(dialog.getByLabel('Ticket', { exact: true })).toBeFocused();
   await expect(dialog.getByLabel('Contenu')).toHaveValue('premier jet'); // relu depuis la base
@@ -860,7 +899,7 @@ test('bouton « tâches à reporter » : place réservée, rien ne bouge quand i
   await expect(page.locator('#jira-pending')).toHaveCount(0);
   const before = await top();
   await pressDown(page, 2);
-  await page.keyboard.press('Shift+J');
+  await page.keyboard.press('r');
   await expect(page.locator('#jira-pending')).toHaveText('1 tâche à reporter');
   expect(await top()).toBe(before);
   await expect(row(page, data.tasks.une.id).locator('.report-wanted')).toHaveText('à reporter');
