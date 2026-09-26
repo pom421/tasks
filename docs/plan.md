@@ -33,6 +33,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
+- [x] Migration : une sauvegarde `.vN.bak` déjà présente n'est plus écrasée ni bloquante (`output file already exists` après restauration par copie) ; la nouvelle devient `.vN.2.bak`
 - [x] Badge « reporté » : l’identifiant du ticket seul quand il y en a un (« reporté » pour les lecteurs d’écran et en info-bulle)
 - [x] `gg` / `G` (à la manière de vim) : premier / dernier élément, comme `Début` / `Fin`
 - [x] `n` ouvre le champ d’ajout du projet où est le curseur (plus le dernier utilisé) ; `Échap` dans un champ « + Ajouter » le vide et en sort (`p` ne s’y écrit plus)

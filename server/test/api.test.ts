@@ -501,6 +501,14 @@ test('versions du schéma : base v2 → dernière version (3, 4, 5, 6…), sauve
   assert.equal((bak.prepare('PRAGMA user_version').get() as { user_version: number }).user_version, 2);
   bak.close();
 
+  // Base restaurée depuis la sauvegarde (copiée, pas déplacée) puis rouverte :
+  // la sauvegarde existante n'est pas écrasée, la nouvelle prend le numéro suivant.
+  fs.copyFileSync(m.backup!, file);
+  const restored = new Store(file);
+  assert.equal(restored.migration.backup, `${file}.v2.2.bak`);
+  assert.ok(fs.existsSync(`${file}.v2.bak`));
+  restored.close();
+
   // Réouverture : plus rien à appliquer.
   const again = new Store(file);
   assert.deepEqual(again.migration.applied, []);
