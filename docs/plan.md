@@ -7,8 +7,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-- [~] Priorité des tâches (fusionnée sur `main`, CI à vérifier) : icônes 1 2 3 à droite, `p` ou clic ; migration 11
-- [~] Raccourcis : `t` plan journée, `T` onglet Plan journée (remplacent `s` / `v`), chrono `c` / `C` (au lieu de `t` / `T`) ; `Maj+↑` / `Maj+↓` projet précédent / suivant ; fiche : même disposition en lecture et en édition (titre en haut), ancrée en haut de l'écran ; icônes hors de l'ordre de `Tab` (touches dédiées)
+Rien.
 
 ## Décisions attendues
 
@@ -43,6 +42,8 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
+- [x] Raccourcis `t` / `T` plan journée, `c` / `C` chrono, `Maj+↑` / `Maj+↓` entre projets ; fiche : même disposition en lecture et en édition (`052a963`)
+- [x] Priorité des tâches : icônes 1 2 3 à droite, `p` ou clic ; migration 11 (`26e1975`)
 - [x] Chrono par tâche : ▷ / pause pleine (`t`), ↻ remise à zéro (`T`), temps passé en info-bulle, ligne et fiche ; migration 9 (`bb31dad`)
 - [x] Plan journée : ☀ / `s` (ligne et fiche), onglet « Plan journée » (`v`, `/plan`), compteur « 3/5 tâches » rouge au-delà du maximum ; migration 10 (`bb31dad`)
 - [x] Migration : une sauvegarde `.vN.bak` déjà présente n'est plus écrasée ni bloquante (`output file already exists` après restauration par copie) ; la nouvelle devient `.vN.2.bak`
