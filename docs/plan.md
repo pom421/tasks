@@ -33,7 +33,7 @@ Rien.
 
 ## Fait (récent)
 
-- [x] Historique d'annulation dans le navigateur (zustand, 50 actions) : `u` annule une à une, `U` rejoue ; créations, déplacements, report, date et fiche désormais annulables
+- [x] Historique d'annulation en mémoire dans le navigateur (zustand, sans limite de nombre) : `u` annule une à une, `U` rejoue ; créations, déplacements, report, date et fiche désormais annulables
 - [x] `Maj+j` / `Maj+k` (`J` / `K`) : projet suivant / précédent, comme `Maj+↓` / `Maj+↑` ; port du serveur de dev réglable par `PORT` (aperçu d'un worktree)
 - [x] « + Ajouter » en écriture : `Échap` vide le champ et le repasse en lecture (au lieu d'en sortir vers l'élément au-dessus)
 - [x] Aide `?` : raccourcis groupés par thème, en colonnes, tout visible sur un écran courant (la liste défile sinon), sans texte d’explication ; ménage : doublon `e` retiré, ajout de `Alt+↑` / `Alt+↓` sur un projet, `Suppr`, `Échap` du Log, `Ctrl+Entrée` qui ferme la fiche

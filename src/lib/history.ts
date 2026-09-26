@@ -1,16 +1,14 @@
 import { create } from 'zustand';
 
-// Historique des actions, gardé dans le navigateur seulement (perdu au
-// rechargement) : u annule la dernière, U la rejoue. Une nouvelle action
-// efface ce qui pouvait être rejoué.
+// Historique des actions, en mémoire vive dans le navigateur seulement (perdu
+// au rechargement) ; pas d'autre limite que cette mémoire : u annule la
+// dernière, U la rejoue. Une nouvelle action efface ce qui pouvait être rejoué.
 export interface Entry {
   label: string; // « tâche cochée » : affiché « Annulé : … » / « Rétabli : … »
   undo: () => Promise<unknown>;
   redo: () => Promise<unknown>;
   focus: string; // élément à resélectionner ensuite (clé de navigation)
 }
-
-export const HISTORY_LIMIT = 50;
 
 interface History {
   past: Entry[]; // la plus récente en dernier
@@ -24,7 +22,7 @@ interface History {
 export const useHistory = create<History>()((set) => ({
   past: [],
   future: [],
-  record: (entry) => set((s) => ({ past: [...s.past, entry].slice(-HISTORY_LIMIT), future: [] })),
+  record: (entry) => set((s) => ({ past: [...s.past, entry], future: [] })),
   undone: () => set((s) => ({ past: s.past.slice(0, -1), future: [...s.future, ...s.past.slice(-1)] })),
   redone: () => set((s) => ({ future: s.future.slice(0, -1), past: [...s.past, ...s.future.slice(-1)] })),
   clear: () => set({ past: [], future: [] }),

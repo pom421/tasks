@@ -71,7 +71,7 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
     'Général',
     [
       [[['Échap Échap']], 'Retirer tous les filtres (projets et Log)'],
-      [[['u']], 'Annuler la dernière action (50 au plus, une à une)'],
+      [[['u']], 'Annuler la dernière action, puis la précédente…'],
       [[['U']], 'Rétablir l’action annulée'],
       [[['?']], 'Cette aide'],
     ],
