@@ -7,7 +7,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-- [~] Filtre priorité : `P` ou clic sur « Priorités », 1 → 2 → 3 → toutes ; zone des projets, combiné en ET avec les autres filtres
+Rien.
 
 ## Décisions attendues
 
@@ -33,6 +33,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
+- [x] Filtre priorité : `P` ou clic sur « Priorités », 1 → 2 → 3 → toutes ; zone des projets, combiné en ET avec les autres filtres (`86ab470`)
 - [x] Raccourcis, minuscule = action / majuscule = filtre : `f` favori (projet) / `F` filtre Favoris (remplace `*`) ; `r` report (remplace `J`) / `R` filtre à reporter → reportées → tous (remplace `r`) ; priorité `1` `2` `3` (remplace `p`) ; plus de `f` pour le Log (`/` puis `Tab`) ; `A` filtre Archivés ; `n` `n` nouveau projet (remplace `p`) (`7d022da`, `aa07421`)
 - [x] Raccourcis `t` / `T` plan journée, `c` / `C` chrono, `Maj+↑` / `Maj+↓` entre projets ; fiche : même disposition en lecture et en édition (`052a963`)
 - [x] Priorité des tâches : icônes 1 2 3 à droite, `p` ou clic ; migration 11 (`26e1975`)
