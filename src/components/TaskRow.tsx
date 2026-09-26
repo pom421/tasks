@@ -12,6 +12,7 @@ import { ReportBadge } from './ReportBadge';
 import { moveDirection } from '@/lib/nav';
 import { TimerButtons, useTimer } from './Timer';
 import { PlanButton, usePlan } from './Plan';
+import { PriorityButton, usePriority } from './Priority';
 
 // Ligne de tâche, à faire (liste des projets) ou faite (journal).
 // Clavier, où que soit le focus dans la ligne (hors champ de saisie) :
@@ -21,6 +22,7 @@ import { PlanButton, usePlan } from './Plan';
 // L l'ouvre sur l'identifiant du ticket,
 // t lance / met en pause le chrono, T l'arrête et le remet à zéro (tâches à faire),
 // s l'ajoute au plan journée ou l'en retire (tâches à faire),
+// p fait tourner la priorité (aucune → 1 → 2 → 3 → aucune),
 // x ou Suppr demande la suppression, un second appui la confirme,
 // Alt+↑ / Alt+↓ (ou Alt+k / Alt+j) déplacent la tâche (onMove, tâches à faire).
 export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (direction: -1 | 1) => void }) {
@@ -31,6 +33,7 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
   const navKey = `task:${task.id}`;
   const timer = useTimer(task);
   const plan = usePlan(task);
+  const priority = usePriority(task);
 
   const patch = (body: TaskPatch, stay = false) => act(() => api.updateTask(task.id, body), { stay });
 
@@ -102,6 +105,7 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
     }
     if (confirmDelete && e.key === 'Escape') e.stopPropagation();
     setConfirmDelete(false); // toute autre touche annule la demande
+    if (priority.onKey(e)) return;
     if (e.key === ' ' && target.getAttribute('role') !== 'checkbox') {
       // Sur la case elle-même, Espace la coche nativement.
       e.preventDefault();
@@ -166,6 +170,7 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
         />
       )}
       {!done && !confirmDelete && <PlanButton plan={plan} hidden />}
+      {!confirmDelete && <PriorityButton priority={task.priority} onClick={priority.cycle} hidden />}
       {confirmDelete ? (
         <span className="confirm-delete flex-none text-xs text-destructive" role="alert">
           x pour supprimer · Échap pour annuler

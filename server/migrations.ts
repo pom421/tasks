@@ -101,6 +101,11 @@ export const MIGRATIONS: Migration[] = [
     name: 'tâches choisies pour la journée',
     sql: `ALTER TABLE task ADD COLUMN day_at TEXT;`,
   },
+  {
+    version: 11,
+    name: 'priorité des tâches (P1, P2, P3)',
+    sql: `ALTER TABLE task ADD COLUMN priority INTEGER;`,
+  },
 ];
 
 export const LATEST_VERSION = MIGRATIONS.at(-1)!.version;

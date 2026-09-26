@@ -7,7 +7,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-- [~] Priorité des tâches : branche `claude/priorite-ixjyv7`, à jour avec `main`, pas encore fusionnée (migration 11)
+- [~] Priorité des tâches (fusionnée sur `main`, CI à vérifier) : icônes 1 2 3 à droite, `p` ou clic ; migration 11
 
 ## Décisions attendues
 
@@ -19,6 +19,9 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 - [?] Chrono : un seul en marche à la fois (en lancer un met l'autre en pause). À garder ?
 - [?] Plan journée : une tâche du plan mais pas faite disparaît le lendemain. La reporter automatiquement au jour suivant ?
 - [?] Plan journée : compteur rouge seulement **au-delà** du maximum (6/5), pas à 5/5. Orange à 5/5 ?
+
+- [?] Priorité : trier ou filtrer par priorité ?
+- [?] Branches d'expérimentation (chrono, priorité, sélection du jour) : chacune ajoute la migration 9. À la fusion, renuméroter la 2e et la 3e (10, 11).
 
 ## Idées / plus tard
 

@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { TimerButtons, useTimer } from './Timer';
 import { PlanButton, usePlan } from './Plan';
+import { PriorityButton, usePriority } from './Priority';
 
 interface TaskDialogProps {
   task: Task | DoneTask;
@@ -32,6 +33,7 @@ const isValidTicket = (s: string) => !s || JIRA_KEY_RE.test(s.toUpperCase()) || 
 // enregistre et repasse en lecture ; un second Ctrl+Entrée (ou Échap) ferme.
 // Chrono comme sur la ligne : t lance / met en pause, T remet à zéro.
 // Plan journée comme sur la ligne : s ou ☀.
+// Priorité comme sur la ligne : p (ou clic sur l'icône).
 // Tout est enregistré automatiquement, rien n'est perdu.
 // Accessibilité : focus piégé, titre et description annoncés (Radix),
 // libellés reliés aux champs, erreurs annoncées.
@@ -40,6 +42,7 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
   const done = 'done_at' in task;
   const timer = useTimer(task);
   const plan = usePlan(task);
+  const priority = usePriority(task);
   const [values, setValues] = useState({ title: task.title, ticket: ticketOf(task), notes: task.notes ?? '' });
   // Ouverte par e (édition complète) ou sur le ticket (L, J → reporté) : directement en édition.
   const [editing, setEditing] = useState(field !== 'notes');
@@ -146,6 +149,7 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
     const inField = (e.target as HTMLElement).matches('input, textarea');
     if (!inField && !done && !e.ctrlKey && !e.metaKey && !e.altKey && timer.onKey(e)) return;
     if (!inField && !done && !e.ctrlKey && !e.metaKey && !e.altKey && plan.onKey(e)) return;
+    if (!inField && !e.ctrlKey && !e.metaKey && !e.altKey && priority.onKey(e)) return;
     if (e.key === 'e' && !editing && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault();
       startEditing();
@@ -202,6 +206,7 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
           <span className="flex">
             {!done && <TimerButtons timer={timer} />}
             {!done && <PlanButton plan={plan} />}
+            <PriorityButton priority={task.priority} onClick={priority.cycle} />
           </span>
         </div>
 

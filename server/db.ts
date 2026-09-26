@@ -8,6 +8,7 @@ import type {
   Journal,
   JournalDay,
   JournalFilter,
+  Priority,
   Project,
   Settings,
   State,
@@ -27,6 +28,7 @@ export interface TaskPatch {
   timeSpent?: number; // annulation : valeurs du chrono remises telles quelles
   timerStartedAt?: string | null;
   dayAt?: string | null;
+  priority?: Priority | null;
 }
 import type { ImportItem } from './markdown.ts';
 import { LATEST_VERSION, migrate, schemaVersion, type MigrationReport } from './migrations.ts';
@@ -152,7 +154,7 @@ export class Store {
       'tasks'
     >[];
     const tasks = this.db
-      .prepare('SELECT id, project_id, title, jira_wanted_at, jira_at, jira_key, jira_url, notes, time_spent, timer_started_at, day_at FROM task WHERE done_at IS NULL ORDER BY position, id')
+      .prepare('SELECT id, project_id, title, jira_wanted_at, jira_at, jira_key, jira_url, notes, time_spent, timer_started_at, day_at, priority FROM task WHERE done_at IS NULL ORDER BY position, id')
       .all() as unknown as Task[];
     const byProject = new Map<number, Project>(projects.map((p) => [p.id, { ...p, tasks: [] }]));
     for (const t of tasks) byProject.get(t.project_id)?.tasks.push({ ...t });
@@ -208,7 +210,7 @@ export class Store {
     const rows = this.db
       .prepare(
         `SELECT t.id, t.title, t.done_at, t.jira_wanted_at, t.jira_at, t.jira_key, t.jira_url, t.notes,
-                t.time_spent, t.timer_started_at, t.day_at, t.project_id, p.name AS project_name
+                t.time_spent, t.timer_started_at, t.day_at, t.priority, t.project_id, p.name AS project_name
          FROM task t JOIN project p ON p.id = t.project_id
          WHERE ${where.join(' AND ')}
          ORDER BY t.done_at DESC, p.id, t.id`,
@@ -296,9 +298,10 @@ export class Store {
   // jira : état du suivi Jira ('none' efface aussi le ticket) ;
   // jiraKey / jiraUrl : ticket (clé ou lien complet) ; notes : détails (Markdown).
   // timer : chrono (un seul en marche à la fois ; une tâche faite l'arrête) ;
-  // dayAt : au plan de cette journée (Plan journée), null = retirée.
+  // dayAt : au plan de cette journée (Plan journée), null = retirée ;
+  // priority : 1 à 3, null = aucune.
   updateTask(id: number, patch: TaskPatch) {
-    const { title, doneAt, jira, jiraKey, jiraUrl, notes, timer, timeSpent, timerStartedAt, dayAt } = patch;
+    const { title, doneAt, jira, jiraKey, jiraUrl, notes, timer, timeSpent, timerStartedAt, dayAt, priority } = patch;
     if (title !== undefined) this.db.prepare('UPDATE task SET title = ? WHERE id = ?').run(title, id);
     if (doneAt) this.db.prepare(`UPDATE task SET ${PAUSE} WHERE id = ? AND timer_started_at IS NOT NULL`).run(id);
     if (doneAt !== undefined) this.db.prepare('UPDATE task SET done_at = ? WHERE id = ?').run(doneAt, id);
@@ -324,6 +327,7 @@ export class Store {
     if (jiraUrl !== undefined) this.db.prepare('UPDATE task SET jira_url = ? WHERE id = ?').run(jiraUrl, id);
     if (notes !== undefined) this.db.prepare('UPDATE task SET notes = ? WHERE id = ?').run(notes, id);
     if (dayAt !== undefined) this.db.prepare('UPDATE task SET day_at = ? WHERE id = ?').run(dayAt, id);
+    if (priority !== undefined) this.db.prepare('UPDATE task SET priority = ? WHERE id = ?').run(priority, id);
     return this.task(id);
   }
 
@@ -383,12 +387,12 @@ export class Store {
     this.db
       .prepare(
         `INSERT INTO task (id, project_id, title, created_at, done_at, position, notes,
-                           jira_wanted_at, jira_at, jira_key, jira_url, time_spent, timer_started_at, day_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                           jira_wanted_at, jira_at, jira_key, jira_url, time_spent, timer_started_at, day_at, priority)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         row.id, row.project_id, row.title, row.created_at, row.done_at, row.position, row.notes,
-        row.jira_wanted_at, row.jira_at, row.jira_key, row.jira_url, row.time_spent, row.timer_started_at, row.day_at,
+        row.jira_wanted_at, row.jira_at, row.jira_key, row.jira_url, row.time_spent, row.timer_started_at, row.day_at, row.priority,
       );
     return this.task(row.id)!;
   }

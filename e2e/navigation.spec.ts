@@ -169,12 +169,11 @@ test('champ d’ajout : on tape directement, Entrée ajoute, Échap vide et sort
   await page.keyboard.type('brouillon');
   await page.keyboard.press('Escape');
   await expect(page.locator(`[data-nav-key="add:${data.alpha.id}"]`)).toHaveValue('');
-  // Hors du champ, sur la tâche au-dessus : les raccourcis marchent (p = nouveau projet).
+  // Hors du champ, sur la tâche au-dessus : les raccourcis marchent (p = priorité).
   const quatre = store.state().projects[0].tasks[2].id;
   await expect.poll(() => current(page)).toBe(`task:${quatre}`);
   await page.keyboard.press('p');
-  await expect(page.locator('#new-project')).toBeFocused();
-  await expect(page.locator('#new-project')).toHaveValue('');
+  await expect(page.locator(`#projects li.task:has([data-nav-key="task:${quatre}"]) button.priority`)).toHaveAttribute('aria-label', 'Priorité 1');
   await expect(page.locator(`[data-nav-key="add:${data.alpha.id}"]`)).toHaveValue('');
 });
 
@@ -237,11 +236,13 @@ test('ligne de tâche : icônes alignées à droite, clic n’importe où sur la
   const une = page.locator('#projects li.task').first();
   const box = async (sel: string) => (await une.locator(sel).boundingBox())!;
   const rowBox = (await une.boundingBox())!;
-  // Icônes (report, détails, chrono, puis ☀ Plan journée) collées au bord droit de la ligne.
+  // Icônes (report, détails, chrono, ☀ Plan journée, puis priorité) collées au bord droit de la ligne.
   const details = await box('.details');
   const timer = await box('.timer');
   const sun = await box('.day-toggle');
-  expect(rowBox.x + rowBox.width - (sun.x + sun.width)).toBeLessThan(10);
+  const priority = await box('button.priority');
+  expect(rowBox.x + rowBox.width - (priority.x + priority.width)).toBeLessThan(10);
+  expect(priority.x - (sun.x + sun.width)).toBeLessThan(10);
   expect(sun.x - (timer.x + timer.width)).toBeLessThan(10);
   expect(timer.x - (details.x + details.width)).toBeLessThan(10);
   expect((await box('.report')).x).toBeGreaterThan(rowBox.x + rowBox.width / 2);

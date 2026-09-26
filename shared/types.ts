@@ -12,6 +12,7 @@ export interface Task {
   jira_key: string | null; // clé du ticket (PROJ-123), lien construit avec l'URL Jira d'entreprise
   jira_url: string | null; // ou lien complet vers le ticket (http/https)
   notes: string | null; // détails, en Markdown
+  priority: Priority | null; // P1 (la plus haute) à P3, null = aucune
   day_at: string | null; // choisie pour la journée du 'YYYY-MM-DD' (Plan journée)
   time_spent: number; // chrono : secondes cumulées (hors période en cours)
   timer_started_at: string | null; // chrono en marche depuis (UTC, 'YYYY-MM-DD HH:MM:SS')
@@ -33,6 +34,9 @@ export function formatDuration(seconds: number): string {
   if (minutes < 60) return `${minutes} min`;
   return `${Math.floor(minutes / 60)}h${String(minutes % 60).padStart(2, '0')}`;
 }
+
+export const PRIORITIES = [1, 2, 3] as const;
+export type Priority = (typeof PRIORITIES)[number];
 
 export interface Settings {
   jira_base_url: string | null; // ex. https://entreprise.atlassian.net

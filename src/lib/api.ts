@@ -1,4 +1,4 @@
-import type { ImportResult, JiraState, TimerAction, Journal, JournalFilter, Settings, State } from '../../shared/types.ts';
+import type { ImportResult, JiraState, Priority, TimerAction, Journal, JournalFilter, Settings, State } from '../../shared/types.ts';
 
 // Le serveur exige un Content-Type précis par route (protection CSRF).
 async function request<T>(method: string, url: string, body?: unknown): Promise<T> {
@@ -31,6 +31,7 @@ export interface TaskPatch {
   time_spent?: number; // annulation du chrono
   timer_started_at?: string | null;
   day_at?: string | null; // Plan journée : date du jour, null = retirée
+  priority?: Priority | null;
 }
 
 export const api = {

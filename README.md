@@ -69,6 +69,7 @@ Chaque session démarre dans un conteneur neuf : les dépendances doivent y êtr
   - Ouverte par `L` (ou `J` → reporté), la fiche démarre en édition sur le ticket et `Entrée` la ferme.
 - Chrono d'une tâche à faire : au survol de la ligne (et dans la fiche), ▷ lance le chrono (`t`) ; en marche, l'icône devient une pause pleine, toujours visible. Temps passé dans l'info-bulle de l'icône (« 12 min », puis « 2h34 »). ↻ remet à zéro (`T`, sans confirmation, annulable par `u`). Un seul chrono en marche à la fois. Cocher la tâche arrête son chrono.
 - Plan journée : au survol d'une tâche à faire (et dans la fiche), ☀ l'ajoute au plan du jour (`s`) ; au plan, le soleil est plein et reste visible. L'onglet « Plan journée » (`v`, adresse `/plan`) ne montre que ces tâches, par projet, sous un compteur « 3/5 tâches » (tâches du plan, faites comprises, sur le maximum par jour), en rouge au-delà du maximum. Une tâche cochée part dans le Log et reste comptée. Le plan vaut pour le jour même. Maximum réglable dans les Réglages (5 par défaut). Filtres de la zone des projets masqués dans cet onglet. Annulable (`u`).
+- Priorité d'une tâche : icône chiffre à droite, pleine et colorée (1 rouge, 2 orange, 3 bleu), carré vide visible au survol sinon. `p` sur la tâche ou clic sur l'icône : aucune → 1 → 2 → 3 → aucune. Même icône et même touche dans la fiche. Annulable (`u`).
 - Icônes d'une tâche : toutes à droite, même style (atténuées et vides ; pleines quand actives, et alors toujours visibles).
 - Report : une tâche passe « à reporter », puis « reporté » (badge après le titre : l'identifiant du ticket s'il y en a un, « reporté » sinon ; date du report en info-bulle).
 - Réglages (icône ⚙, page `/admin`, `Échap` pour revenir) : URL de base des tickets (ex. `https://entreprise.atlassian.net`), qui transforme les identifiants en liens (`URL/browse/PROJ-123`), conservée en base ; nombre de tâches maximum par jour (Plan journée) ; export / import des données.
@@ -91,13 +92,14 @@ Clavier (`?` affiche l'aide) :
 | `T` (majuscule) | Remettre le chrono à zéro (annulable par `u`) |
 | `s` | Ajouter la tâche au plan journée / l'en retirer (aussi dans la fiche) |
 | `v` | Onglet « Projets » / « Plan journée » |
+| `p` sur une tâche | Priorité suivante : aucune → 1 → 2 → 3 → aucune (aussi dans la fiche) |
 | `r` | Projets : afficher seulement les tâches à reporter (ou clic sur « N tâches à reporter ») |
 | `*` | Afficher seulement les projets favoris (ou clic sur « Favoris ») |
 | `f` sur un projet | Favori / plus favori (ailleurs, `f` filtre le Log par projet) |
 | `a` sur un projet | Archiver / désarchiver |
 | `x` puis `x` | Supprimer la tâche ou le projet : le 1er appui affiche ce qui va être supprimé, le 2e supprime (`Échap` annule). `Suppr` marche aussi |
-| `u` | Annuler la dernière action : sur une tâche cocher / décocher, renommer, supprimer, chrono, plan journée ; sur un projet favori, archivage, suppression (une seule, pas les modifications faites dans la fiche). Le curseur revient sur l'élément |
-| `p` / `n` | Nouveau projet / nouvelle tâche (dans le projet où est le curseur, sinon le dernier utilisé) |
+| `u` | Annuler la dernière action : sur une tâche cocher / décocher, renommer, supprimer, chrono, plan journée, priorité ; sur un projet favori, archivage, suppression (une seule, pas les modifications faites dans la fiche). Le curseur revient sur l'élément |
+| `p` / `n` | Nouveau projet (ailleurs que sur une tâche) / nouvelle tâche (dans le projet où est le curseur, sinon le dernier utilisé) |
 | `d` / `f` | Filtre du Log par journée / par projet (`f` hors projet sélectionné) |
 | `/` | Rechercher dans le Log |
 
@@ -141,10 +143,10 @@ En dev, l'API est branchée dans le serveur Vite (`vite.config.ts`) : une seule 
 
 ## Modèle de données
 
-`project` (id, name, created_at, archived_at, favorite_at, position) : 1 projet a 0..n `task` (id, project_id, title, created_at, done_at, position, notes, jira_wanted_at, jira_at, jira_key, jira_url, time_spent, timer_started_at, day_at).
+`project` (id, name, created_at, archived_at, favorite_at, position) : 1 projet a 0..n `task` (id, project_id, title, created_at, done_at, position, notes, jira_wanted_at, jira_at, jira_key, jira_url, time_spent, timer_started_at, day_at, priority).
 `setting` (key, value) : réglages de l'application (ex. `jira_base_url`, `day_capacity` = maximum de tâches par jour, 5 par défaut).
 `position` = ordre des projets, et ordre (priorité) des tâches dans leur projet.
-`notes` = contenu en Markdown. Chrono : `time_spent` = secondes cumulées, `timer_started_at` = chrono en marche depuis (UTC) ; temps passé = les deux additionnés. `day_at` = jour ('YYYY-MM-DD') pour lequel la tâche a été mise au plan (Plan journée). Une tâche est faite quand `done_at` est rempli (le journal, ce sont ces tâches-là), à reporter quand `jira_wanted_at` l'est et pas `jira_at`, reportée quand `jira_at` l'est. Ticket : `jira_key` (lien construit avec `jira_base_url`, qui peut donc changer) ou `jira_url` (lien complet). Liens en http(s) uniquement.
+`notes` = contenu en Markdown. Chrono : `time_spent` = secondes cumulées, `timer_started_at` = chrono en marche depuis (UTC) ; temps passé = les deux additionnés. `day_at` = jour ('YYYY-MM-DD') pour lequel la tâche a été mise au plan (Plan journée). `priority` = 1 (P1, la plus haute) à 3, NULL = aucune. Une tâche est faite quand `done_at` est rempli (le journal, ce sont ces tâches-là), à reporter quand `jira_wanted_at` l'est et pas `jira_at`, reportée quand `jira_at` l'est. Ticket : `jira_key` (lien construit avec `jira_base_url`, qui peut donc changer) ou `jira_url` (lien complet). Liens en http(s) uniquement.
 ### Versions du schéma
 
 - Chaque évolution de la base est un **script numéroté** dans `server/migrations.ts` (version, nom, SQL). On ajoute une version en fin de liste, on ne modifie jamais un script publié.

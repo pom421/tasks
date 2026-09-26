@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { type DeletedProject, type ProjectPatch, type ProjectRow, type Store, type TaskPatch, type TaskRow, isDate, today } from './db.ts';
-import { JIRA_KEY_RE, type JiraState, type Settings, type TimerAction } from '../shared/types.ts';
+import { JIRA_KEY_RE, PRIORITIES, type JiraState, type Priority, type Settings, type TimerAction } from '../shared/types.ts';
 import { parseMarkdown } from './markdown.ts';
 
 type Req = IncomingMessage;
@@ -112,6 +112,13 @@ function int(v: unknown, label: string): number {
   return v as number;
 }
 
+// Priorité : 1, 2 ou 3 ; null (ou absente) = aucune.
+function priority(v: unknown): Priority | null {
+  if (v === null || v === undefined) return null;
+  if (!PRIORITIES.includes(v as Priority)) throw new HttpError(400, 'Priorité invalide : 1, 2 ou 3 attendu');
+  return v as Priority;
+}
+
 // Journée choisie (Plan journée) : date 'YYYY-MM-DD' ou null.
 function dayAt(v: unknown): string | null {
   if (v === null || v === undefined) return null;
@@ -146,6 +153,7 @@ function restoredTask(body: Body): TaskRow {
     time_spent: int(body.time_spent ?? 0, 'Temps passé'),
     timer_started_at: timestamp(body.timer_started_at, 'Début du chrono'),
     day_at: dayAt(body.day_at),
+    priority: priority(body.priority),
   };
 }
 
@@ -343,6 +351,7 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
       if ('time_spent' in body) patch.timeSpent = int(body.time_spent, 'Temps passé');
       if ('timer_started_at' in body) patch.timerStartedAt = timestamp(body.timer_started_at, 'Début du chrono');
       if ('day_at' in body) patch.dayAt = dayAt(body.day_at);
+      if ('priority' in body) patch.priority = priority(body.priority);
       const task = store.updateTask(Number(id), patch);
       if (!task) throw new HttpError(404, 'Tâche introuvable');
       send(res, 200, task);
