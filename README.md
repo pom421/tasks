@@ -152,6 +152,6 @@ En dev, l'API est branchée dans le serveur Vite (`vite.config.ts`) : une seule 
 - Chaque évolution de la base est un **script numéroté** dans `server/migrations.ts` (version, nom, SQL). On ajoute une version en fin de liste, on ne modifie jamais un script publié.
 - À l'ouverture (démarrage ou import d'une base), les scripts manquants sont appliqués **dans l'ordre**, chacun dans une transaction : une base en version 2 passe en version 6 via 3, 4, 5 et 6.
 - Suivi dans la table technique `schema_migration` (version, nom, version de l'outil, date d'application).
-- Avant de migrer une base existante, une **sauvegarde** est faite à côté : `tasks.db.v2.bak`.
+- Avant de migrer une base existante, une **sauvegarde** est faite à côté : `tasks.db.v2.bak` (si elle existe déjà, elle n'est pas écrasée : `tasks.db.v2.2.bak`, etc.).
 - Une base plus récente que l'outil est refusée (mettre l'outil à jour).
 - `pnpm db:migrate [fichier]` : affiche la version et l'historique, et migre si besoin.

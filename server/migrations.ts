@@ -159,6 +159,9 @@ export function migrate(db: DatabaseSync, file?: string): MigrationReport {
   let backup: string | null = null;
   if (pending.length && from > 0 && file && file !== ':memory:' && fs.existsSync(file)) {
     backup = `${file}.v${from}.bak`;
+    // Sauvegarde déjà présente (base restaurée depuis elle, migration relancée) :
+    // jamais écrasée, la nouvelle prend le numéro suivant (.v8.2.bak…).
+    for (let n = 2; fs.existsSync(backup); n++) backup = `${file}.v${from}.${n}.bak`;
     db.exec(`VACUUM INTO '${backup.replaceAll("'", "''")}'`);
     fs.chmodSync(backup, 0o600);
   }
