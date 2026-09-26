@@ -268,7 +268,7 @@ export function ProjectList({ projects, archivedOnly, jiraFilter, favoritesOnly 
           </p>
         )}
       </section>
-      <AddInput id="new-project" className="mt-6 font-semibold" placeholder="+ Nouveau projet (p)" navKey="new-project" onAdd={addProject} />
+      <AddInput id="new-project" className="mt-6 font-semibold" placeholder="+ Nouveau projet (n n)" navKey="new-project" onAdd={addProject} />
     </>
   );
 }

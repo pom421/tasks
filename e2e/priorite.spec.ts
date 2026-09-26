@@ -86,7 +86,7 @@ test('fiche : même icône, mêmes touches', async ({ page, store }) => {
   await expect(row(page, 'Une2')).toBeVisible();
 });
 
-test('non-régression : priorité gardée dans le Log ; p sur une tâche = nouveau projet', async ({ page, store }) => {
+test('non-régression : priorité gardée dans le Log ; n n sur une tâche = nouveau projet', async ({ page, store }) => {
   const alpha = store.createProject('Alpha');
   const une = store.createTask(alpha.id, 'Une');
   store.createTask(alpha.id, 'Deux');
@@ -94,6 +94,7 @@ test('non-régression : priorité gardée dans le Log ; p sur une tâche = nouve
   await page.goto('/');
   await expect(page.locator('.day li.task', { hasText: 'Une' }).locator('button.priority')).toHaveAttribute('aria-label', 'Priorité 1');
   await row(page, 'Deux').locator('.name').focus();
-  await page.keyboard.press('p');
+  await page.keyboard.press('n');
+  await page.keyboard.press('n');
   await expect(page.locator('#new-project')).toBeFocused();
 });

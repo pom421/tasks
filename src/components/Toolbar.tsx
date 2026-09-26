@@ -25,8 +25,9 @@ const SHORTCUTS: [string, string][] = [
   ['f', 'Sur un projet : favori / plus favori'],
   ['F', 'Afficher seulement les projets favoris'],
   ['a', 'Sur un projet : archiver / désarchiver'],
+  ['A', 'Afficher seulement les projets archivés'],
   ['u', 'Annuler la dernière action (cocher, renommer, supprimer, chrono, plan journée, priorité, favori, archivage)'],
-  ['p', 'Nouveau projet'],
+  ['n n', 'Nouveau projet (n deux fois, rapprochés)'],
   ['n', 'Nouvelle tâche (projet courant, sinon dernier utilisé)'],
   ['d', 'Filtrer le log sur une journée'],
   ['/', 'Rechercher dans le log (titre, contenu, ticket) ; Tab : journée, projet'],
@@ -84,7 +85,7 @@ export function Toolbar({ jiraWanted, jiraDone, jiraFilter, onJiraFilter, favori
             id="archived-only"
             className={filterClass(archivedOnly)}
             aria-pressed={archivedOnly}
-            title="Afficher seulement les projets archivés"
+            title="Afficher seulement les projets archivés (A)"
             onClick={onArchivedOnly}
           >
             <Archive aria-hidden fill={archivedOnly ? 'currentColor' : 'none'} /> Archivés

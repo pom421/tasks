@@ -60,6 +60,8 @@ export function App() {
   const pending = useRef<PendingFocus[]>([]);
   const lastProject = useRef<number | null>(null);
   const lastUndo = useRef<Undo | null>(null);
+  // Instant du dernier n : un 2e n rapproché (n n) ouvre « Nouveau projet ».
+  const lastN = useRef(0);
 
   const toast = useCallback((msg: string) => setMessage(msg), []);
   useEffect(() => {
@@ -168,21 +170,23 @@ export function App() {
       const target = e.target as HTMLElement;
       if (target.closest('input, select, textarea, [role="dialog"]')) return;
       // n : champ d'ajout du projet où est le curseur (projet ou une de ses
-      // tâches), sinon du dernier projet utilisé, sinon du premier.
+      // tâches), sinon du dernier projet utilisé, sinon du premier ; aucun
+      // projet : « Nouveau projet ». Un 2e n rapproché : voir l'effet suivant.
       const focusAdd = () => {
+        lastN.current = Date.now();
         const here = target.closest('#projects .project')?.id.replace('project-', '');
         const inputs = [...document.querySelectorAll<HTMLInputElement>('#projects input.add')];
         const find = (id: unknown) => inputs.find((i) => i.dataset.navKey === `add:${id}`);
-        (find(here) ?? find(lastProject.current) ?? inputs[0])?.focus();
+        (find(here) ?? find(lastProject.current) ?? inputs[0] ?? document.getElementById('new-project'))?.focus();
       };
       const keys: Record<string, () => void> = {
-        p: () => document.getElementById('new-project')?.focus(),
         n: focusAdd,
         d: () => document.getElementById('filter-date')?.focus(),
         '/': () => document.getElementById('log-search')?.focus(),
         // Filtres de la zone des projets : sans effet dans l'onglet Plan journée.
         R: () => !dayView && cycleJiraFilter(),
         F: () => !dayView && setFavoritesOnly((v) => !v),
+        A: () => !dayView && setArchivedOnly((v) => !v),
         T: () => navigate(dayView ? '/' : '/plan'),
         u: undo,
         '?': () => setHelpOpen(true),
@@ -197,6 +201,23 @@ export function App() {
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   });
+
+  // n n : nouveau projet. Le 1er n a placé le curseur dans un champ d'ajout de
+  // tâche (encore vide) ; le 2e, rapproché, y est intercepté (phase de capture,
+  // avant de s'écrire) et part sur « Nouveau projet ».
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const field = e.target as HTMLInputElement;
+      if (e.key !== 'n' || e.ctrlKey || e.metaKey || e.altKey || Date.now() - lastN.current > 800) return;
+      if (!field.matches?.('#projects input.add') || field.value) return;
+      e.preventDefault();
+      e.stopPropagation();
+      lastN.current = 0;
+      document.getElementById('new-project')?.focus();
+    };
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, []);
 
   // Tâche ouverte dans la fiche : relue dans les données à jour (liste ou journal).
   const allTasks: (Task & { project_name?: string })[] = [

@@ -7,7 +7,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-- [~] Raccourcis : `f` favori (projet) / `F` filtre Favoris (remplace `*`) ; `r` report (remplace `J`) / `R` filtre à reporter → reportées → tous (remplace `r`) ; priorité `1` `2` `3` (remplace `p`) ; plus de `f` pour le Log (`/` puis `Tab`)
+- [~] Raccourcis : `f` favori (projet) / `F` filtre Favoris (remplace `*`) ; `r` report (remplace `J`) / `R` filtre à reporter → reportées → tous (remplace `r`) ; priorité `1` `2` `3` (remplace `p`) ; plus de `f` pour le Log (`/` puis `Tab`) ; `A` filtre Archivés ; `n` `n` nouveau projet (remplace `p`)
 
 ## Décisions attendues
 
@@ -20,7 +20,6 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 - [?] Plan journée : une tâche du plan mais pas faite disparaît le lendemain. La reporter automatiquement au jour suivant ?
 - [?] Plan journée : compteur rouge seulement **au-delà** du maximum (6/5), pas à 5/5. Orange à 5/5 ?
 - [?] Priorité : trier ou filtrer par priorité ?
-- [?] Raccourcis restants de la règle « minuscule = action, majuscule = filtre » : `A` pour le filtre Archivés ? `N` pour nouveau projet ?
 
 ## Idées / plus tard
 

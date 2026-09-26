@@ -169,10 +169,11 @@ test('champ d’ajout : on tape directement, Entrée ajoute, Échap vide et sort
   await page.keyboard.type('brouillon');
   await page.keyboard.press('Escape');
   await expect(page.locator(`[data-nav-key="add:${data.alpha.id}"]`)).toHaveValue('');
-  // Hors du champ, sur la tâche au-dessus : les raccourcis marchent (p = nouveau projet).
+  // Hors du champ, sur la tâche au-dessus : les raccourcis marchent (n n = nouveau projet).
   const quatre = store.state().projects[0].tasks[2].id;
   await expect.poll(() => current(page)).toBe(`task:${quatre}`);
-  await page.keyboard.press('p');
+  await page.keyboard.press('n');
+  await page.keyboard.press('n');
   await expect(page.locator('#new-project')).toBeFocused();
   await expect(page.locator('#new-project')).toHaveValue('');
   await expect(page.locator(`[data-nav-key="add:${data.alpha.id}"]`)).toHaveValue('');
@@ -312,7 +313,15 @@ test('raccourcis actifs même quand le focus est sur la case à cocher', async (
 });
 
 test('nouveau projet : le focus va sur la saisie de sa première tâche', async ({ page, store }) => {
+  // p et N ne font rien (nouveau projet : n n) ; un seul n : champ d'ajout de tâche.
   await page.keyboard.press('p');
+  await page.keyboard.press('N');
+  await expect(page.locator('#new-project')).not.toBeFocused();
+  await page.keyboard.press('n');
+  await expect(page.locator('#projects input.add').first()).toBeFocused();
+  await page.keyboard.press('n');
+  await expect(page.locator('#new-project')).toBeFocused();
+  await expect(page.locator('#projects input.add').first()).toHaveValue('');
   await page.keyboard.type('Gamma');
   await page.keyboard.press('Enter');
   await expect(page.locator('.project-head .name', { hasText: 'Gamma' })).toBeVisible();
@@ -406,7 +415,7 @@ test('vers un projet vide ; les projets archivés masqués sont sautés', async 
 
 // --- Favoris, archive, suppression ---------------------------------------
 
-test('cœur : projet favori (plein, rouge) ; bouton Favoris et * filtrent', async ({ page, store, data }) => {
+test('cœur : projet favori (plein, rouge) ; bouton Favoris et F filtrent', async ({ page, store, data }) => {
   await expect(page.locator('#favorites-only')).toHaveCount(0); // aucun favori : pas de bouton
   const heart = page.locator(`#project-${data.beta.id}`).getByRole('button', { name: 'Favori' });
   await expect(heart).toHaveAttribute('aria-pressed', 'false');
@@ -428,6 +437,20 @@ test('cœur : projet favori (plein, rouge) ; bouton Favoris et * filtrent', asyn
   await expect(page.locator('.project')).toHaveCount(2);
   await page.keyboard.press('F');
   await expect(page.locator('.project')).toHaveCount(1);
+});
+
+test('A : bascule le filtre Archivés', async ({ page, store, data }) => {
+  store.updateProject(data.beta.id, { archived: true });
+  await reload(page);
+  const filter = page.locator('#archived-only');
+  await expect(filter).toHaveAttribute('title', 'Afficher seulement les projets archivés (A)');
+  await expect(page.locator('.project .project-head .name')).toHaveText(['Alpha']);
+  await page.keyboard.press('A');
+  await expect(filter).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.project .project-head .name')).toHaveText(['Beta']);
+  await page.keyboard.press('A');
+  await expect(filter).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('.project .project-head .name')).toHaveText(['Alpha']);
 });
 
 test('archiver et supprimer : boutons icônes nommés, titre au survol', async ({ page, store, data }) => {

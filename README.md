@@ -62,7 +62,7 @@ Chaque session démarre dans un conteneur neuf : les dépendances doivent y êtr
   - `<` / `>` passent au jour précédent / suivant qui a des entrées (désactivés en bout de liste et pendant une recherche) ; « Aujourd’hui », tout à droite, y ramène. Le nombre de résultats s'affiche au centre : « 5 tâches trouvées dans 2 journées ».
 - Nouveau projet → curseur directement sur la saisie de sa première tâche.
 - Projet : cœur ♡ = favori (plein et rouge quand actif, `f`). Au survol d'un projet : icônes archive (archiver / désarchiver, `a`) et corbeille (supprimer, `x` `x`), avec leur nom en info-bulle. Suppression toujours en deux temps, sans fenêtre de confirmation : 1er appui (`x` ou corbeille) = message de ce qui va être supprimé, 2e appui = suppression, `Échap` annule. Une tâche se supprime au clavier (`x` `x`). Tout est annulable (`u`), y compris la suppression : le projet revient avec toutes ses tâches, Log compris.
-- Sous la barre d'outils, alignés à droite, trois filtres de la **zone des projets** (sans effet sur le Log), combinables : report (`R` ou clic : « N tâches à reporter » → « N tâches reportées » → toutes), « Archivés » (seulement les projets archivés), « Favoris » (seulement les favoris, `F`). Chacun n'apparaît que s'il sert (au moins une tâche à faire à reporter ou reportée, un projet archivé, un favori) ; actif, son icône se remplit (pas de fond coloré).
+- Sous la barre d'outils, alignés à droite, trois filtres de la **zone des projets** (sans effet sur le Log), combinables : report (`R` ou clic : « N tâches à reporter » → « N tâches reportées » → toutes), « Archivés » (seulement les projets archivés, `A`), « Favoris » (seulement les favoris, `F`). Chacun n'apparaît que s'il sert (au moins une tâche à faire à reporter ou reportée, un projet archivé, un favori) ; actif, son icône se remplit (pas de fond coloré).
 - Souris : clic sur un nom pour le modifier (pour une tâche, n'importe où sur la ligne jusqu'aux icônes, alignées à droite). Titre trop long : coupé par « … », affiché en entier au survol (ou au focus clavier).
 - Fiche d'une tâche (`Maj+Entrée`, `o` ou icône 🗒) : titre complet, identifiant du ticket (`PROJ-123`), puis contenu en Markdown. L'icône 🗒 signale une tâche qui a du contenu.
   - Lecture seule par défaut. `e` (comme GitLab) passe tout en édition : titre, puis `Tab` → ticket, puis `Tab` → contenu. Double-clic sur le contenu : édition directement dedans.
@@ -82,7 +82,7 @@ Clavier (`?` affiche l'aide) :
 | `↑` `↓` ou `j` `k` | Passer d'un projet, d'une tâche ou d'un champ « + Ajouter » à l'autre (`Début` / `Fin` ou `g` `g` / `G` : premier / dernier) |
 | `Maj+↑` `Maj+↓` | En-tête du projet précédent / suivant |
 | `Entrée` | Modifier le nom sélectionné, puis `Entrée` pour enregistrer |
-| `Échap` | Quitter l'édition sans enregistrer, retour à la navigation ; dans un champ « + Ajouter » : le vide et en sort (curseur sur l'élément au-dessus, `p` / `n` utilisables) |
+| `Échap` | Quitter l'édition sans enregistrer, retour à la navigation ; dans un champ « + Ajouter » : le vide et en sort (curseur sur l'élément au-dessus, `n` utilisable) |
 | `Espace` | Cocher / décocher la tâche |
 | `Alt+↑` `Alt+↓` (ou `Alt+k` `Alt+j`) | Monter / descendre la tâche (priorité). En bord de projet, elle passe dans le projet voisin |
 | `Alt+↑` `Alt+↓` sur un projet | Monter / descendre tout le projet (avant / après le projet voisin) |
@@ -99,9 +99,11 @@ Clavier (`?` affiche l'aide) :
 | `f` sur un projet | Favori / plus favori |
 | `F` (majuscule) | Afficher seulement les projets favoris (ou clic sur « Favoris ») |
 | `a` sur un projet | Archiver / désarchiver |
+| `A` (majuscule) | Afficher seulement les projets archivés (ou clic sur « Archivés ») |
 | `x` puis `x` | Supprimer la tâche ou le projet : le 1er appui affiche ce qui va être supprimé, le 2e supprime (`Échap` annule). `Suppr` marche aussi |
 | `u` | Annuler la dernière action : sur une tâche cocher / décocher, renommer, supprimer, chrono, plan journée, priorité ; sur un projet favori, archivage, suppression (une seule, pas les modifications faites dans la fiche). Le curseur revient sur l'élément |
-| `p` / `n` | Nouveau projet / nouvelle tâche (dans le projet où est le curseur, sinon le dernier utilisé) |
+| `n` | Nouvelle tâche (dans le projet où est le curseur, sinon le dernier utilisé) |
+| `n` puis `n` | Nouveau projet (deux appuis rapprochés, comme `g` `g`) |
 | `d` | Filtre du Log par journée |
 | `/` | Rechercher dans le Log |
 
