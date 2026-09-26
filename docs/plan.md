@@ -7,7 +7,9 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-- [~] Priorité des tâches (branche d'expérimentation `claude/priorite-ixjyv7`, pas encore sur `main`) : drapeau à droite, plein et coloré (P1 rouge, P2 orange, P3 bleu) ; `1` `2` `3` ou clic, sur la ligne et dans la fiche ; migration 9
+- [~] Chrono par tâche (fusionné sur `main`, CI à vérifier) : ▷ / pause pleine (`t`), ↻ remise à zéro (`T`, sans confirmation), temps passé en info-bulle, sur la ligne et dans la fiche ; migration 9
+- [~] Plan journée (fusionné sur `main`, CI à vérifier) : ☀ / `s` sur la ligne et dans la fiche, onglet « Plan journée » (`v`, `/plan`), compteur « 3/5 tâches » rouge au-delà du maximum (Réglages) ; migration 10
+- [~] Priorité des tâches (branche d'expérimentation `claude/priorite-ixjyv7`, à jour avec `main`) : drapeau à droite, plein et coloré (P1 rouge, P2 orange, P3 bleu) ; `1` `2` `3` ou clic, sur la ligne et dans la fiche ; migration 11
 
 ## Décisions attendues
 
@@ -16,6 +18,9 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
   le Log pour ne pas les oublier ?
 - [?] Filtre « Archivés » actif : icône archive pleine = bloc noir (le trait
   intérieur disparaît). Remplissage gris clair à la place ?
+- [?] Chrono : un seul en marche à la fois (en lancer un met l'autre en pause). À garder ?
+- [?] Plan journée : une tâche du plan mais pas faite disparaît le lendemain. La reporter automatiquement au jour suivant ?
+- [?] Plan journée : compteur rouge seulement **au-delà** du maximum (6/5), pas à 5/5. Orange à 5/5 ?
 
 - [?] Priorité : trier ou filtrer par priorité ? Le drapeau sert aussi au filtre « à reporter » de la barre d'outils : changer l'un des deux ?
 - [?] Branches d'expérimentation (chrono, priorité, sélection du jour) : chacune ajoute la migration 9. À la fusion, renuméroter la 2e et la 3e (10, 11).

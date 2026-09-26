@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { type DeletedProject, type ProjectPatch, type ProjectRow, type Store, type TaskPatch, type TaskRow, isDate, today } from './db.ts';
-import { JIRA_KEY_RE, PRIORITIES, type JiraState, type Priority, type Settings } from '../shared/types.ts';
+import { JIRA_KEY_RE, PRIORITIES, type JiraState, type Priority, type Settings, type TimerAction } from '../shared/types.ts';
 import { parseMarkdown } from './markdown.ts';
 
 type Req = IncomingMessage;
@@ -119,6 +119,13 @@ function priority(v: unknown): Priority | null {
   return v as Priority;
 }
 
+// Journée choisie (Plan journée) : date 'YYYY-MM-DD' ou null.
+function dayAt(v: unknown): string | null {
+  if (v === null || v === undefined) return null;
+  if (!isDate(v)) throw new HttpError(400, 'Date invalide');
+  return v;
+}
+
 function timestamp(v: unknown, label: string): string | null {
   if (v === null || v === undefined) return null;
   if (typeof v !== 'string' || !TIMESTAMP_RE.test(v)) throw new HttpError(400, `${label} invalide`);
@@ -143,6 +150,9 @@ function restoredTask(body: Body): TaskRow {
     jira_at: timestamp(body.jira_at, 'Date de report'),
     jira_key: key as string | null,
     jira_url: httpUrl(body.jira_url ?? null),
+    time_spent: int(body.time_spent ?? 0, 'Temps passé'),
+    timer_started_at: timestamp(body.timer_started_at, 'Début du chrono'),
+    day_at: dayAt(body.day_at),
     priority: priority(body.priority),
   };
 }
@@ -229,7 +239,12 @@ export interface AppOptions {
 export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, staticDir }: AppOptions = {}) {
   // Table de routage : [méthode, regex, handler(req, res, url, ...params)].
   const routes: [string, RegExp, Handler][] = [
-    ['GET', /^\/api\/state$/, (_req, res) => send(res, 200, store.state())],
+    // day : journée de « Plan journée » (date du navigateur), facultative.
+    ['GET', /^\/api\/state$/, (_req, res, url) => {
+      const day = url.searchParams.get('day') || undefined;
+      if (day && !isDate(day)) throw new HttpError(400, 'Date invalide');
+      send(res, 200, store.state(day));
+    }],
 
     ['GET', /^\/api\/journal$/, (_req, res, url) => {
       const from = url.searchParams.get('from') || undefined;
@@ -249,6 +264,12 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
       const patch: Partial<Settings> = {};
       // URL Jira d'entreprise, sans « / » final (on y ajoute /browse/CLÉ).
       if ('jira_base_url' in body) patch.jira_base_url = httpUrl(body.jira_base_url)?.replace(/\/+$/, '') ?? null;
+      // Plan journée : maximum de tâches, de 1 à 50.
+      if ('day_capacity' in body) {
+        const n = body.day_capacity;
+        if (!Number.isInteger(n) || (n as number) < 1 || (n as number) > 50) throw new HttpError(400, 'Maximum invalide : nombre de 1 à 50 attendu');
+        patch.day_capacity = n as number;
+      }
       send(res, 200, store.updateSettings(patch));
     }],
 
@@ -322,6 +343,14 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
         if ((patch.jiraKey || patch.jiraUrl) && !('jira' in body)) patch.jira = 'done';
       }
       if ('notes' in body) patch.notes = optionalText(body.notes, 'Notes', 20_000);
+      if ('timer' in body) {
+        if (!['start', 'pause', 'reset'].includes(body.timer as string)) throw new HttpError(400, 'Action du chrono invalide');
+        patch.timer = body.timer as TimerAction;
+      }
+      // Annulation (u) : valeurs précédentes du chrono.
+      if ('time_spent' in body) patch.timeSpent = int(body.time_spent, 'Temps passé');
+      if ('timer_started_at' in body) patch.timerStartedAt = timestamp(body.timer_started_at, 'Début du chrono');
+      if ('day_at' in body) patch.dayAt = dayAt(body.day_at);
       if ('priority' in body) patch.priority = priority(body.priority);
       const task = store.updateTask(Number(id), patch);
       if (!task) throw new HttpError(404, 'Tâche introuvable');

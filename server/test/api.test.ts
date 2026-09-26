@@ -229,7 +229,7 @@ test('migration : une base v1 (sans jira_at) est mise à niveau à l’ouverture
            PRAGMA user_version = 1;`);
   v1.close();
   const old = new Store(file);
-  assert.deepEqual(old.state().projects[0].tasks[0], { id: 1, project_id: 1, title: 'Tâche v1', jira_wanted_at: null, jira_at: null, jira_key: null, jira_url: null, notes: null, priority: null });
+  assert.deepEqual(old.state().projects[0].tasks[0], { id: 1, project_id: 1, title: 'Tâche v1', jira_wanted_at: null, jira_at: null, jira_key: null, jira_url: null, notes: null, time_spent: 0, timer_started_at: null, day_at: null, priority: null });
   assert.ok(old.updateTask(1, { jira: 'done' })?.jira_at);
   old.close();
 });
@@ -327,7 +327,7 @@ test('migration 4 : une tâche déjà « reportée » (v3) garde son état', asy
 });
 
 test('réglages : URL Jira d’entreprise conservée en base, validée', async () => {
-  assert.deepEqual((await call('GET', '/api/settings')).body, { jira_base_url: null });
+  assert.deepEqual((await call('GET', '/api/settings')).body, { jira_base_url: null, day_capacity: 5 });
   const { body } = await call('PUT', '/api/settings', { jira_base_url: 'https://entreprise.atlassian.net/' });
   assert.equal(body.jira_base_url, 'https://entreprise.atlassian.net'); // sans « / » final
   assert.equal((await call('GET', '/api/state')).body.settings.jira_base_url, 'https://entreprise.atlassian.net');
@@ -491,7 +491,7 @@ test('versions du schéma : base v2 → dernière version (3, 4, 5, 6…), sauve
   // Données conservées et transformées par les migrations.
   assert.deepEqual(store2.state().projects[0].tasks[0], {
     id: 1, project_id: 1, title: 'Reportée en v2', jira_wanted_at: '2026-01-01 09:00:00',
-    jira_at: '2026-01-01 09:00:00', jira_key: null, jira_url: null, notes: null, priority: null,
+    jira_at: '2026-01-01 09:00:00', jira_key: null, jira_url: null, notes: null, time_spent: 0, timer_started_at: null, day_at: null, priority: null,
   });
   store2.close();
 
@@ -557,6 +557,82 @@ test('déplacement de projet : index parmi tous les projets', async () => {
   assert.equal((await all()).at(-1), p4.id);
   assert.equal((await call('POST', `/api/projects/${ids[0]}/move`, { index: -1 })).status, 400);
   assert.equal((await call('POST', '/api/projects/99999/move', { index: 0 })).status, 404);
+});
+
+test('chrono : lancer, pause, un seul en marche, tâche faite, remise à zéro, annulation', async () => {
+  const { body: p } = await call('POST', '/api/projects', { name: 'Chrono' });
+  const { body: a } = await call('POST', '/api/tasks', { project_id: p.id, title: 'A' });
+  const { body: b } = await call('POST', '/api/tasks', { project_id: p.id, title: 'B' });
+  assert.equal(a.time_spent, 0);
+  assert.equal(a.timer_started_at, null);
+
+  let { body: t } = await call('PATCH', `/api/tasks/${a.id}`, { timer: 'start' });
+  assert.match(t.timer_started_at, /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
+  // Lancé il y a 90 s : la pause ajoute la période au temps cumulé.
+  store.db.prepare("UPDATE task SET timer_started_at = datetime('now', '-90 seconds') WHERE id = ?").run(a.id);
+  ({ body: t } = await call('PATCH', `/api/tasks/${a.id}`, { timer: 'pause' }));
+  assert.equal(t.timer_started_at, null);
+  assert.ok(t.time_spent >= 90 && t.time_spent <= 92, String(t.time_spent));
+
+  // Un seul chrono en marche : lancer B met A en pause.
+  await call('PATCH', `/api/tasks/${a.id}`, { timer: 'start' });
+  await call('PATCH', `/api/tasks/${b.id}`, { timer: 'start' });
+  let { body: state } = await call('GET', '/api/state');
+  const running = state.projects.find((x: any) => x.id === p.id).tasks.filter((x: any) => x.timer_started_at);
+  assert.deepEqual(running.map((x: any) => x.title), ['B']);
+
+  // Tâche faite : son chrono s'arrête ; une tâche faite ne se relance pas.
+  ({ body: t } = await call('PATCH', `/api/tasks/${b.id}`, { done: true }));
+  assert.equal(t.timer_started_at, null);
+  ({ body: t } = await call('PATCH', `/api/tasks/${b.id}`, { timer: 'start' }));
+  assert.equal(t.timer_started_at, null);
+
+  // Remise à zéro, puis annulation (valeurs précédentes remises telles quelles).
+  ({ body: t } = await call('PATCH', `/api/tasks/${a.id}`, { timer: 'reset' }));
+  assert.deepEqual([t.time_spent, t.timer_started_at], [0, null]);
+  ({ body: t } = await call('PATCH', `/api/tasks/${a.id}`, { time_spent: 120, timer_started_at: '2026-09-25 08:00:00' }));
+  assert.deepEqual([t.time_spent, t.timer_started_at], [120, '2026-09-25 08:00:00']);
+
+  assert.equal((await call('PATCH', `/api/tasks/${a.id}`, { timer: 'stop' })).status, 400);
+  assert.equal((await call('PATCH', `/api/tasks/${a.id}`, { time_spent: -1 })).status, 400);
+
+  // Suppression puis restauration : le chrono est conservé.
+  const { body: deleted } = await call('DELETE', `/api/tasks/${a.id}`);
+  await call('POST', '/api/tasks/restore', deleted);
+  ({ body: state } = await call('GET', '/api/state'));
+  t = state.projects.find((x: any) => x.id === p.id).tasks.find((x: any) => x.id === a.id);
+  assert.deepEqual([t.time_spent, t.timer_started_at], [120, '2026-09-25 08:00:00']);
+});
+
+test('Plan journée : choisir une tâche pour un jour, compte des faites, maximum réglable', async () => {
+  const { body: p } = await call('POST', '/api/projects', { name: 'Journée' });
+  const { body: a } = await call('POST', '/api/tasks', { project_id: p.id, title: 'A' });
+  const { body: b } = await call('POST', '/api/tasks', { project_id: p.id, title: 'B' });
+  assert.equal(a.day_at, null);
+  assert.equal((await call('PATCH', `/api/tasks/${a.id}`, { day_at: '2026-07-01' })).body.day_at, '2026-07-01');
+  await call('PATCH', `/api/tasks/${b.id}`, { day_at: '2026-07-01' });
+  assert.equal((await call('PATCH', `/api/tasks/${a.id}`, { day_at: 'demain' })).status, 400);
+
+  // Faite : elle compte dans les faites du jour choisi (et pas d'un autre).
+  await call('PATCH', `/api/tasks/${b.id}`, { done: true, done_at: '2026-07-01' });
+  let { body: state } = await call('GET', '/api/state?day=2026-07-01');
+  assert.equal(state.dayDone, 1);
+  assert.deepEqual(state.projects.find((x: any) => x.id === p.id).tasks.map((t: any) => [t.title, t.day_at]), [['A', '2026-07-01']]);
+  assert.equal((await call('GET', '/api/state?day=2026-07-02')).body.dayDone, 0);
+  assert.equal((await call('GET', '/api/state?day=hier')).status, 400);
+
+  // Retirée ; restaurée à l'identique après suppression.
+  await call('PATCH', `/api/tasks/${a.id}`, { day_at: null });
+  ({ body: state } = await call('GET', '/api/state?day=2026-07-01'));
+  assert.equal(state.projects.find((x: any) => x.id === p.id).tasks[0].day_at, null);
+  const { body: deleted } = await call('DELETE', `/api/tasks/${b.id}`);
+  assert.equal((await call('POST', '/api/tasks/restore', deleted)).body.day_at, '2026-07-01');
+
+  // Maximum de la journée : 5 par défaut, de 1 à 50.
+  assert.equal((await call('PUT', '/api/settings', { day_capacity: 7 })).body.day_capacity, 7);
+  for (const bad of [0, 51, '7', 2.5]) assert.equal((await call('PUT', '/api/settings', { day_capacity: bad })).status, 400);
+  assert.equal((await call('GET', '/api/settings')).body.day_capacity, 7);
+  await call('PUT', '/api/settings', { day_capacity: 5 });
 });
 
 test('priorité : P1 à P3, aucune, validation, conservée à la restauration', async () => {

@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } f
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { TimerButtons, useTimer } from './Timer';
+import { PlanButton, usePlan } from './Plan';
 import { PriorityButton, usePriority } from './Priority';
 
 interface TaskDialogProps {
@@ -29,12 +31,17 @@ const isValidTicket = (s: string) => !s || JIRA_KEY_RE.test(s.toUpperCase()) || 
 // Fiche d'une tâche, façon GitLab : lecture seule par défaut ; e passe tout en
 // édition (titre, puis Tab : ticket, puis contenu Markdown) ; Ctrl+Entrée
 // enregistre et repasse en lecture ; un second Ctrl+Entrée (ou Échap) ferme.
+// Chrono comme sur la ligne : t lance / met en pause, T remet à zéro.
+// Plan journée comme sur la ligne : s ou ☀.
 // Priorité comme sur la ligne : 1, 2, 3 (la même touche la retire).
 // Tout est enregistré automatiquement, rien n'est perdu.
 // Accessibilité : focus piégé, titre et description annoncés (Radix),
 // libellés reliés aux champs, erreurs annoncées.
 export function TaskDialog({ task, projectName, field, open, onClose }: TaskDialogProps) {
   const id = useId();
+  const done = 'done_at' in task;
+  const timer = useTimer(task);
+  const plan = usePlan(task);
   const priority = usePriority(task);
   const [values, setValues] = useState({ title: task.title, ticket: ticketOf(task), notes: task.notes ?? '' });
   // Ouverte par e (édition complète) ou sur le ticket (L, J → reporté) : directement en édition.
@@ -140,6 +147,8 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const inField = (e.target as HTMLElement).matches('input, textarea');
+    if (!inField && !done && !e.ctrlKey && !e.metaKey && !e.altKey && timer.onKey(e)) return;
+    if (!inField && !done && !e.ctrlKey && !e.metaKey && !e.altKey && plan.onKey(e)) return;
     if (!inField && !e.ctrlKey && !e.metaKey && !e.altKey && priority.onKey(e)) return;
     if (e.key === 'e' && !editing && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault();
@@ -153,7 +162,7 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
     }
   };
 
-  const state = 'done_at' in task ? `faite le ${task.done_at.split('-').reverse().join('/')}` : 'à faire';
+  const state = done ? `faite le ${task.done_at.split('-').reverse().join('/')}` : 'à faire';
   const errorFor = (f: Field) =>
     error?.field === f && (
       <p id={`${id}-${f}-error`} role="alert" className="text-sm text-destructive">
@@ -194,7 +203,11 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
           <DialogDescription>
             {projectName} · {state}
           </DialogDescription>
-          <PriorityButton priority={task.priority} onClick={priority.cycle} />
+          <span className="flex">
+            {!done && <TimerButtons timer={timer} />}
+            {!done && <PlanButton plan={plan} />}
+            <PriorityButton priority={task.priority} onClick={priority.cycle} />
+          </span>
         </div>
 
         {editing ? (

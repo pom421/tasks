@@ -91,6 +91,18 @@ export const MIGRATIONS: Migration[] = [
   },
   {
     version: 9,
+    name: 'chrono des tâches (temps passé)',
+    sql: `
+      ALTER TABLE task ADD COLUMN time_spent INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE task ADD COLUMN timer_started_at TEXT;`,
+  },
+  {
+    version: 10,
+    name: 'tâches choisies pour la journée',
+    sql: `ALTER TABLE task ADD COLUMN day_at TEXT;`,
+  },
+  {
+    version: 11,
     name: 'priorité des tâches (P1, P2, P3)',
     sql: `ALTER TABLE task ADD COLUMN priority INTEGER;`,
   },
