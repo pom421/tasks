@@ -89,6 +89,13 @@ export const MIGRATIONS: Migration[] = [
     name: 'projets favoris',
     sql: `ALTER TABLE project ADD COLUMN favorite_at TEXT;`,
   },
+  {
+    version: 9,
+    name: 'chrono des tâches (temps passé)',
+    sql: `
+      ALTER TABLE task ADD COLUMN time_spent INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE task ADD COLUMN timer_started_at TEXT;`,
+  },
 ];
 
 export const LATEST_VERSION = MIGRATIONS.at(-1)!.version;

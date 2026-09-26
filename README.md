@@ -67,6 +67,7 @@ Chaque session démarre dans un conteneur neuf : les dépendances doivent y êtr
   - Lecture seule par défaut. `e` (comme GitLab) passe tout en édition : titre, puis `Tab` → ticket, puis `Tab` → contenu. Double-clic sur le contenu : édition directement dedans.
   - `Ctrl+Entrée` (ou `Entrée` dans le titre / le ticket) enregistre et repasse en lecture seule ; un second `Ctrl+Entrée` (ou `Échap`) ferme. Enregistrement automatique.
   - Ouverte par `L` (ou `J` → reporté), la fiche démarre en édition sur le ticket et `Entrée` la ferme.
+- Chrono d'une tâche à faire : au survol de la ligne (et dans la fiche), ▷ lance le chrono (`t`) ; en marche, l'icône devient une pause pleine, toujours visible, et le temps passé s'affiche (« 12 min », puis « 2h34 » à partir d'une heure). ↻ arrête le chrono et le remet à zéro, en deux temps (`T` `T`, ou ↻ deux fois ; `Échap` annule). Un seul chrono en marche à la fois : en lancer un met l'autre en pause. Cocher la tâche arrête son chrono ; le temps passé reste affiché dans le Log. Annulable (`u`).
 - Report : une tâche passe « à reporter », puis « reporté » (badge après le titre : l'identifiant du ticket s'il y en a un, « reporté » sinon ; date du report en info-bulle).
 - Réglages (icône ⚙, page `/admin`, `Échap` pour revenir) : URL de base des tickets (ex. `https://entreprise.atlassian.net`), qui transforme les identifiants en liens (`URL/browse/PROJ-123`), conservée en base ; export / import des données.
 
@@ -84,12 +85,14 @@ Clavier (`?` affiche l'aide) :
 | `e` | Ouvrir la fiche directement en édition (titre, `Tab` → ticket, `Tab` → contenu) |
 | `J` (majuscule) | Report : à reporter → reporté (fiche proposée pour le ticket) → rien |
 | `L` (majuscule) | Ouvrir la fiche sur le champ « Ticket » |
+| `t` | Chrono de la tâche : lancer / mettre en pause (aussi dans la fiche) |
+| `T` puis `T` | Arrêter le chrono et le remettre à zéro : le 1er appui affiche un message, le 2e remet à zéro (`Échap` annule) |
 | `r` | Projets : afficher seulement les tâches à reporter (ou clic sur « N tâches à reporter ») |
 | `*` | Afficher seulement les projets favoris (ou clic sur « Favoris ») |
 | `f` sur un projet | Favori / plus favori (ailleurs, `f` filtre le Log par projet) |
 | `a` sur un projet | Archiver / désarchiver |
 | `x` puis `x` | Supprimer la tâche ou le projet : le 1er appui affiche ce qui va être supprimé, le 2e supprime (`Échap` annule). `Suppr` marche aussi |
-| `u` | Annuler la dernière action : sur une tâche cocher / décocher, renommer, supprimer ; sur un projet favori, archivage, suppression (une seule, pas les modifications faites dans la fiche). Le curseur revient sur l'élément |
+| `u` | Annuler la dernière action : sur une tâche cocher / décocher, renommer, supprimer, chrono ; sur un projet favori, archivage, suppression (une seule, pas les modifications faites dans la fiche). Le curseur revient sur l'élément |
 | `p` / `n` | Nouveau projet / nouvelle tâche (dans le projet où est le curseur, sinon le dernier utilisé) |
 | `d` / `f` | Filtre du Log par journée / par projet (`f` hors projet sélectionné) |
 | `/` | Rechercher dans le Log |
@@ -134,10 +137,10 @@ En dev, l'API est branchée dans le serveur Vite (`vite.config.ts`) : une seule 
 
 ## Modèle de données
 
-`project` (id, name, created_at, archived_at, favorite_at, position) : 1 projet a 0..n `task` (id, project_id, title, created_at, done_at, position, notes, jira_wanted_at, jira_at, jira_key, jira_url).
+`project` (id, name, created_at, archived_at, favorite_at, position) : 1 projet a 0..n `task` (id, project_id, title, created_at, done_at, position, notes, jira_wanted_at, jira_at, jira_key, jira_url, time_spent, timer_started_at).
 `setting` (key, value) : réglages de l'application (ex. `jira_base_url`).
 `position` = ordre des projets, et ordre (priorité) des tâches dans leur projet.
-`notes` = contenu en Markdown. Une tâche est faite quand `done_at` est rempli (le journal, ce sont ces tâches-là), à reporter quand `jira_wanted_at` l'est et pas `jira_at`, reportée quand `jira_at` l'est. Ticket : `jira_key` (lien construit avec `jira_base_url`, qui peut donc changer) ou `jira_url` (lien complet). Liens en http(s) uniquement.
+`notes` = contenu en Markdown. Chrono : `time_spent` = secondes cumulées, `timer_started_at` = chrono en marche depuis (UTC) ; temps passé = les deux additionnés. Une tâche est faite quand `done_at` est rempli (le journal, ce sont ces tâches-là), à reporter quand `jira_wanted_at` l'est et pas `jira_at`, reportée quand `jira_at` l'est. Ticket : `jira_key` (lien construit avec `jira_base_url`, qui peut donc changer) ou `jira_url` (lien complet). Liens en http(s) uniquement.
 ### Versions du schéma
 
 - Chaque évolution de la base est un **script numéroté** dans `server/migrations.ts` (version, nom, SQL). On ajoute une version en fin de liste, on ne modifie jamais un script publié.

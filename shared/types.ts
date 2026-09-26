@@ -12,6 +12,25 @@ export interface Task {
   jira_key: string | null; // clé du ticket (PROJ-123), lien construit avec l'URL Jira d'entreprise
   jira_url: string | null; // ou lien complet vers le ticket (http/https)
   notes: string | null; // détails, en Markdown
+  time_spent: number; // chrono : secondes cumulées (hors période en cours)
+  timer_started_at: string | null; // chrono en marche depuis (UTC, 'YYYY-MM-DD HH:MM:SS')
+}
+
+// Chrono : lancer, mettre en pause, arrêter et remettre à zéro.
+export type TimerAction = 'start' | 'pause' | 'reset';
+
+// Temps passé en secondes, période en cours comprise.
+export function timeSpent(t: Pick<Task, 'time_spent' | 'timer_started_at'>, now = Date.now()): number {
+  if (!t.timer_started_at) return t.time_spent;
+  const start = Date.parse(t.timer_started_at.replace(' ', 'T') + 'Z');
+  return t.time_spent + Math.max(0, Math.floor((now - start) / 1000));
+}
+
+// « 12 min », puis « 2h34 » à partir d'une heure.
+export function formatDuration(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} min`;
+  return `${Math.floor(minutes / 60)}h${String(minutes % 60).padStart(2, '0')}`;
 }
 
 export interface Settings {

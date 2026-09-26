@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { type DeletedProject, type ProjectPatch, type ProjectRow, type Store, type TaskPatch, type TaskRow, isDate, today } from './db.ts';
-import { JIRA_KEY_RE, type JiraState, type Settings } from '../shared/types.ts';
+import { JIRA_KEY_RE, type JiraState, type Settings, type TimerAction } from '../shared/types.ts';
 import { parseMarkdown } from './markdown.ts';
 
 type Req = IncomingMessage;
@@ -136,6 +136,8 @@ function restoredTask(body: Body): TaskRow {
     jira_at: timestamp(body.jira_at, 'Date de report'),
     jira_key: key as string | null,
     jira_url: httpUrl(body.jira_url ?? null),
+    time_spent: int(body.time_spent ?? 0, 'Temps passé'),
+    timer_started_at: timestamp(body.timer_started_at, 'Début du chrono'),
   };
 }
 
@@ -314,6 +316,13 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
         if ((patch.jiraKey || patch.jiraUrl) && !('jira' in body)) patch.jira = 'done';
       }
       if ('notes' in body) patch.notes = optionalText(body.notes, 'Notes', 20_000);
+      if ('timer' in body) {
+        if (!['start', 'pause', 'reset'].includes(body.timer as string)) throw new HttpError(400, 'Action du chrono invalide');
+        patch.timer = body.timer as TimerAction;
+      }
+      // Annulation (u) : valeurs précédentes du chrono.
+      if ('time_spent' in body) patch.timeSpent = int(body.time_spent, 'Temps passé');
+      if ('timer_started_at' in body) patch.timerStartedAt = timestamp(body.timer_started_at, 'Début du chrono');
       const task = store.updateTask(Number(id), patch);
       if (!task) throw new HttpError(404, 'Tâche introuvable');
       send(res, 200, task);
