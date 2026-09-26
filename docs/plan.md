@@ -7,7 +7,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-- [~] Raccourcis : `f` favori (projet) / `F` filtre Favoris (remplace `*`) ; `r` report (remplace `J`) / `R` filtre à reporter → reportées → tous (remplace `r`) ; priorité `1` `2` `3` (remplace `p`) ; plus de `f` pour le Log (`/` puis `Tab`) ; `A` filtre Archivés ; `n` `n` nouveau projet (remplace `p`)
+Rien.
 
 ## Décisions attendues
 
@@ -33,6 +33,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
+- [x] Raccourcis, minuscule = action / majuscule = filtre : `f` favori (projet) / `F` filtre Favoris (remplace `*`) ; `r` report (remplace `J`) / `R` filtre à reporter → reportées → tous (remplace `r`) ; priorité `1` `2` `3` (remplace `p`) ; plus de `f` pour le Log (`/` puis `Tab`) ; `A` filtre Archivés ; `n` `n` nouveau projet (remplace `p`) (`7d022da`, `aa07421`)
 - [x] Raccourcis `t` / `T` plan journée, `c` / `C` chrono, `Maj+↑` / `Maj+↓` entre projets ; fiche : même disposition en lecture et en édition (`052a963`)
 - [x] Priorité des tâches : icônes 1 2 3 à droite, `p` ou clic ; migration 11 (`26e1975`)
 - [x] Chrono par tâche : ▷ / pause pleine (`t`), ↻ remise à zéro (`T`), temps passé en info-bulle, ligne et fiche ; migration 9 (`bb31dad`)
