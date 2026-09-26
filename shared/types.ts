@@ -12,12 +12,12 @@ export interface Task {
   jira_key: string | null; // clé du ticket (PROJ-123), lien construit avec l'URL Jira d'entreprise
   jira_url: string | null; // ou lien complet vers le ticket (http/https)
   notes: string | null; // détails, en Markdown
-  day_at: string | null; // choisie pour la journée du 'YYYY-MM-DD' (Ma journée)
+  day_at: string | null; // choisie pour la journée du 'YYYY-MM-DD' (Plan journée)
 }
 
 export interface Settings {
   jira_base_url: string | null; // ex. https://entreprise.atlassian.net
-  day_capacity: number; // Ma journée : nombre de tâches maximum
+  day_capacity: number; // Plan journée : nombre de tâches maximum
 }
 
 export const DEFAULT_DAY_CAPACITY = 5;

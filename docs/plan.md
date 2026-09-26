@@ -7,7 +7,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-- [~] Ma journée (branche d'expérimentation `claude/ma-journee-ixjyv7`, pas encore sur `main`) : ☀ / `s` pour choisir une tâche, onglet « Ma journée » (`v`, `/jour`), compteur « 3/5 tâches » rouge au-delà du maximum (Réglages) ; migration 9
+- [~] Plan journée (branche d'expérimentation `claude/ma-journee-ixjyv7`, pas encore sur `main`) : ☀ / `s` sur la ligne et dans la fiche, onglet « Plan journée » (`v`, `/plan`), compteur « 3/5 tâches » rouge au-delà du maximum (Réglages) ; migration 9
 
 ## Décisions attendues
 
@@ -17,8 +17,8 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 - [?] Filtre « Archivés » actif : icône archive pleine = bloc noir (le trait
   intérieur disparaît). Remplissage gris clair à la place ?
 
-- [?] Ma journée : une tâche choisie mais pas faite disparaît le lendemain. La reporter automatiquement au jour suivant ?
-- [?] Ma journée : compteur rouge seulement **au-delà** du maximum (6/5), pas à 5/5. Orange à 5/5 ?
+- [?] Plan journée : une tâche du plan mais pas faite disparaît le lendemain. La reporter automatiquement au jour suivant ?
+- [?] Plan journée : compteur rouge seulement **au-delà** du maximum (6/5), pas à 5/5. Orange à 5/5 ?
 - [?] Branches d'expérimentation (chrono, priorité, sélection du jour) : chacune ajoute la migration 9. À la fusion, renuméroter la 2e et la 3e (10, 11).
 
 ## Idées / plus tard

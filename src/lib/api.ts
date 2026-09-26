@@ -27,7 +27,7 @@ export interface TaskPatch {
   jira?: JiraState;
   jira_ticket?: string | null; // clé (PROJ-123) ou lien complet
   notes?: string | null;
-  day_at?: string | null; // Ma journée : date du jour, null = retirée
+  day_at?: string | null; // Plan journée : date du jour, null = retirée
 }
 
 export const api = {

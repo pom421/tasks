@@ -52,7 +52,7 @@ Chaque session démarre dans un conteneur neuf : les dépendances doivent y êtr
 
 ## Utilisation
 
-- Disposition : sur écran large, deux colonnes : onglets « Projets » / « Ma journée » à gauche et « Log » à droite (Log toujours visible, il défile seul) ; sur écran étroit, le Log est sous les projets.
+- Disposition : sur écran large, deux colonnes : onglets « Projets » / « Plan journée » à gauche et « Log » à droite (Log toujours visible, il défile seul) ; sur écran étroit, le Log est sous les projets.
 - Cocher une tâche → elle passe dans le Log, datée du jour, barrée. La décocher → elle revient dans son projet.
 - Log (un cadre par jour) : fonctionne seul, les boutons de la zone des projets n'y touchent pas. Par défaut, aujourd'hui (même vide). Sur la ligne du titre, trois filtres :
   - recherche (`/`) : toutes les journées contenant une tâche dont le titre, le contenu ou le ticket contient le texte (sans tenir compte des majuscules ni des accents). `Échap` vide le champ ;
@@ -67,9 +67,10 @@ Chaque session démarre dans un conteneur neuf : les dépendances doivent y êtr
   - Lecture seule par défaut. `e` (comme GitLab) passe tout en édition : titre, puis `Tab` → ticket, puis `Tab` → contenu. Double-clic sur le contenu : édition directement dedans.
   - `Ctrl+Entrée` (ou `Entrée` dans le titre / le ticket) enregistre et repasse en lecture seule ; un second `Ctrl+Entrée` (ou `Échap`) ferme. Enregistrement automatique.
   - Ouverte par `L` (ou `J` → reporté), la fiche démarre en édition sur le ticket et `Entrée` la ferme.
-- Ma journée : au survol d'une tâche à faire, ☀ l'ajoute aux tâches du jour (`s`) ; choisie, le soleil est plein et reste visible. L'onglet « Ma journée » (`v`, adresse `/jour`) ne montre que ces tâches, par projet, sous un compteur « 3/5 tâches » (tâches choisies, faites comprises, sur le maximum par jour) ; au-delà du maximum, « 6/5 tâches : au-delà du maximum », en rouge. Une tâche cochée part dans le Log et reste comptée (« dont 1 faite »). Le choix vaut pour le jour même : le lendemain, la liste repart de zéro. Maximum réglable dans les Réglages (5 par défaut). Les filtres de la zone des projets n'y apparaissent pas (sans effet). Annulable (`u`).
+- Plan journée : au survol d'une tâche à faire (et dans la fiche), ☀ l'ajoute au plan du jour (`s`) ; au plan, le soleil est plein et reste visible. L'onglet « Plan journée » (`v`, adresse `/plan`) ne montre que ces tâches, par projet, sous un compteur « 3/5 tâches » (tâches du plan, faites comprises, sur le maximum par jour), en rouge au-delà du maximum. Une tâche cochée part dans le Log et reste comptée. Le plan vaut pour le jour même. Maximum réglable dans les Réglages (5 par défaut). Filtres de la zone des projets masqués dans cet onglet. Annulable (`u`).
+- Icônes d'une tâche : toutes à droite, même style (atténuées et vides ; pleines quand actives, et alors toujours visibles).
 - Report : une tâche passe « à reporter », puis « reporté » (badge après le titre : l'identifiant du ticket s'il y en a un, « reporté » sinon ; date du report en info-bulle).
-- Réglages (icône ⚙, page `/admin`, `Échap` pour revenir) : URL de base des tickets (ex. `https://entreprise.atlassian.net`), qui transforme les identifiants en liens (`URL/browse/PROJ-123`), conservée en base ; nombre de tâches maximum par jour (Ma journée) ; export / import des données.
+- Réglages (icône ⚙, page `/admin`, `Échap` pour revenir) : URL de base des tickets (ex. `https://entreprise.atlassian.net`), qui transforme les identifiants en liens (`URL/browse/PROJ-123`), conservée en base ; nombre de tâches maximum par jour (Plan journée) ; export / import des données.
 
 Clavier (`?` affiche l'aide) :
 
@@ -85,14 +86,14 @@ Clavier (`?` affiche l'aide) :
 | `e` | Ouvrir la fiche directement en édition (titre, `Tab` → ticket, `Tab` → contenu) |
 | `J` (majuscule) | Report : à reporter → reporté (fiche proposée pour le ticket) → rien |
 | `L` (majuscule) | Ouvrir la fiche sur le champ « Ticket » |
-| `s` | Ajouter la tâche à « Ma journée » / l'en retirer |
-| `v` | Onglet « Projets » / « Ma journée » |
+| `s` | Ajouter la tâche au plan journée / l'en retirer (aussi dans la fiche) |
+| `v` | Onglet « Projets » / « Plan journée » |
 | `r` | Projets : afficher seulement les tâches à reporter (ou clic sur « N tâches à reporter ») |
 | `*` | Afficher seulement les projets favoris (ou clic sur « Favoris ») |
 | `f` sur un projet | Favori / plus favori (ailleurs, `f` filtre le Log par projet) |
 | `a` sur un projet | Archiver / désarchiver |
 | `x` puis `x` | Supprimer la tâche ou le projet : le 1er appui affiche ce qui va être supprimé, le 2e supprime (`Échap` annule). `Suppr` marche aussi |
-| `u` | Annuler la dernière action : sur une tâche cocher / décocher, renommer, supprimer, ma journée ; sur un projet favori, archivage, suppression (une seule, pas les modifications faites dans la fiche). Le curseur revient sur l'élément |
+| `u` | Annuler la dernière action : sur une tâche cocher / décocher, renommer, supprimer, plan journée ; sur un projet favori, archivage, suppression (une seule, pas les modifications faites dans la fiche). Le curseur revient sur l'élément |
 | `p` / `n` | Nouveau projet / nouvelle tâche (dans le projet où est le curseur, sinon le dernier utilisé) |
 | `d` / `f` | Filtre du Log par journée / par projet (`f` hors projet sélectionné) |
 | `/` | Rechercher dans le Log |
@@ -140,7 +141,7 @@ En dev, l'API est branchée dans le serveur Vite (`vite.config.ts`) : une seule 
 `project` (id, name, created_at, archived_at, favorite_at, position) : 1 projet a 0..n `task` (id, project_id, title, created_at, done_at, position, notes, jira_wanted_at, jira_at, jira_key, jira_url, day_at).
 `setting` (key, value) : réglages de l'application (ex. `jira_base_url`, `day_capacity` = maximum de tâches par jour, 5 par défaut).
 `position` = ordre des projets, et ordre (priorité) des tâches dans leur projet.
-`notes` = contenu en Markdown. `day_at` = jour ('YYYY-MM-DD') pour lequel la tâche a été choisie (Ma journée). Une tâche est faite quand `done_at` est rempli (le journal, ce sont ces tâches-là), à reporter quand `jira_wanted_at` l'est et pas `jira_at`, reportée quand `jira_at` l'est. Ticket : `jira_key` (lien construit avec `jira_base_url`, qui peut donc changer) ou `jira_url` (lien complet). Liens en http(s) uniquement.
+`notes` = contenu en Markdown. `day_at` = jour ('YYYY-MM-DD') pour lequel la tâche a été mise au plan (Plan journée). Une tâche est faite quand `done_at` est rempli (le journal, ce sont ces tâches-là), à reporter quand `jira_wanted_at` l'est et pas `jira_at`, reportée quand `jira_at` l'est. Ticket : `jira_key` (lien construit avec `jira_base_url`, qui peut donc changer) ou `jira_url` (lien complet). Liens en http(s) uniquement.
 ### Versions du schéma
 
 - Chaque évolution de la base est un **script numéroté** dans `server/migrations.ts` (version, nom, SQL). On ajoute une version en fin de liste, on ne modifie jamais un script publié.

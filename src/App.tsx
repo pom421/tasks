@@ -18,7 +18,7 @@ interface Data {
   days: JournalDay[];
   settings: Settings;
   dates: string[]; // jours du Log ayant des entrées
-  dayDone: number; // Ma journée : tâches choisies déjà faites
+  dayDone: number; // Plan journée : tâches du plan déjà faites
 }
 
 // Focus à appliquer une fois les nouvelles données affichées.
@@ -37,9 +37,9 @@ export function App() {
     dates: [],
     dayDone: 0,
   });
-  // Pages, sans routeur : la liste (/), son onglet « Ma journée » (/jour) et les réglages (/admin).
+  // Pages, sans routeur : la liste (/), son onglet « Plan journée » (/plan) et les réglages (/admin).
   const [path, setPath] = useState(window.location.pathname);
-  const dayView = path === '/jour';
+  const dayView = path === '/plan';
   // Fiche d'une tâche : id, champ focalisé, open à false pendant l'animation de
   // fermeture ; opening numérote les ouvertures (formulaire neuf à chaque fois).
   const [openTask, setOpenTask] = useState<{ id: number; field: TaskField; open: boolean; opening: number } | null>(null);
@@ -177,10 +177,10 @@ export function App() {
         d: () => document.getElementById('filter-date')?.focus(),
         f: () => document.getElementById('filter-project')?.focus(),
         '/': () => document.getElementById('log-search')?.focus(),
-        // Filtres de la zone des projets : sans effet dans l'onglet Ma journée.
+        // Filtres de la zone des projets : sans effet dans l'onglet Plan journée.
         r: () => !dayView && setJiraOnly((v) => !v),
         '*': () => !dayView && setFavoritesOnly((v) => !v),
-        v: () => navigate(dayView ? '/' : '/jour'),
+        v: () => navigate(dayView ? '/' : '/plan'),
         u: undo,
         '?': () => setHelpOpen(true),
         // Échap (hors élément de la liste) : réinitialise les filtres du Log.
@@ -248,14 +248,14 @@ export function App() {
             <div role="tablist" aria-label="Vue" className="mt-3 flex h-[26px] items-center gap-4 lg:mt-5">
               {[
                 { label: 'Projets', to: '/', selected: !dayView },
-                { label: 'Ma journée', to: '/jour', selected: dayView },
+                { label: 'Plan journée', to: '/plan', selected: dayView },
               ].map((tab) => (
                 <button
                   key={tab.to}
                   type="button"
                   role="tab"
                   aria-selected={tab.selected}
-                  title="Projets / Ma journée (v)"
+                  title="Projets / Plan journée (v)"
                   className={cn(
                     'border-b-2 font-semibold',
                     tab.selected ? 'border-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',

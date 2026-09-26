@@ -13,14 +13,14 @@ const SHORTCUTS: [string, string][] = [
   ['Alt+↑ Alt+↓', 'Monter / descendre la tâche, jusque dans le projet voisin (Alt+k / Alt+j)'],
   ['J', 'Report : à reporter → reporté → rien (majuscule)'],
   ['L', 'Ouvrir la fiche sur l’identifiant du ticket (majuscule)'],
-  ['s', 'Ajouter la tâche à « Ma journée » / l’en retirer'],
-  ['v', 'Onglet Projets / Ma journée'],
+  ['s', 'Ajouter la tâche au plan journée / l’en retirer (aussi dans la fiche)'],
+  ['v', 'Onglet Projets / Plan journée'],
   ['r', 'Afficher seulement les tâches à reporter (projets)'],
   ['*', 'Afficher seulement les projets favoris'],
   ['x x', 'Supprimer la tâche ou le projet (x une 2e fois pour confirmer)'],
   ['f', 'Sur un projet : favori / plus favori'],
   ['a', 'Sur un projet : archiver / désarchiver'],
-  ['u', 'Annuler la dernière action (cocher, renommer, supprimer, ma journée, favori, archivage)'],
+  ['u', 'Annuler la dernière action (cocher, renommer, supprimer, plan journée, favori, archivage)'],
   ['p', 'Nouveau projet'],
   ['n', 'Nouvelle tâche (projet courant, sinon dernier utilisé)'],
   ['d', 'Filtrer le log sur une journée'],
@@ -39,7 +39,7 @@ interface ToolbarProps {
   archived: number; // nombre de projets archivés
   archivedOnly: boolean;
   onArchivedOnly: () => void;
-  showFilters: boolean; // filtres de la zone des projets, masqués dans l'onglet Ma journée
+  showFilters: boolean; // filtres de la zone des projets, masqués dans l'onglet Plan journée
   helpOpen: boolean;
   onHelpOpen: (open: boolean) => void;
 }

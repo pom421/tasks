@@ -1,6 +1,6 @@
 import { useRef, useState, type FocusEvent, type KeyboardEvent } from 'react';
 import { hasDetails, jiraState, type DoneTask, type JiraState, type Task } from '../../shared/types.ts';
-import { NotebookText, Sun } from 'lucide-react';
+import { NotebookText } from 'lucide-react';
 import { api, type TaskPatch } from '@/lib/api';
 import { useActions } from '@/lib/actions';
 import { localToday } from '@/lib/dates';
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { EditableName } from './Editable';
 import { ReportBadge } from './ReportBadge';
 import { moveDirection } from '@/lib/nav';
+import { PlanButton, usePlan } from './Plan';
 
 // Ligne de tâche, à faire (liste des projets) ou faite (journal).
 // Clavier, où que soit le focus dans la ligne (hors champ de saisie) :
@@ -17,7 +18,7 @@ import { moveDirection } from '@/lib/nav';
 // (rien -> à reporter -> reporté -> rien), o ou Maj+Entrée ouvre la fiche,
 // e l'ouvre directement en édition,
 // L l'ouvre sur l'identifiant du ticket,
-// s l'ajoute à « Ma journée » ou l'en retire (tâches à faire),
+// s l'ajoute au plan journée ou l'en retire (tâches à faire),
 // x ou Suppr demande la suppression, un second appui la confirme,
 // Alt+↑ / Alt+↓ (ou Alt+k / Alt+j) déplacent la tâche (onMove, tâches à faire).
 export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (direction: -1 | 1) => void }) {
@@ -26,6 +27,7 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
   const [editingDate, setEditingDate] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const navKey = `task:${task.id}`;
+  const plan = usePlan(task);
 
   const patch = (body: TaskPatch, stay = false) => act(() => api.updateTask(task.id, body), { stay });
 
@@ -61,17 +63,6 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
       if (next === 'done' && !j.pending && !task.jira_key && !task.jira_url) openTask(task, 'jira');
     });
   };
-
-  // Ma journée : choisie pour aujourd'hui (date du navigateur). stay : dans
-  // l'onglet Ma journée, la ligne retirée disparaît, le curseur reste en place.
-  const inDay = !done && task.day_at === localToday();
-  const toggleDay = () =>
-    undoable(
-      inDay ? 'retrait de ma journée' : 'ajout à ma journée',
-      () => api.updateTask(task.id, { day_at: inDay ? null : localToday() }),
-      () => api.updateTask(task.id, { day_at: task.day_at }),
-      true,
-    );
 
   const remove = () => {
     let deleted: Record<string, unknown> | undefined;
@@ -109,10 +100,7 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
       e.preventDefault();
       toggleDone();
     }
-    if (e.key === 's' && !done) {
-      e.preventDefault();
-      toggleDay();
-    }
+    if (!done && plan.onKey(e)) return;
     if (e.key === 'J') {
       e.preventDefault();
       cycleJira();
@@ -150,35 +138,20 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
         />
         <ReportBadge task={task} />
         {hasDetails(task) && (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon-xs"
             tabIndex={-1}
-            className="details flex-none text-muted-foreground hover:text-foreground"
+            className="details flex-none text-muted-foreground"
             title="Voir le contenu (o ou Maj+Entrée)"
             aria-label="Voir les détails"
             onClick={() => openTask(task, 'notes')}
           >
-            <NotebookText className="size-3.5" aria-hidden />
-          </button>
+            <NotebookText aria-hidden />
+          </Button>
         )}
       </span>
-      {/* Bascule « Ma journée » : au survol, toujours visible (soleil plein) si choisie. */}
-      {!done && !confirmDelete && (
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          className={cn(
-            'day-toggle flex-none',
-            inDay ? 'text-amber-500' : 'invisible text-muted-foreground group-hover:visible group-focus-within:visible',
-          )}
-          aria-label="Ma journée"
-          aria-pressed={inDay}
-          title={inDay ? 'Retirer de ma journée (s)' : 'Ajouter à ma journée (s)'}
-          onClick={toggleDay}
-        >
-          <Sun aria-hidden fill={inDay ? 'currentColor' : 'none'} />
-        </Button>
-      )}
+      {!done && !confirmDelete && <PlanButton plan={plan} hidden />}
       {confirmDelete ? (
         <span className="confirm-delete flex-none text-xs text-destructive" role="alert">
           x pour supprimer · Échap pour annuler

@@ -11,7 +11,7 @@ interface DayViewProps {
   capacity: number; // maximum de tâches par jour (Réglages)
 }
 
-// Onglet « Ma journée » : seulement les tâches à faire choisies pour aujourd'hui
+// Onglet « Plan journée » : seulement les tâches à faire du plan du jour
 // (s ou ☀), groupées par projet, sous le compteur « 3/5 tâches » (rouge au-delà
 // du maximum). Les tâches faites partent dans le Log mais restent comptées.
 export function DayView({ projects, dayDone, capacity }: DayViewProps) {
@@ -24,14 +24,12 @@ export function DayView({ projects, dayDone, capacity }: DayViewProps) {
   const over = total > capacity;
 
   return (
-    <section id="day" aria-label="Ma journée">
+    <section id="day" aria-label="Plan journée">
       <p
         className={cn('day-count mt-3 text-sm', over ? 'font-medium text-destructive' : 'text-muted-foreground')}
         title={`Maximum : ${capacity} ${plural(capacity, 'tâche')} par jour (Réglages)`}
       >
         {total}/{capacity} {plural(total, 'tâche')}
-        {dayDone > 0 && `, dont ${dayDone} ${plural(dayDone, 'faite')}`}
-        {over && ' : au-delà du maximum'}
       </p>
       {groups.map((p) => (
         <div key={p.id} className="day-project mt-4">
@@ -45,9 +43,7 @@ export function DayView({ projects, dayDone, capacity }: DayViewProps) {
       ))}
       {!todo && (
         <p className="empty mt-3 italic text-muted-foreground">
-          {dayDone
-            ? 'Toutes les tâches de la journée sont faites.'
-            : 'Aucune tâche pour aujourd’hui : s sur une tâche (ou ☀ au survol) pour l’ajouter.'}
+          {dayDone ? 'Tout est fait.' : 'Rien de prévu.'}
         </p>
       )}
     </section>

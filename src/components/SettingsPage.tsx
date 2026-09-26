@@ -11,7 +11,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
   const id = useId();
   const [jiraBaseUrl, setJiraBaseUrl] = useState('');
   const [status, setStatus] = useState<{ ok?: string; error?: string }>({});
-  // Ma journée : maximum de tâches par jour (texte saisi, vérifié par le serveur).
+  // Plan journée : maximum de tâches par jour (texte saisi, vérifié par le serveur).
   const [capacity, setCapacity] = useState('');
   const [dayStatus, setDayStatus] = useState<{ ok?: string; error?: string }>({});
   // Import .sqlite en deux temps (il remplace toute la base) : 1er clic = message,
@@ -147,7 +147,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
 
       <section aria-labelledby={`${id}-day`} className="mt-10">
         <h2 id={`${id}-day`} className="font-semibold">
-          Ma journée
+          Plan journée
         </h2>
         <form className="mt-3 grid max-w-lg gap-2" onSubmit={saveCapacity} noValidate>
           <Label htmlFor={`${id}-capacity`}>Nombre de tâches maximum par jour</Label>
@@ -159,12 +159,8 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
             value={capacity}
             onChange={(e) => setCapacity(e.target.value)}
             className="h-8 w-24"
-            aria-describedby={`${id}-capacity-hint`}
             aria-invalid={Boolean(dayStatus.error)}
           />
-          <p id={`${id}-capacity-hint`} className="text-xs text-muted-foreground">
-            Au-delà, le compteur de l’onglet Ma journée passe en rouge (ex. 6/5 tâches).
-          </p>
           <div className="mt-2 flex items-center gap-3">
             <Button type="submit">Enregistrer</Button>
             <p role="status" className="text-sm text-muted-foreground">
