@@ -1415,3 +1415,22 @@ test('aide ? : raccourcis groupés, tout visible sur écran courant, liste qui d
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
 });
+
+test('filtres des projets sur la ligne des onglets, à droite, alignés avec la ligne du Log', async ({ page, store, data }) => {
+  store.updateProject(data.alpha.id, { favorite: true });
+  store.updateTask(data.tasks.une.id, { priority: 1 });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await reload(page);
+  const filters = page.getByRole('group', { name: 'Filtres des projets' });
+  await expect(filters.getByRole('button')).toHaveCount(2); // Priorités, Favoris
+  await expect(page.locator('header #favorites-only')).toHaveCount(0); // plus dans l'en-tête
+  const top = async (selector: string) => Math.round((await page.locator(selector).boundingBox())!.y);
+  const box = async (selector: string) => (await page.locator(selector).boundingBox())!;
+  expect(await top('#favorites-only')).toBe(await top('[role="tablist"]'));
+  expect(await top('#favorites-only')).toBe(await top('#log-search'));
+  expect((await box('#favorites-only')).height).toBe((await box('#log-search')).height);
+  // À droite de la colonne des projets, avant le Log.
+  const favorites = await box('#favorites-only');
+  expect(favorites.x + favorites.width).toBeLessThan((await box('#journal')).x);
+  expect(favorites.x).toBeGreaterThan((await box('[role="tablist"]')).x + 200);
+});

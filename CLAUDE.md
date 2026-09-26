@@ -15,9 +15,10 @@ modèle de données) et `docs/plan.md` (tâches en cours, décisions attendues).
 - **Afficher seulement ce qui sert** : un bouton de filtre n'apparaît que s'il a
   un effet, calculé sur **toutes** les données (jamais selon les autres
   filtres) ; un bouton actif reste visible pour pouvoir le couper.
-- **Zones indépendantes** : les filtres du haut (à reporter, Archivés, Favoris)
-  ne touchent que la zone des projets, combinés en ET. Le Log a ses propres
-  filtres (recherche, journée, projet) sur la ligne de son titre.
+- **Zones indépendantes** : les filtres de l'onglet Projets (report, priorité,
+  Archivés, Favoris), sur la ligne des onglets, ne touchent que la zone des
+  projets, combinés en ET. Le Log a ses propres filtres (recherche, journée,
+  projet) sur la ligne de son titre.
 - **Icônes, pas de texte** : l'UX doit se comprendre par les icônes, sans
   message d'explication ; l'info complémentaire va dans l'info-bulle. Icônes
   d'une tâche toutes à droite, même style (`ghost` `icon-xs`, atténuée et vide,

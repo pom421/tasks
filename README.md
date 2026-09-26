@@ -62,7 +62,7 @@ Chaque session démarre dans un conteneur neuf : les dépendances doivent y êtr
   - `<` / `>` passent au jour précédent / suivant qui a des entrées (désactivés en bout de liste et pendant une recherche) ; « Aujourd’hui », tout à droite, y ramène. Le nombre de résultats s'affiche au centre : « 5 tâches trouvées dans 2 journées ».
 - Nouveau projet → curseur directement sur la saisie de sa première tâche.
 - Projet : cœur ♡ = favori (plein et rouge quand actif, `f`). Au survol d'un projet : icônes archive (archiver / désarchiver, `a`) et corbeille (supprimer, `x` `x`), avec leur nom en info-bulle. Suppression toujours en deux temps, sans fenêtre de confirmation : 1er appui (`x` ou corbeille) = message de ce qui va être supprimé, 2e appui = suppression, `Échap` annule. Une tâche se supprime au clavier (`x` `x`). Tout est annulable (`u`), y compris la suppression : le projet revient avec toutes ses tâches, Log compris.
-- Sous la barre d'outils, alignés à droite, quatre filtres de la **zone des projets** (sans effet sur le Log), combinables : report (`R` ou clic : « N tâches à reporter » → « N tâches reportées » → toutes), priorité (`P` ou clic : « Priorité 1 » → 2 → 3 → toutes), « Archivés » (seulement les projets archivés, `A`), « Favoris » (seulement les favoris, `F`). Chacun n'apparaît que s'il sert (au moins une tâche à faire à reporter ou reportée, une tâche à faire avec une priorité, un projet archivé, un favori) ; actif, son icône se remplit (pas de fond coloré).
+- Dans l'onglet « Projets », sur la ligne des onglets et à droite (comme ceux du Log sur la ligne de son titre), quatre filtres de la **zone des projets** (sans effet sur le Log), combinables : report (`R` ou clic : « N tâches à reporter » → « N tâches reportées » → toutes), priorité (`P` ou clic : « Priorité 1 » → 2 → 3 → toutes), « Archivés » (seulement les projets archivés, `A`), « Favoris » (seulement les favoris, `F`). Chacun n'apparaît que s'il sert (au moins une tâche à faire à reporter ou reportée, une tâche à faire avec une priorité, un projet archivé, un favori) ; actif, son icône se remplit (pas de fond coloré).
 - Souris : clic sur un nom pour le modifier (pour une tâche, n'importe où sur la ligne jusqu'aux icônes, alignées à droite). Titre trop long : coupé par « … », affiché en entier au survol (ou au focus clavier).
 - Fiche d'une tâche (`Maj+Entrée`, `o` ou icône 🗒) : titre complet, identifiant du ticket (`PROJ-123`), puis contenu en Markdown. L'icône 🗒 signale une tâche qui a du contenu.
   - Lecture seule par défaut. `e` (comme GitLab) passe tout en édition : titre, puis `Tab` → ticket, puis `Tab` → contenu. Double-clic sur le contenu : édition directement dedans.
@@ -140,7 +140,7 @@ server/           Node exécute le TypeScript tel quel (pas d'étape de build)
 shared/types.ts   types échangés entre serveur et front
 src/              front React (Vite)
   App.tsx         état, chargement des données, raccourcis globaux
-  components/     Toolbar, ProjectList, TaskRow, TaskDialog, ReportBadge, Journal, SettingsPage…
+  components/     Toolbar, ProjectFilters, ProjectList, TaskRow, TaskDialog, ReportBadge, Journal, SettingsPage…
   lib/markdown.ts rendu Markdown assaini (marked + DOMPurify)
   components/ui/  composants shadcn/ui (copiés dans le projet, modifiables)
   lib/nav.ts      navigation clavier (focus, ↑/↓, restauration après re-rendu)

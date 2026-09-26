@@ -33,6 +33,7 @@ Rien.
 
 ## Fait (récent)
 
+- [x] Filtres des projets déplacés dans l'onglet « Projets », sur la ligne des onglets à droite (comme le Log), à la hauteur des champs du Log ; l'en-tête ne garde que le titre, l'aide et les réglages
 - [x] Historique d'annulation en mémoire dans le navigateur (zustand, sans limite de nombre) : `u` annule une à une, `U` rejoue ; créations, déplacements, report, date et fiche désormais annulables
 - [x] `Maj+j` / `Maj+k` (`J` / `K`) : projet suivant / précédent, comme `Maj+↓` / `Maj+↑` ; port du serveur de dev réglable par `PORT` (aperçu d'un worktree)
 - [x] « + Ajouter » en écriture : `Échap` vide le champ et le repasse en lecture (au lieu d'en sortir vers l'élément au-dessus)

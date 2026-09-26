@@ -19,7 +19,7 @@ mêmes classes, même comportement. L'utilisateur veut une UX homogène.
   les autres filtres) ; toujours visible s'il est actif (pour pouvoir le couper).
 
 ## Filtre
-- Filtres du haut (à reporter, Archivés, Favoris) : zone des projets seulement,
+- Filtres de l'onglet Projets (`ProjectFilters.tsx` : report, priorité, Archivés, Favoris) : zone des projets seulement,
   combinés en ET. Le Log a ses propres filtres ; aucun effet croisé.
 - Liste vide : message exact. Un seul filtre = son message propre ; plusieurs =
   « Aucune tâche / Aucun projet avec les filtres demandés. »

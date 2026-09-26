@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { DEFAULT_DAY_CAPACITY, jiraState, type JiraState, type JournalDay, type Priority, type Project, type Settings, type Task } from '../shared/types.ts';
+import { DEFAULT_DAY_CAPACITY, type JiraState, type JournalDay, type Priority, type Project, type Settings, type Task } from '../shared/types.ts';
 import { api } from '@/lib/api';
 import { ActionsContext, type Actions, type TaskField } from '@/lib/actions';
 import { record, useHistory } from '@/lib/history';
 import { focusByKey, handleNavKey, restore, snapshot, type FocusSnapshot } from '@/lib/nav';
 import { Toolbar } from '@/components/Toolbar';
+import { ProjectFilters } from '@/components/ProjectFilters';
 import { ProjectList } from '@/components/ProjectList';
 import { Journal, NO_FILTER, journalQuery, type Filter } from '@/components/Journal';
 import { TaskDialog } from '@/components/TaskDialog';
@@ -294,48 +295,46 @@ export function App() {
       {/* Écran large : projets à gauche, Log à droite (une tâche cochée y apparaît
           aussitôt) ; écran étroit : l'un sous l'autre. */}
       <div className="mx-auto max-w-2xl px-4 lg:max-w-6xl">
-        <Toolbar
-          // Compteurs sur tous les projets : un bouton ne disparaît pas selon les autres filtres.
-          jiraWanted={data.projects.flatMap((p) => p.tasks).filter((t) => jiraState(t) === 'wanted').length}
-          jiraDone={data.projects.flatMap((p) => p.tasks).filter((t) => jiraState(t) === 'done').length}
-          jiraFilter={jiraFilter}
-          priorities={data.projects.flatMap((p) => p.tasks).filter((t) => t.priority).length}
-          priorityFilter={priorityFilter}
-          onPriorityFilter={cyclePriorityFilter}
-          onJiraFilter={cycleJiraFilter}
-          favorites={data.projects.filter((p) => p.favorite_at).length}
-          favoritesOnly={favoritesOnly}
-          onFavoritesOnly={() => setFavoritesOnly((v) => !v)}
-          archived={data.projects.filter((p) => p.archived_at).length}
-          archivedOnly={archivedOnly}
-          onArchivedOnly={() => setArchivedOnly((v) => !v)}
-          showFilters={!dayView}
-          helpOpen={helpOpen}
-          onHelpOpen={setHelpOpen}
-        />
+        <Toolbar helpOpen={helpOpen} onHelpOpen={setHelpOpen} />
         <main className="lg:grid lg:grid-cols-2 lg:items-start">
           <div className="min-w-0 lg:pr-8 lg:pb-16">
-            {/* Onglets de la colonne, sur la ligne du titre du Log (même hauteur). */}
-            <div role="tablist" aria-label="Vue" className="mt-3 flex h-[26px] items-center gap-4 lg:mt-5">
-              {[
-                { label: 'Projets', to: '/', selected: !dayView },
-                { label: 'Plan journée', to: '/plan', selected: dayView },
-              ].map((tab) => (
-                <button
-                  key={tab.to}
-                  type="button"
-                  role="tab"
-                  aria-selected={tab.selected}
-                  title="Projets / Plan journée (T)"
-                  className={cn(
-                    'border-b-2 font-semibold',
-                    tab.selected ? 'border-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
-                  )}
-                  onClick={() => navigate(tab.to)}
-                >
-                  {tab.label}
-                </button>
-              ))}
+            {/* Onglets de la colonne, sur la ligne du titre du Log (même hauteur) ;
+                à droite, les filtres de l'onglet Projets (repliés sur écran étroit). */}
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 lg:mt-5">
+              <div role="tablist" aria-label="Vue" className="flex h-[26px] items-center gap-4">
+                {[
+                  { label: 'Projets', to: '/', selected: !dayView },
+                  { label: 'Plan journée', to: '/plan', selected: dayView },
+                ].map((tab) => (
+                  <button
+                    key={tab.to}
+                    type="button"
+                    role="tab"
+                    aria-selected={tab.selected}
+                    title="Projets / Plan journée (T)"
+                    className={cn(
+                      'border-b-2 font-semibold',
+                      tab.selected ? 'border-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
+                    )}
+                    onClick={() => navigate(tab.to)}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+              {!dayView && (
+                <ProjectFilters
+                  projects={data.projects}
+                  jiraFilter={jiraFilter}
+                  onJiraFilter={cycleJiraFilter}
+                  priorityFilter={priorityFilter}
+                  onPriorityFilter={cyclePriorityFilter}
+                  favoritesOnly={favoritesOnly}
+                  onFavoritesOnly={() => setFavoritesOnly((v) => !v)}
+                  archivedOnly={archivedOnly}
+                  onArchivedOnly={() => setArchivedOnly((v) => !v)}
+                />
+              )}
             </div>
             {dayView ? (
               <DayView projects={data.projects} dayDone={data.dayDone} capacity={data.settings.day_capacity} />
