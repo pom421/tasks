@@ -20,5 +20,6 @@ function api(): Plugin {
 export default defineConfig({
   plugins: [react(), tailwindcss(), api()],
   resolve: { alias: { '@': path.resolve('src') } },
-  server: { host: '127.0.0.1', port: 5173 },
+  // PORT : autre port si 5173 est pris (ex. aperçu d'un worktree).
+  server: { host: '127.0.0.1', port: Number(process.env.PORT) || 5173 },
 });

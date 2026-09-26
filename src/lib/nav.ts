@@ -97,11 +97,13 @@ export function handleNavKey(e: KeyboardEvent) {
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   const target = e.target as Element;
   if (document.querySelector('[role="dialog"]') || ownsArrows(target)) return;
-  if (e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
-    // Dans un champ texte, Maj+flèche sélectionne : on n'y touche pas.
+  // Maj+↑ / Maj+↓ (ou Maj+k / Maj+j, soit K / J) : projet précédent / suivant.
+  const projectMoves: Record<string, -1 | 1> = { ArrowUp: -1, ArrowDown: 1, K: -1, J: 1 };
+  if (e.shiftKey && e.key in projectMoves) {
+    // Dans un champ texte, Maj+flèche sélectionne et J / K s'écrivent : on n'y touche pas.
     if (target.matches(TEXT_FIELD)) return;
     e.preventDefault();
-    moveProject(e.key === 'ArrowUp' ? -1 : 1);
+    moveProject(projectMoves[e.key]);
     return;
   }
   if (e.shiftKey && e.key !== 'G') return;

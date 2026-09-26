@@ -10,7 +10,7 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
     [
       [[['↑', '↓'], ['k', 'j']], 'Élément précédent / suivant (projet, tâche, « + Ajouter »)'],
       [[['Début', 'Fin'], ['g g', 'G']], 'Premier / dernier élément'],
-      [[['Maj+↑', 'Maj+↓']], 'Projet précédent / suivant'],
+      [[['Maj+↑', 'Maj+↓'], ['K', 'J']], 'Projet précédent / suivant'],
       [[['Entrée']], 'Modifier le nom ; sur « + Ajouter », écrire'],
       [[['Échap']], 'Quitter l’édition sans enregistrer ; « + Ajouter » : vider, repasser en lecture'],
       [[['T']], 'Onglet Projets / Plan journée'],
