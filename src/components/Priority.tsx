@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
 // Une couleur par priorité (icône pleine) ; sans priorité : atténuée et vide.
-const COLOR: Record<Priority, string> = {
+export const PRIORITY_COLOR: Record<Priority, string> = {
   1: 'text-red-600 dark:text-red-400',
   2: 'text-amber-500 dark:text-amber-400',
   3: 'text-sky-600 dark:text-sky-400',
@@ -41,12 +41,13 @@ export function usePriority(task: Task) {
 }
 
 // Icône « chiffre » (carré arrondi) : pleine, colorée, chiffre en blanc avec
-// une priorité ; sans priorité, carré vide.
-function PriorityIcon({ priority }: { priority: Priority | null }) {
+// une priorité ; sans priorité, carré vide. noDigit : carré seul (le chiffre
+// est déjà dans le libellé voisin).
+export function PriorityIcon({ priority, className, noDigit }: { priority: Priority | null; className?: string; noDigit?: boolean }) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden>
+    <svg viewBox="0 0 24 24" aria-hidden className={className}>
       <rect x="2" y="2" width="20" height="20" rx="5" fill={priority ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" />
-      {priority && (
+      {priority && !noDigit && (
         <text x="12" y="17.5" textAnchor="middle" fontSize="16" fontWeight="700" fill="white">
           {priority}
         </text>
@@ -65,7 +66,7 @@ export function PriorityButton({ priority, onClick, hidden }: { priority: Priori
       tabIndex={-1}
       className={cn(
         'priority flex-none',
-        priority ? COLOR[priority] : 'text-muted-foreground',
+        priority ? PRIORITY_COLOR[priority] : 'text-muted-foreground',
         !priority && hidden && 'invisible group-hover:visible group-focus-within:visible',
       )}
       aria-label={priority ? `Priorité ${priority}` : 'Priorité'}

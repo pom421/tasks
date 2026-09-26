@@ -7,7 +7,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-Rien.
+- [~] Filtre priorité : `P` ou clic sur « Priorités », 1 → 2 → 3 → toutes ; zone des projets, combiné en ET avec les autres filtres
 
 ## Décisions attendues
 
@@ -19,7 +19,7 @@ Rien.
 - [?] Chrono : un seul en marche à la fois (en lancer un met l'autre en pause). À garder ?
 - [?] Plan journée : une tâche du plan mais pas faite disparaît le lendemain. La reporter automatiquement au jour suivant ?
 - [?] Plan journée : compteur rouge seulement **au-delà** du maximum (6/5), pas à 5/5. Orange à 5/5 ?
-- [?] Priorité : trier ou filtrer par priorité ?
+- [?] Priorité : trier les tâches par priorité (en plus du filtre `P`) ?
 
 ## Idées / plus tard
 

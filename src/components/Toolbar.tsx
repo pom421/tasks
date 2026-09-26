@@ -1,5 +1,7 @@
 import { Archive, Flag, Heart, Settings as SettingsIcon } from 'lucide-react';
-import type { JiraState } from '../../shared/types.ts';
+import type { JiraState, Priority } from '../../shared/types.ts';
+import { PRIORITY_COLOR, PriorityIcon } from './Priority';
+import { cn } from '@/lib/utils';
 import { useActions } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -15,6 +17,7 @@ const SHORTCUTS: [string, string][] = [
   ['Alt+↑ Alt+↓', 'Monter / descendre la tâche, jusque dans le projet voisin (Alt+k / Alt+j)'],
   ['r', 'Report : à reporter → reporté (fiche sur le ticket) → rien'],
   ['R', 'Afficher seulement les tâches à reporter → reportées → toutes (projets)'],
+  ['P', 'Afficher seulement les tâches de priorité 1 → 2 → 3 → toutes (projets)'],
   ['L', 'Ouvrir la fiche sur l’identifiant du ticket (majuscule)'],
   ['c', 'Chrono de la tâche : lancer / mettre en pause (aussi dans la fiche)'],
   ['C', 'Remettre le chrono à zéro'],
@@ -39,6 +42,9 @@ interface ToolbarProps {
   jiraDone: number; // tâches à faire reportées
   jiraFilter: JiraState;
   onJiraFilter: () => void;
+  priorities: number; // tâches à faire avec une priorité
+  priorityFilter: Priority | null;
+  onPriorityFilter: () => void;
   favorites: number;
   favoritesOnly: boolean;
   onFavoritesOnly: () => void;
@@ -53,7 +59,7 @@ interface ToolbarProps {
 // Actif : texte à pleine intensité ; inactif : atténué.
 const filterClass = (active: boolean) => (active ? 'text-foreground' : 'text-muted-foreground');
 
-export function Toolbar({ jiraWanted, jiraDone, jiraFilter, onJiraFilter, favorites, favoritesOnly, onFavoritesOnly, archived, archivedOnly, onArchivedOnly, showFilters, helpOpen, onHelpOpen }: ToolbarProps) {
+export function Toolbar({ jiraWanted, jiraDone, jiraFilter, onJiraFilter, priorities, priorityFilter, onPriorityFilter, favorites, favoritesOnly, onFavoritesOnly, archived, archivedOnly, onArchivedOnly, showFilters, helpOpen, onHelpOpen }: ToolbarProps) {
   const { navigate } = useActions();
 
   // Filtres de la zone des projets, combinables (ET logique). Chacun n'est
@@ -78,6 +84,19 @@ export function Toolbar({ jiraWanted, jiraDone, jiraFilter, onJiraFilter, favori
             {jiraFilter === 'done' || (jiraFilter === 'none' && !jiraWanted)
               ? `${jiraDone} ${jiraDone > 1 ? 'tâches reportées' : 'tâche reportée'}`
               : `${jiraWanted} ${jiraWanted > 1 ? 'tâches' : 'tâche'} à reporter`}
+          </Button>
+        )}
+        {/* Priorité : un clic (ou P) passe à la suite : 1 → 2 → 3 → toutes. */}
+        {showFilters && (priorities > 0 || priorityFilter) && (
+          <Button
+            id="priority-filter"
+            className={filterClass(Boolean(priorityFilter))}
+            aria-pressed={Boolean(priorityFilter)}
+            title="Priorité 1 → 2 → 3 → toutes (P)"
+            onClick={onPriorityFilter}
+          >
+            <PriorityIcon priority={priorityFilter} noDigit className={cn(priorityFilter && PRIORITY_COLOR[priorityFilter])} />
+            {priorityFilter ? `Priorité ${priorityFilter}` : 'Priorités'}
           </Button>
         )}
         {showFilters && (archived > 0 || archivedOnly) && (

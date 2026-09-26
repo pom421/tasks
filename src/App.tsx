@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { DEFAULT_DAY_CAPACITY, jiraState, type JiraState, type JournalDay, type Project, type Settings, type Task } from '../shared/types.ts';
+import { DEFAULT_DAY_CAPACITY, jiraState, type JiraState, type JournalDay, type Priority, type Project, type Settings, type Task } from '../shared/types.ts';
 import { api } from '@/lib/api';
 import { ActionsContext, type Actions, type TaskField, type Undo } from '@/lib/actions';
 import { focusByKey, handleNavKey, restore, snapshot, type FocusSnapshot } from '@/lib/nav';
@@ -51,6 +51,9 @@ export function App() {
   const [jiraFilter, setJiraFilter] = useState<JiraState>('none');
   const cycleJiraFilter = () => setJiraFilter((f) => NEXT_JIRA_FILTER[f]);
   const [archivedOnly, setArchivedOnly] = useState(false);
+  // Filtre priorité (P) : aucun → 1 → 2 → 3 → aucun.
+  const [priorityFilter, setPriorityFilter] = useState<Priority | null>(null);
+  const cyclePriorityFilter = () => setPriorityFilter((p) => (p === 3 ? null : (((p ?? 0) + 1) as Priority)));
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -187,6 +190,7 @@ export function App() {
         R: () => !dayView && cycleJiraFilter(),
         F: () => !dayView && setFavoritesOnly((v) => !v),
         A: () => !dayView && setArchivedOnly((v) => !v),
+        P: () => !dayView && cyclePriorityFilter(),
         T: () => navigate(dayView ? '/' : '/plan'),
         u: undo,
         '?': () => setHelpOpen(true),
@@ -256,6 +260,9 @@ export function App() {
           jiraWanted={data.projects.flatMap((p) => p.tasks).filter((t) => jiraState(t) === 'wanted').length}
           jiraDone={data.projects.flatMap((p) => p.tasks).filter((t) => jiraState(t) === 'done').length}
           jiraFilter={jiraFilter}
+          priorities={data.projects.flatMap((p) => p.tasks).filter((t) => t.priority).length}
+          priorityFilter={priorityFilter}
+          onPriorityFilter={cyclePriorityFilter}
           onJiraFilter={cycleJiraFilter}
           favorites={data.projects.filter((p) => p.favorite_at).length}
           favoritesOnly={favoritesOnly}
@@ -294,7 +301,7 @@ export function App() {
             {dayView ? (
               <DayView projects={data.projects} dayDone={data.dayDone} capacity={data.settings.day_capacity} />
             ) : (
-              <ProjectList projects={data.projects} archivedOnly={archivedOnly} jiraFilter={jiraFilter} favoritesOnly={favoritesOnly} />
+              <ProjectList projects={data.projects} archivedOnly={archivedOnly} jiraFilter={jiraFilter} priorityFilter={priorityFilter} favoritesOnly={favoritesOnly} />
             )}
           </div>
           <Journal days={data.days} dates={data.dates} projects={data.projects} filter={filter} onFilter={changeFilter} />

@@ -98,3 +98,64 @@ test('non-régression : priorité gardée dans le Log ; n n sur une tâche = nou
   await page.keyboard.press('n');
   await expect(page.locator('#new-project')).toBeFocused();
 });
+
+test('P : filtre priorité 1 → 2 → 3 → toutes (zone des projets seulement)', async ({ page, store }) => {
+  const alpha = store.createProject('Alpha');
+  const beta = store.createProject('Beta');
+  const ids = {
+    un: store.createTask(alpha.id, 'Urgent').id,
+    deux: store.createTask(alpha.id, 'Important').id,
+    sans: store.createTask(alpha.id, 'Sans').id,
+    trois: store.createTask(beta.id, 'Plus tard').id,
+  };
+  store.updateTask(ids.un, { priority: 1 });
+  store.updateTask(ids.deux, { priority: 2 });
+  store.updateTask(ids.trois, { priority: 3, jira: 'wanted' });
+  store.updateTask(store.createTask(beta.id, 'Faite').id, { priority: 1, doneAt: '2026-09-25' });
+  await page.goto('/');
+  await expect(page.locator('.project')).toHaveCount(2);
+  const names = page.locator('#projects .name');
+  const button = page.locator('#priority-filter');
+  await expect(button).toHaveText('Priorités');
+  await expect(button).toHaveAttribute('aria-pressed', 'false');
+
+  await page.keyboard.press('P');
+  await expect(button).toHaveText('Priorité 1');
+  await expect(button).toHaveAttribute('aria-pressed', 'true');
+  await expect(names).toHaveText(['Alpha', 'Urgent']);
+  await expect(page.locator('#journal .name')).toHaveText(['Faite']); // Log inchangé
+  await page.keyboard.press('P');
+  await expect(names).toHaveText(['Alpha', 'Important']);
+  await button.click();
+  await expect(button).toHaveText('Priorité 3');
+  await expect(names).toHaveText(['Beta', 'Plus tard']);
+
+  // Combiné en ET avec le report : priorité 3 et à reporter.
+  await page.keyboard.press('R');
+  await expect(names).toHaveText(['Beta', 'Plus tard']);
+  await page.keyboard.press('R'); // reportées : aucune
+  await expect(page.locator('#projects .empty')).toHaveText('Aucune tâche avec les filtres demandés.');
+  await page.keyboard.press('R');
+
+  await page.keyboard.press('P');
+  await expect(button).toHaveAttribute('aria-pressed', 'false');
+  await expect(names).toHaveText(['Alpha', 'Urgent', 'Important', 'Sans', 'Beta', 'Plus tard']);
+});
+
+test('P : message exact si aucune tâche de cette priorité ; bouton absent sans priorité', async ({ page, store }) => {
+  const alpha = store.createProject('Alpha');
+  const une = store.createTask(alpha.id, 'Une');
+  await page.goto('/');
+  await expect(page.locator('.project')).toHaveCount(1);
+  await expect(page.locator('#priority-filter')).toHaveCount(0);
+
+  store.updateTask(une.id, { priority: 2 });
+  await page.reload();
+  await page.locator('body').press('P');
+  await expect(page.locator('#projects .empty')).toHaveText('Aucune tâche à faire de priorité 1.');
+  // Filtre actif : bouton toujours là pour le couper, même si la priorité disparaît.
+  store.updateTask(une.id, { priority: null });
+  await page.locator('body').press('P');
+  await page.locator('body').press('P');
+  await expect(page.locator('#priority-filter')).toHaveText('Priorité 3');
+});
