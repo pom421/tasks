@@ -26,6 +26,11 @@ export function focusByKey(key: string) {
   focusItem(navItems().find((item) => item.dataset.navKey === key));
 }
 
+// Focus donné par la navigation (↑/↓, j/k, gg/G, Début/Fin) : un champ
+// « + Ajouter » atteint ainsi reste en lecture (Entrée pour écrire).
+let byNav = false;
+export const focusedByNav = () => byNav;
+
 // Déplace le focus de delta éléments, ou au début / à la fin (±Infinity).
 export function move(delta: number) {
   const items = navItems();
@@ -36,7 +41,9 @@ export function move(delta: number) {
   else if (delta === Infinity) next = items.length - 1;
   else if (i === -1) next = delta > 0 ? 0 : items.length - 1;
   else next = Math.min(Math.max(i + delta, 0), items.length - 1);
+  byNav = true;
   focusItem(items[next]);
+  byNav = false;
 }
 
 // Photographie du focus avant un re-rendu : clé et position.
@@ -73,6 +80,9 @@ export function leaveField(field: HTMLElement) {
   else field.blur();
 }
 
+// Champ de saisie où l'on écrit (un champ « + Ajouter » en lecture n'en est pas un).
+export const TEXT_FIELD = 'input:not([type="checkbox"]):not([readonly]), textarea';
+
 // Éléments où ↑/↓ ont déjà un sens (listes, dates, édition) : on n'y touche pas.
 function ownsArrows(el: Element) {
   return el.matches('input.edit, select, textarea, input[type="date"]');
@@ -96,7 +106,7 @@ export function handleNavKey(e: KeyboardEvent) {
   if (document.querySelector('[role="dialog"]') || ownsArrows(target)) return;
   if (e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
     // Dans un champ texte, Maj+flèche sélectionne : on n'y touche pas.
-    if (target.matches('input:not([type="checkbox"]), textarea')) return;
+    if (target.matches(TEXT_FIELD)) return;
     e.preventDefault();
     moveProject(e.key === 'ArrowUp' ? -1 : 1);
     return;
@@ -105,7 +115,7 @@ export function handleNavKey(e: KeyboardEvent) {
   const moves: Record<string, number> = { ArrowDown: 1, ArrowUp: -1 };
   // Hors champ texte seulement (où ces touches servent à écrire ou déplacer
   // le curseur) : Début / Fin, et à la manière de vim j / k, gg / G.
-  if (!target.matches('input:not([type="checkbox"]), textarea')) {
+  if (!target.matches(TEXT_FIELD)) {
     Object.assign(moves, { Home: -Infinity, End: Infinity, j: 1, k: -1, G: Infinity });
     if (e.key === 'g') {
       e.preventDefault();

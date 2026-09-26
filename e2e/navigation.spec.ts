@@ -156,9 +156,10 @@ test('Espace dans le journal décoche la tâche', async ({ page, store, data }) 
   expect(store.state().projects[1].tasks[0].title).toBe('Trois');
 });
 
-test('champ d’ajout : on tape directement, Entrée ajoute, Échap vide et sort du champ', async ({ page, store, data }) => {
+test('champ d’ajout : Entrée pour écrire, Entrée ajoute, Échap vide et sort du champ', async ({ page, store, data }) => {
   await pressDown(page, 4);
   expect(await current(page)).toBe(`add:${data.alpha.id}`);
+  await page.keyboard.press('Enter'); // atteint par la navigation : en lecture, Entrée pour écrire
   await page.keyboard.type('Quatre');
   await page.keyboard.press('Enter');
   await expect(page.locator('#projects .name', { hasText: 'Quatre' })).toBeVisible();
@@ -289,7 +290,7 @@ test('Suppr fonctionne comme x (double appui)', async ({ page, store }) => {
   expect(store.state().projects[0].tasks.map((t) => t.title)).toEqual(['Deux']);
 });
 
-test('j / k naviguent comme ↓ / ↑, mais s’écrivent dans un champ', async ({ page, data }) => {
+test('j / k naviguent comme ↓ / ↑, y compris sur « + Ajouter » ; s’écrivent une fois en écriture (Entrée)', async ({ page, data }) => {
   await page.keyboard.press('j');
   expect(await current(page)).toBe(`project:${data.alpha.id}`);
   await page.keyboard.press('j');
@@ -297,12 +298,38 @@ test('j / k naviguent comme ↓ / ↑, mais s’écrivent dans un champ', async 
   expect(await current(page)).toBe(`task:${data.tasks.deux.id}`);
   await page.keyboard.press('k');
   expect(await current(page)).toBe(`task:${data.tasks.une.id}`);
-  // Dans le champ d'ajout, j et k sont des lettres.
+  // Champ d'ajout atteint par j : en lecture, j / k continuent de naviguer.
+  const add = page.locator(`[data-nav-key="add:${data.alpha.id}"]`);
   await page.keyboard.press('j');
   await page.keyboard.press('j');
   expect(await current(page)).toBe(`add:${data.alpha.id}`);
+  await expect(add).toHaveAttribute('readonly', '');
+  await page.keyboard.press('k');
+  expect(await current(page)).toBe(`task:${data.tasks.deux.id}`);
+  await page.keyboard.press('j');
+  await page.keyboard.press('j');
+  expect(await current(page)).toBe(`project:${data.beta.id}`);
+  await page.keyboard.press('k');
+  await expect(add).toHaveValue('');
+  // Entrée : en écriture, j et k sont des lettres.
+  await page.keyboard.press('Enter');
+  await expect(add).not.toHaveAttribute('readonly');
   await page.keyboard.type('jk');
-  await expect(page.locator(`[data-nav-key="add:${data.alpha.id}"]`)).toHaveValue('jk');
+  await expect(add).toHaveValue('jk');
+});
+
+test('« + Ajouter » : n ou clic = écriture directe ; n sur le champ en lecture le passe en écriture', async ({ page, data }) => {
+  const add = page.locator(`[data-nav-key="add:${data.alpha.id}"]`);
+  await add.click();
+  await page.keyboard.type('x');
+  await expect(add).toHaveValue('x');
+  await page.keyboard.press('Escape');
+  await pressDown(page, 1); // retour sur « + Ajouter » par la navigation : lecture
+  expect(await current(page)).toBe(`add:${data.alpha.id}`);
+  await expect(add).toHaveAttribute('readonly', '');
+  await page.keyboard.press('n');
+  await expect(add).not.toHaveAttribute('readonly');
+  await expect(add).toBeFocused();
 });
 
 test('raccourcis actifs même quand le focus est sur la case à cocher', async ({ page, store }) => {
@@ -1229,4 +1256,11 @@ test('Échap Échap : retire tous les filtres (projets et Log) ; un seul Échap 
   await expect(page.locator('#log-search')).toHaveValue('');
   await expect(page.locator('#journal .name')).toHaveCount(0); // Log revenu à aujourd'hui
   await expect(page.locator('#projects .project-head .name')).toHaveText(['Alpha', 'Beta']);
+});
+
+// Chromium des tests masque les barres de défilement (pas de décalage visible) :
+// on vérifie donc la règle qui réserve leur place.
+test('place de la barre de défilement toujours réservée (pas de décalage au filtrage)', async ({ page }) => {
+  const gutter = await page.evaluate(() => getComputedStyle(document.documentElement).scrollbarGutter);
+  expect(gutter).toBe('stable');
 });

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { leaveField } from '@/lib/nav';
+import { focusedByNav, leaveField } from '@/lib/nav';
 
 interface EditableNameProps {
   value: string;
@@ -100,25 +100,40 @@ interface AddInputProps {
   className?: string;
 }
 
-// Champ d'ajout, lui aussi étape de navigation. Échap vide la saisie et sort du
-// champ (retour à la navigation, comme en édition d'un titre).
+// Champ d'ajout, lui aussi étape de navigation. Atteint par la navigation
+// (↑/↓, j/k…), il reste en lecture : les touches naviguent toujours, Entrée
+// passe en écriture (comme pour modifier un titre). Par n, n n ou un clic : en
+// écriture directement. Échap vide la saisie et sort du champ.
 export function AddInput({ placeholder, navKey, onAdd, onFocus, id, className }: AddInputProps) {
   const [value, setValue] = useState('');
+  const [browsing, setBrowsing] = useState(false);
   return (
     <input
       id={id}
       className={cn(
         'add w-full border-b border-transparent bg-transparent py-0.5 pl-1 text-muted-foreground outline-none placeholder:text-muted-foreground focus:border-primary focus:text-foreground',
+        browsing && 'caret-transparent',
         className,
       )}
+      readOnly={browsing}
       placeholder={placeholder}
       autoComplete="off"
       data-nav=""
       data-nav-key={navKey}
       value={value}
       onChange={(e) => setValue(e.target.value)}
-      onFocus={onFocus}
+      onFocus={() => {
+        setBrowsing(focusedByNav());
+        onFocus?.();
+      }}
+      onBlur={() => setBrowsing(false)}
+      onMouseDown={() => setBrowsing(false)}
       onKeyDown={async (e) => {
+        if (browsing && e.key === 'Enter') {
+          e.preventDefault();
+          setBrowsing(false);
+          return;
+        }
         if (e.key === 'Escape') {
           e.stopPropagation();
           setValue('');

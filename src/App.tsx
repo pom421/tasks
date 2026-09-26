@@ -173,7 +173,8 @@ export function App() {
       handleNavKey(e);
       if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
       const target = e.target as HTMLElement;
-      if (target.closest('input, select, textarea, [role="dialog"]')) return;
+      // Champ « + Ajouter » en lecture (atteint par la navigation) : raccourcis actifs.
+      if (target.closest('input:not([readonly]), select, textarea, [role="dialog"]')) return;
       // n : champ d'ajout du projet où est le curseur (projet ou une de ses
       // tâches), sinon du dernier projet utilisé, sinon du premier ; aucun
       // projet : « Nouveau projet ». Un 2e n rapproché : voir l'effet suivant.
@@ -182,7 +183,10 @@ export function App() {
         const here = target.closest('#projects .project')?.id.replace('project-', '');
         const inputs = [...document.querySelectorAll<HTMLInputElement>('#projects input.add')];
         const find = (id: unknown) => inputs.find((i) => i.dataset.navKey === `add:${id}`);
-        (find(here) ?? find(lastProject.current) ?? inputs[0] ?? document.getElementById('new-project'))?.focus();
+        const field = find(here) ?? find(lastProject.current) ?? inputs[0] ?? document.getElementById('new-project');
+        // Déjà dessus en lecture : on repasse par le focus pour écrire.
+        if (field === document.activeElement) field?.blur();
+        field?.focus();
       };
       const keys: Record<string, () => void> = {
         n: focusAdd,
