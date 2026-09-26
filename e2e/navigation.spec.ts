@@ -1226,6 +1226,27 @@ test('Maj+↑ / Maj+↓ : en-tête du projet précédent / suivant ; dans un cha
   expect(await current(page)).toBe('new-project');
 });
 
+test('Maj+j / Maj+k comme Maj+↓ / Maj+↑ ; en écriture, J et K s’écrivent', async ({ page, data }) => {
+  const { alpha, beta, tasks } = data;
+  await pressDown(page, 3); // « Deux », dans Alpha
+  await page.keyboard.press('Shift+KeyJ');
+  expect(await current(page)).toBe(`project:${beta.id}`);
+  await page.keyboard.press('j'); // « Trois »
+  expect(await current(page)).toBe(`task:${tasks.trois.id}`);
+  await page.keyboard.press('Shift+KeyK');
+  expect(await current(page)).toBe(`project:${alpha.id}`);
+  // « + Ajouter » en lecture : Maj+j navigue ; en écriture, s'écrit.
+  const add = page.locator(`[data-nav-key="add:${alpha.id}"]`);
+  await pressDown(page, 3);
+  expect(await current(page)).toBe(`add:${alpha.id}`);
+  await page.keyboard.press('Shift+KeyJ');
+  expect(await current(page)).toBe(`project:${beta.id}`);
+  await add.click();
+  await page.keyboard.type('JK');
+  await expect(add).toHaveValue('JK');
+  expect(await current(page)).toBe(`add:${alpha.id}`);
+});
+
 test('fiche : même disposition en lecture et en édition (titre en haut, icônes dessous)', async ({ page }) => {
   await pressDown(page, 2);
   await page.keyboard.press('o');
