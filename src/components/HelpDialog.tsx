@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 
 // Une ligne : touches (alternatives séparées par « / », chacune une suite de
 // touches) et action. Mêmes formulations que le README.
@@ -97,12 +97,10 @@ function Keys({ keys }: { keys: string[][] }) {
 export function HelpDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* Hauteur limitée à l'écran : l'en-tête reste, la liste défile. */}
-      <DialogContent className="max-h-[85vh] grid-rows-[auto_minmax(0,1fr)] gap-0 p-0 sm:max-w-4xl xl:max-w-6xl">
-        <div className="border-b px-6 py-4">
-          <DialogTitle>Raccourcis</DialogTitle>
-          <DialogDescription className="mt-1">À la souris : clic sur un nom pour le modifier.</DialogDescription>
-        </div>
+      {/* Hauteur limitée à l'écran : le titre reste, la liste défile. Pas de
+          description (aria-describedby vide : pas d'avertissement Radix). */}
+      <DialogContent aria-describedby={undefined} className="max-h-[85vh] grid-rows-[auto_minmax(0,1fr)] gap-0 p-0 sm:max-w-4xl xl:max-w-6xl">
+        <DialogTitle className="border-b px-6 py-4">Raccourcis</DialogTitle>
         <div className="min-h-0 overflow-y-auto px-6 pt-4">
           {/* Colonnes dans un bloc à hauteur naturelle : elles s'équilibrent. */}
           <div className="gap-10 md:columns-2 xl:columns-3">
