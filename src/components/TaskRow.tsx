@@ -1,6 +1,6 @@
 import { useRef, useState, type FocusEvent, type KeyboardEvent } from 'react';
 import { hasDetails, jiraState, type DoneTask, type JiraState, type Task } from '../../shared/types.ts';
-import { NotebookText } from 'lucide-react';
+import { NotebookText, Sun } from 'lucide-react';
 import { api, type TaskPatch } from '@/lib/api';
 import { useActions } from '@/lib/actions';
 import { localToday } from '@/lib/dates';
@@ -17,6 +17,7 @@ import { moveDirection } from '@/lib/nav';
 // (rien -> à reporter -> reporté -> rien), o ou Maj+Entrée ouvre la fiche,
 // e l'ouvre directement en édition,
 // L l'ouvre sur l'identifiant du ticket,
+// s l'ajoute à « Ma journée » ou l'en retire (tâches à faire),
 // x ou Suppr demande la suppression, un second appui la confirme,
 // Alt+↑ / Alt+↓ (ou Alt+k / Alt+j) déplacent la tâche (onMove, tâches à faire).
 export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (direction: -1 | 1) => void }) {
@@ -61,6 +62,17 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
     });
   };
 
+  // Ma journée : choisie pour aujourd'hui (date du navigateur). stay : dans
+  // l'onglet Ma journée, la ligne retirée disparaît, le curseur reste en place.
+  const inDay = !done && task.day_at === localToday();
+  const toggleDay = () =>
+    undoable(
+      inDay ? 'retrait de ma journée' : 'ajout à ma journée',
+      () => api.updateTask(task.id, { day_at: inDay ? null : localToday() }),
+      () => api.updateTask(task.id, { day_at: task.day_at }),
+      true,
+    );
+
   const remove = () => {
     let deleted: Record<string, unknown> | undefined;
     return undoable(
@@ -96,6 +108,10 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
       // Sur la case elle-même, Espace la coche nativement.
       e.preventDefault();
       toggleDone();
+    }
+    if (e.key === 's' && !done) {
+      e.preventDefault();
+      toggleDay();
     }
     if (e.key === 'J') {
       e.preventDefault();
@@ -146,6 +162,23 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
           </button>
         )}
       </span>
+      {/* Bascule « Ma journée » : au survol, toujours visible (soleil plein) si choisie. */}
+      {!done && !confirmDelete && (
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          className={cn(
+            'day-toggle flex-none',
+            inDay ? 'text-amber-500' : 'invisible text-muted-foreground group-hover:visible group-focus-within:visible',
+          )}
+          aria-label="Ma journée"
+          aria-pressed={inDay}
+          title={inDay ? 'Retirer de ma journée (s)' : 'Ajouter à ma journée (s)'}
+          onClick={toggleDay}
+        >
+          <Sun aria-hidden fill={inDay ? 'currentColor' : 'none'} />
+        </Button>
+      )}
       {confirmDelete ? (
         <span className="confirm-delete flex-none text-xs text-destructive" role="alert">
           x pour supprimer · Échap pour annuler

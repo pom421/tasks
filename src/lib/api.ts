@@ -27,10 +27,11 @@ export interface TaskPatch {
   jira?: JiraState;
   jira_ticket?: string | null; // clé (PROJ-123) ou lien complet
   notes?: string | null;
+  day_at?: string | null; // Ma journée : date du jour, null = retirée
 }
 
 export const api = {
-  state: () => request<State>('GET', '/api/state'),
+  state: (day: string) => request<State>('GET', `/api/state?day=${day}`),
   settings: () => request<Settings>('GET', '/api/settings'),
   updateSettings: (patch: Partial<Settings>) => request<Settings>('PUT', '/api/settings', patch),
   journal: ({ from, to, projectId, jiraPending, q }: JournalFilter) => {

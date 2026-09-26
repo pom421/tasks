@@ -237,9 +237,11 @@ test('ligne de tâche : icônes alignées à droite, clic n’importe où sur la
   const une = page.locator('#projects li.task').first();
   const box = async (sel: string) => (await une.locator(sel).boundingBox())!;
   const rowBox = (await une.boundingBox())!;
-  // Icônes (report, détails) collées au bord droit de la ligne.
+  // Icônes (report, détails, puis ☀ Ma journée) collées au bord droit de la ligne.
   const details = await box('.details');
-  expect(rowBox.x + rowBox.width - (details.x + details.width)).toBeLessThan(10);
+  const sun = await box('.day-toggle');
+  expect(rowBox.x + rowBox.width - (sun.x + sun.width)).toBeLessThan(10);
+  expect(sun.x - (details.x + details.width)).toBeLessThan(10);
   expect((await box('.report')).x).toBeGreaterThan(rowBox.x + rowBox.width / 2);
 
   // Clic à droite du texte, juste avant les icônes : le titre passe en édition.
@@ -726,12 +728,12 @@ test('réglages (/admin) : URL Jira conservée en base, lien depuis la fiche', a
   await expect(page).toHaveURL(/\/admin$/);
   await expect(page.getByRole('heading', { name: 'Réglages' })).toBeVisible();
   // Boutons homogènes : même hauteur, à contour, sans fond coloré.
-  const save = page.getByRole('button', { name: 'Enregistrer' });
+  const save = page.getByRole('button', { name: 'Enregistrer' }).first();
   const importMd = page.getByRole('button', { name: 'Importer .md' });
   expect((await save.boundingBox())!.height).toBe((await importMd.boundingBox())!.height);
   await expect(save).toHaveCSS('background-color', await importMd.evaluate((b) => getComputedStyle(b).backgroundColor));
   await page.getByLabel('URL de base des tickets').fill('https://entreprise.atlassian.net/');
-  await page.getByRole('button', { name: 'Enregistrer' }).click();
+  await page.getByRole('button', { name: 'Enregistrer' }).first().click();
   await expect(page.getByText('Réglages enregistrés.')).toBeVisible();
   expect(store.settings().jira_base_url).toBe('https://entreprise.atlassian.net');
 
@@ -959,8 +961,8 @@ test('écran large : projets à gauche, Log à droite, toujours visible ; écran
   const projects = (await page.locator('#projects').boundingBox())!;
   const log = (await page.locator('#journal').boundingBox())!;
   expect(log.x).toBeGreaterThan(projects.x + projects.width - 1); // à droite
-  // En haut, à la même hauteur : titre « Projets » en face de « Log ».
-  const projectsTitle = (await page.getByRole('heading', { name: 'Projets' }).boundingBox())!;
+  // En haut, à la même hauteur : onglet « Projets » en face du titre « Log ».
+  const projectsTitle = (await page.getByRole('tab', { name: 'Projets' }).boundingBox())!;
   const logTitle = (await page.locator('#journal').getByRole('heading', { name: 'Log' }).boundingBox())!;
   expect(Math.abs(projectsTitle.y - logTitle.y)).toBeLessThan(2);
 
@@ -975,7 +977,8 @@ test('écran large : projets à gauche, Log à droite, toujours visible ; écran
   const narrowLog = (await page.locator('#journal').boundingBox())!;
   expect(narrowLog.y).toBeGreaterThan(narrowProjects.y + narrowProjects.height); // dessous
   expect(Math.abs(narrowLog.x - narrowProjects.x)).toBeLessThan(2);
-  await expect(page.getByRole('heading', { name: 'Projets' })).toBeHidden(); // écran étroit : pas de colonnes
+  // Écran étroit : les onglets restent là (seul moyen de changer de vue à la souris).
+  await expect(page.getByRole('tab', { name: 'Projets' })).toBeVisible();
 });
 
 test('Log : une tâche cochée est barrée ; décochée, elle ne l’est plus', async ({ page }) => {

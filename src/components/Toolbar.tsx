@@ -13,12 +13,14 @@ const SHORTCUTS: [string, string][] = [
   ['Alt+↑ Alt+↓', 'Monter / descendre la tâche, jusque dans le projet voisin (Alt+k / Alt+j)'],
   ['J', 'Report : à reporter → reporté → rien (majuscule)'],
   ['L', 'Ouvrir la fiche sur l’identifiant du ticket (majuscule)'],
+  ['s', 'Ajouter la tâche à « Ma journée » / l’en retirer'],
+  ['v', 'Onglet Projets / Ma journée'],
   ['r', 'Afficher seulement les tâches à reporter (projets)'],
   ['*', 'Afficher seulement les projets favoris'],
   ['x x', 'Supprimer la tâche ou le projet (x une 2e fois pour confirmer)'],
   ['f', 'Sur un projet : favori / plus favori'],
   ['a', 'Sur un projet : archiver / désarchiver'],
-  ['u', 'Annuler la dernière action (cocher, renommer, supprimer, favori, archivage)'],
+  ['u', 'Annuler la dernière action (cocher, renommer, supprimer, ma journée, favori, archivage)'],
   ['p', 'Nouveau projet'],
   ['n', 'Nouvelle tâche (projet courant, sinon dernier utilisé)'],
   ['d', 'Filtrer le log sur une journée'],
@@ -37,6 +39,7 @@ interface ToolbarProps {
   archived: number; // nombre de projets archivés
   archivedOnly: boolean;
   onArchivedOnly: () => void;
+  showFilters: boolean; // filtres de la zone des projets, masqués dans l'onglet Ma journée
   helpOpen: boolean;
   onHelpOpen: (open: boolean) => void;
 }
@@ -44,7 +47,7 @@ interface ToolbarProps {
 // Actif : texte à pleine intensité ; inactif : atténué.
 const filterClass = (active: boolean) => (active ? 'text-foreground' : 'text-muted-foreground');
 
-export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, favorites, favoritesOnly, onFavoritesOnly, archived, archivedOnly, onArchivedOnly, helpOpen, onHelpOpen }: ToolbarProps) {
+export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, favorites, favoritesOnly, onFavoritesOnly, archived, archivedOnly, onArchivedOnly, showFilters, helpOpen, onHelpOpen }: ToolbarProps) {
   const { navigate } = useActions();
 
   // Filtres de la zone des projets, combinables (ET logique). Chacun n'est
@@ -56,7 +59,7 @@ export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, favorites, favo
     <header className="flex flex-wrap items-center justify-between gap-2 pt-6 pb-2">
       <h1 className="text-2xl font-bold">Tâches</h1>
       <nav className="flex flex-wrap items-center gap-1.5">
-        {(jiraPending > 0 || jiraFilter) && (
+        {showFilters && (jiraPending > 0 || jiraFilter) && (
           <Button
             id="jira-pending"
             className={filterClass(jiraFilter)}
@@ -68,7 +71,7 @@ export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, favorites, favo
             {jiraPending} {jiraPending > 1 ? 'tâches' : 'tâche'} à reporter
           </Button>
         )}
-        {(archived > 0 || archivedOnly) && (
+        {showFilters && (archived > 0 || archivedOnly) && (
           <Button
             id="archived-only"
             className={filterClass(archivedOnly)}
@@ -79,7 +82,7 @@ export function Toolbar({ jiraPending, jiraFilter, onJiraFilter, favorites, favo
             <Archive aria-hidden fill={archivedOnly ? 'currentColor' : 'none'} /> Archivés
           </Button>
         )}
-        {(favorites > 0 || favoritesOnly) && (
+        {showFilters && (favorites > 0 || favoritesOnly) && (
           <Button
             id="favorites-only"
             className={filterClass(favoritesOnly)}

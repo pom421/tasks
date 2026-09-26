@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { jiraState, type JournalDay, type Project, type Settings, type Task } from '../shared/types.ts';
+import { DEFAULT_DAY_CAPACITY, jiraState, type JournalDay, type Project, type Settings, type Task } from '../shared/types.ts';
 import { api } from '@/lib/api';
 import { ActionsContext, type Actions, type TaskField, type Undo } from '@/lib/actions';
 import { focusByKey, handleNavKey, restore, snapshot, type FocusSnapshot } from '@/lib/nav';
@@ -8,6 +8,9 @@ import { ProjectList } from '@/components/ProjectList';
 import { Journal, NO_FILTER, journalQuery, type Filter } from '@/components/Journal';
 import { TaskDialog } from '@/components/TaskDialog';
 import { SettingsPage } from '@/components/SettingsPage';
+import { DayView } from '@/components/DayView';
+import { localToday } from '@/lib/dates';
+import { cn } from '@/lib/utils';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 interface Data {
@@ -15,6 +18,7 @@ interface Data {
   days: JournalDay[];
   settings: Settings;
   dates: string[]; // jours du Log ayant des entrées
+  dayDone: number; // Ma journée : tâches choisies déjà faites
 }
 
 // Focus à appliquer une fois les nouvelles données affichées.
@@ -26,9 +30,16 @@ interface PendingFocus {
 }
 
 export function App() {
-  const [data, setData] = useState<Data>({ projects: [], days: [], settings: { jira_base_url: null }, dates: [] });
-  // Deux « pages » seulement : la liste (/) et les réglages (/admin), sans routeur.
+  const [data, setData] = useState<Data>({
+    projects: [],
+    days: [],
+    settings: { jira_base_url: null, day_capacity: DEFAULT_DAY_CAPACITY },
+    dates: [],
+    dayDone: 0,
+  });
+  // Pages, sans routeur : la liste (/), son onglet « Ma journée » (/jour) et les réglages (/admin).
   const [path, setPath] = useState(window.location.pathname);
+  const dayView = path === '/jour';
   // Fiche d'une tâche : id, champ focalisé, open à false pendant l'animation de
   // fermeture ; opening numérote les ouvertures (formulaire neuf à chaque fois).
   const [openTask, setOpenTask] = useState<{ id: number; field: TaskField; open: boolean; opening: number } | null>(null);
@@ -55,7 +66,7 @@ export function App() {
 
   const load = useCallback(async (f: Filter = filterRef.current) => {
     const [state, journal] = await Promise.all([
-      api.state(),
+      api.state(localToday()),
       api.journal(journalQuery(f)),
     ]);
     setData({
@@ -63,6 +74,7 @@ export function App() {
       days: journal.days,
       settings: state.settings,
       dates: journal.dates,
+      dayDone: state.dayDone,
     });
   }, []);
 
@@ -165,8 +177,10 @@ export function App() {
         d: () => document.getElementById('filter-date')?.focus(),
         f: () => document.getElementById('filter-project')?.focus(),
         '/': () => document.getElementById('log-search')?.focus(),
-        r: () => setJiraOnly((v) => !v),
-        '*': () => setFavoritesOnly((v) => !v),
+        // Filtres de la zone des projets : sans effet dans l'onglet Ma journée.
+        r: () => !dayView && setJiraOnly((v) => !v),
+        '*': () => !dayView && setFavoritesOnly((v) => !v),
+        v: () => navigate(dayView ? '/' : '/jour'),
         u: undo,
         '?': () => setHelpOpen(true),
         // Échap (hors élément de la liste) : réinitialise les filtres du Log.
@@ -224,14 +238,39 @@ export function App() {
           archived={data.projects.filter((p) => p.archived_at).length}
           archivedOnly={archivedOnly}
           onArchivedOnly={() => setArchivedOnly((v) => !v)}
+          showFilters={!dayView}
           helpOpen={helpOpen}
           onHelpOpen={setHelpOpen}
         />
         <main className="lg:grid lg:grid-cols-2 lg:items-start">
           <div className="min-w-0 lg:pr-8 lg:pb-16">
-            {/* Écran large : titre de colonne, sur la ligne de celui du Log (même hauteur). */}
-            <h2 className="hidden h-[26px] items-center font-semibold lg:mt-5 lg:flex">Projets</h2>
-            <ProjectList projects={data.projects} archivedOnly={archivedOnly} jiraOnly={jiraOnly} favoritesOnly={favoritesOnly} />
+            {/* Onglets de la colonne, sur la ligne du titre du Log (même hauteur). */}
+            <div role="tablist" aria-label="Vue" className="mt-3 flex h-[26px] items-center gap-4 lg:mt-5">
+              {[
+                { label: 'Projets', to: '/', selected: !dayView },
+                { label: 'Ma journée', to: '/jour', selected: dayView },
+              ].map((tab) => (
+                <button
+                  key={tab.to}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab.selected}
+                  title="Projets / Ma journée (v)"
+                  className={cn(
+                    'border-b-2 font-semibold',
+                    tab.selected ? 'border-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
+                  )}
+                  onClick={() => navigate(tab.to)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            {dayView ? (
+              <DayView projects={data.projects} dayDone={data.dayDone} capacity={data.settings.day_capacity} />
+            ) : (
+              <ProjectList projects={data.projects} archivedOnly={archivedOnly} jiraOnly={jiraOnly} favoritesOnly={favoritesOnly} />
+            )}
           </div>
           <Journal days={data.days} dates={data.dates} projects={data.projects} filter={filter} onFilter={changeFilter} />
         </main>

@@ -12,11 +12,15 @@ export interface Task {
   jira_key: string | null; // clé du ticket (PROJ-123), lien construit avec l'URL Jira d'entreprise
   jira_url: string | null; // ou lien complet vers le ticket (http/https)
   notes: string | null; // détails, en Markdown
+  day_at: string | null; // choisie pour la journée du 'YYYY-MM-DD' (Ma journée)
 }
 
 export interface Settings {
   jira_base_url: string | null; // ex. https://entreprise.atlassian.net
+  day_capacity: number; // Ma journée : nombre de tâches maximum
 }
+
+export const DEFAULT_DAY_CAPACITY = 5;
 
 // Lien du ticket : URL complète, sinon clé + URL Jira d'entreprise.
 export function jiraLink(t: Pick<Task, 'jira_key' | 'jira_url'>, settings: Settings): string | null {
@@ -55,6 +59,7 @@ export interface JournalDay {
 export interface State {
   projects: Project[];
   jiraPending: number; // tâches à reporter dans Jira (à faire ou faites)
+  dayDone: number; // tâches faites parmi celles choisies pour la journée demandée
   settings: Settings;
 }
 

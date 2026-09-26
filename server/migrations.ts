@@ -89,6 +89,11 @@ export const MIGRATIONS: Migration[] = [
     name: 'projets favoris',
     sql: `ALTER TABLE project ADD COLUMN favorite_at TEXT;`,
   },
+  {
+    version: 9,
+    name: 'tâches choisies pour la journée',
+    sql: `ALTER TABLE task ADD COLUMN day_at TEXT;`,
+  },
 ];
 
 export const LATEST_VERSION = MIGRATIONS.at(-1)!.version;
