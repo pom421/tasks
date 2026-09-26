@@ -119,13 +119,20 @@ test('fiche : mêmes icônes, mêmes touches', async ({ page, store, data }) => 
   const dialog = page.getByRole('dialog');
   const chrono = dialog.getByRole('button', { name: 'Chrono', exact: true });
   await expect(chrono).toHaveAttribute('title', '12 min · Lancer le chrono (c)');
+  // Temps passé affiché dans la fiche, à gauche des icônes : atténué à l'arrêt.
+  const time = dialog.locator('.time-spent');
+  await expect(time).toHaveText('12 min');
+  await expect(time).toHaveClass(/text-muted-foreground/);
+  expect((await time.boundingBox())!.x).toBeLessThan((await chrono.boundingBox())!.x);
 
   await chrono.click();
   await expect(chrono).toHaveAttribute('aria-pressed', 'true');
+  await expect(time).toHaveClass(/text-foreground/);
   await page.keyboard.press('c');
   await expect(chrono).toHaveAttribute('aria-pressed', 'false');
   await page.keyboard.press('C');
   await expect(chrono).toHaveAttribute('title', 'Lancer le chrono (c)');
+  await expect(time).toHaveCount(0); // plus de temps : rien d'affiché
   await expect(dialog.getByRole('button', { name: 'Remettre le chrono à zéro' })).toHaveCount(0);
 
   await page.keyboard.press('Escape');
@@ -141,4 +148,24 @@ test('non-régression : Log sans chrono ; ligne sans chrono inchangée', async (
   await logged.hover();
   await expect(logged.getByRole('button', { name: 'Chrono', exact: true })).toHaveCount(0);
   await expect(row(page, 'Deux').locator('.title')).toHaveText('Deux');
+});
+
+test('fiche : durée en cours (2h34) et durée d’une tâche faite', async ({ page, store, data }) => {
+  store.updateTask(data.une.id, { timeSpent: 2 * 3600 + 29 * 60, timerStartedAt: sqlTime(NOW - 5 * 60_000) });
+  store.updateTask(data.deux.id, { timeSpent: 45 * 60, doneAt: '2026-09-25' });
+  await open(page);
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('o');
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.locator('.time-spent')).toHaveText('2h34');
+  await expect(dialog.locator('.time-spent')).toHaveAttribute('title', 'Temps passé, chrono en marche');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+
+  // Tâche faite (Log) : durée affichée, sans bouton de chrono.
+  await page.locator('#journal li.task .name', { hasText: 'Deux' }).focus();
+  await page.keyboard.press('o');
+  await expect(dialog.locator('.time-spent')).toHaveText('45 min');
+  await expect(dialog.getByRole('button', { name: 'Chrono', exact: true })).toHaveCount(0);
 });

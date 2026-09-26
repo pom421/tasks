@@ -1,5 +1,5 @@
 import { useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { JIRA_KEY_RE, type DoneTask, type Task } from '../../shared/types.ts';
+import { JIRA_KEY_RE, formatDuration, type DoneTask, type Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
 import type { TaskField } from '@/lib/actions';
 import { focusByKey } from '@/lib/nav';
@@ -221,7 +221,17 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
           <DialogDescription>
             {projectName} · {state}
           </DialogDescription>
-          <span className="flex">
+          <span className="flex items-center">
+            {/* Temps passé, à gauche des icônes : aligné à droite, il s'allonge vers
+                la gauche sans déplacer les icônes. Texte normal chrono en marche. */}
+            {(timer.running || timer.seconds > 0) && (
+              <span
+                className={cn('time-spent mr-1 text-sm tabular-nums', timer.running ? 'text-foreground' : 'text-muted-foreground')}
+                title={timer.running ? 'Temps passé, chrono en marche' : 'Temps passé'}
+              >
+                {formatDuration(timer.seconds)}
+              </span>
+            )}
             {!done && <TimerButtons timer={timer} />}
             {!done && <PlanButton plan={plan} />}
             <PriorityButton priority={task.priority} onClick={priority.cycle} />
