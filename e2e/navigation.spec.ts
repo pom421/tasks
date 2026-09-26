@@ -1264,3 +1264,30 @@ test('place de la barre de défilement toujours réservée (pas de décalage au 
   const gutter = await page.evaluate(() => getComputedStyle(document.documentElement).scrollbarGutter);
   expect(gutter).toBe('stable');
 });
+
+test('aide ? : raccourcis groupés, tout visible sur écran courant, liste qui défile sur petit écran', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await reload(page);
+  await page.keyboard.press('?');
+  const dialog = page.getByRole('dialog', { name: 'Raccourcis' });
+  await expect(dialog.getByRole('heading', { level: 3 })).toHaveText(['Navigation', 'Fiche', 'Tâche', 'Projet', 'Filtres des projets', 'Log', 'Général']);
+  // Raccourcis ajoutés au ménage : déplacement d'un projet, Suppr, fermeture de la fiche.
+  await expect(dialog.getByText('Monter / descendre le projet')).toBeVisible();
+  await expect(dialog.getByText('Supprimer avec ses tâches (ou Suppr)')).toBeVisible();
+  await expect(dialog.getByText('Enregistrer et lire ; en lecture, fermer')).toBeVisible();
+  const list = dialog.locator('.overflow-y-auto');
+  const fits = () => list.evaluate((e) => e.scrollHeight <= e.clientHeight);
+  expect(await fits()).toBe(true);
+  // Écran bas : la fenêtre reste dans l'écran, seule la liste défile.
+  await page.keyboard.press('Escape');
+  await page.setViewportSize({ width: 1024, height: 500 });
+  await page.keyboard.press('?');
+  await expect(dialog).toBeVisible();
+  expect(await fits()).toBe(false);
+  // Attendre la fin de l'animation d'ouverture.
+  await expect.poll(async () => (await dialog.boundingBox())!.y).toBeGreaterThanOrEqual(0);
+  const box = (await dialog.boundingBox())!;
+  expect(box.y + box.height).toBeLessThanOrEqual(500);
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+});

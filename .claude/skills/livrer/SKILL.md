@@ -17,7 +17,7 @@ description: Vérifier, documenter, commiter et pousser une modification termin�
    périmés, textes en anglais, cas oublié (plusieurs filtres combinés, liste vide…).
 3. **Documentation à jour** :
    - `README.md` : section Utilisation, tableau des raccourcis, modèle de données ;
-   - aide `?` : tableau `SHORTCUTS` de `src/components/Toolbar.tsx` ;
+   - aide `?` : sections `SECTIONS` de `src/components/HelpDialog.tsx` ;
    - `docs/plan.md` : tâche en « Fait » avec le commit (ou « En cours » tant que
      la CI n'est pas verte), décisions à trancher dans « Décisions attendues ».
 4. **Commit** en français : `feat:` / `fix:` / `style:` / `test:` / `docs:`, titre

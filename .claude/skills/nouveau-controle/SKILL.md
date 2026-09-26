@@ -33,7 +33,7 @@ mêmes classes, même comportement. L'utilisateur veut une UX homogène.
 - Focus clavier conservé après l'action (`act()` restaure le focus).
 
 ## À mettre à jour
-- Aide `?` (`SHORTCUTS` dans `Toolbar.tsx`), `README.md`, `docs/plan.md`.
+- Aide `?` (`SECTIONS` dans `HelpDialog.tsx`, dans la bonne section), `README.md`, `docs/plan.md`.
 - Tests e2e : le comportement, le clavier, l'accessibilité (`getByRole` + nom),
   plus un test de **non-régression** (photo avant / après de ce qui ne doit pas
   changer).

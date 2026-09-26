@@ -4,39 +4,7 @@ import { PRIORITY_COLOR, PriorityIcon } from './Priority';
 import { cn } from '@/lib/utils';
 import { useActions } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-
-const SHORTCUTS: [string, string][] = [
-  ['↑ ↓  j k', 'Se déplacer (Début / Fin ou g g / G : premier / dernier) ; sur « + Ajouter », Entrée pour écrire'],
-  ['Maj+↑ Maj+↓', 'Projet précédent / suivant'],
-  ['Maj+Entrée  o', 'Ouvrir la fiche ; e : tout modifier (Tab : champ suivant), Ctrl+Entrée : lecture'],
-  ['e', 'Ouvrir la fiche directement en édition'],
-  ['Entrée', 'Modifier le nom sélectionné / valider'],
-  ['Échap', "Quitter l'édition ou un champ « + Ajouter », retour à la navigation"],
-  ['Échap Échap', 'Retirer tous les filtres (projets et Log)'],
-  ['Espace', 'Cocher / décocher la tâche'],
-  ['Alt+↑ Alt+↓', 'Monter / descendre la tâche, jusque dans le projet voisin (Alt+k / Alt+j)'],
-  ['r', 'Report : à reporter → reporté (fiche sur le ticket) → rien'],
-  ['R', 'Afficher seulement les tâches à reporter → reportées → toutes (projets)'],
-  ['P', 'Afficher seulement les tâches de priorité 1 → 2 → 3 → toutes (projets)'],
-  ['L', 'Ouvrir la fiche sur l’identifiant du ticket (majuscule)'],
-  ['c', 'Chrono de la tâche : lancer / mettre en pause (aussi dans la fiche)'],
-  ['C', 'Remettre le chrono à zéro'],
-  ['t', 'Ajouter la tâche au plan journée / l’en retirer (aussi dans la fiche)'],
-  ['T', 'Onglet Projets / Plan journée'],
-  ['1 2 3', 'Priorité 1, 2 ou 3 ; le même chiffre la retire (aussi dans la fiche)'],
-  ['x x', 'Supprimer la tâche ou le projet (x une 2e fois pour confirmer)'],
-  ['f', 'Sur un projet : favori / plus favori'],
-  ['F', 'Afficher seulement les projets favoris'],
-  ['a', 'Sur un projet : archiver / désarchiver'],
-  ['A', 'Afficher seulement les projets archivés'],
-  ['u', 'Annuler la dernière action (cocher, renommer, supprimer, chrono, plan journée, priorité, favori, archivage)'],
-  ['n n', 'Nouveau projet (n deux fois, rapprochés)'],
-  ['n', 'Nouvelle tâche (projet courant, sinon dernier utilisé)'],
-  ['d', 'Filtrer le log sur une journée'],
-  ['/', 'Rechercher dans le log (titre, contenu, ticket) ; Tab : journée, projet'],
-  ['?', 'Cette aide'],
-];
+import { HelpDialog } from './HelpDialog';
 
 interface ToolbarProps {
   jiraWanted: number; // tâches à faire à reporter
@@ -141,22 +109,7 @@ export function Toolbar({ jiraWanted, jiraDone, jiraFilter, onJiraFilter, priori
         </Button>
       </nav>
 
-      <Dialog open={helpOpen} onOpenChange={onHelpOpen}>
-        <DialogContent>
-          <DialogTitle>Raccourcis</DialogTitle>
-          <DialogDescription>À la souris : clic sur un nom pour le modifier.</DialogDescription>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-            {SHORTCUTS.map(([key, label]) => (
-              <div key={label} className="contents">
-                <dt>
-                  <kbd className="rounded border px-1 font-mono text-xs">{key}</kbd>
-                </dt>
-                <dd>{label}</dd>
-              </div>
-            ))}
-          </dl>
-        </DialogContent>
-      </Dialog>
+      <HelpDialog open={helpOpen} onOpenChange={onHelpOpen} />
     </header>
   );
 }

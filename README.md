@@ -75,7 +75,7 @@ Chaque session démarre dans un conteneur neuf : les dépendances doivent y êtr
 - Report : une tâche passe « à reporter », puis « reporté » (badge après le titre : l'identifiant du ticket s'il y en a un, « reporté » sinon ; date du report en info-bulle).
 - Réglages (icône ⚙, page `/admin`, `Échap` pour revenir) : URL de base des tickets (ex. `https://entreprise.atlassian.net`), qui transforme les identifiants en liens (`URL/browse/PROJ-123`), conservée en base ; nombre de tâches maximum par jour (Plan journée) ; export / import des données.
 
-Clavier (`?` affiche l'aide) :
+Clavier (`?` affiche l'aide, groupée par thème : navigation, fiche, tâche, projet, filtres des projets, Log, général ; sur un petit écran, la liste défile sous le titre) :
 
 | Touche | Action |
 |---|---|
