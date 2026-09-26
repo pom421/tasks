@@ -7,8 +7,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-- [~] Chrono par tâche (fusionné sur `main`, CI à vérifier) : ▷ / pause pleine (`t`), ↻ remise à zéro (`T`, sans confirmation), temps passé en info-bulle, sur la ligne et dans la fiche ; migration 9
-- [~] Plan journée (fusionné sur `main`, CI à vérifier) : ☀ / `s` sur la ligne et dans la fiche, onglet « Plan journée » (`v`, `/plan`), compteur « 3/5 tâches » rouge au-delà du maximum (Réglages) ; migration 10
+- [~] Priorité des tâches : branche `claude/priorite-ixjyv7`, à jour avec `main`, pas encore fusionnée (migration 11)
 
 ## Décisions attendues
 
@@ -33,6 +32,8 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
+- [x] Chrono par tâche : ▷ / pause pleine (`t`), ↻ remise à zéro (`T`), temps passé en info-bulle, ligne et fiche ; migration 9 (`bb31dad`)
+- [x] Plan journée : ☀ / `s` (ligne et fiche), onglet « Plan journée » (`v`, `/plan`), compteur « 3/5 tâches » rouge au-delà du maximum ; migration 10 (`bb31dad`)
 - [x] Migration : une sauvegarde `.vN.bak` déjà présente n'est plus écrasée ni bloquante (`output file already exists` après restauration par copie) ; la nouvelle devient `.vN.2.bak`
 - [x] Badge « reporté » : l’identifiant du ticket seul quand il y en a un (« reporté » pour les lecteurs d’écran et en info-bulle)
 - [x] `gg` / `G` (à la manière de vim) : premier / dernier élément, comme `Début` / `Fin`
