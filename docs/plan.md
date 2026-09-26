@@ -33,6 +33,11 @@ Rien.
 
 ## Fait (récent)
 
+- [x] Place de la barre de défilement réservée : plus de décalage quand un filtre la fait apparaître ou disparaître
+- [x] « + Ajouter » atteint par `j` / `k` : en lecture, `Entrée` pour écrire (`n`, `n` `n` ou clic : écriture directe)
+- [x] `Échap` `Échap` : retire tous les filtres (projets et Log) (`f9c64f3`)
+- [x] Fiche : temps passé affiché à gauche des icônes du chrono (`791d23b`)
+- [x] Priorité absente : « 1 » dans un carré à contour (`ad8068d`)
 - [x] Filtre priorité : `P` ou clic sur « Priorités », 1 → 2 → 3 → toutes ; zone des projets, combiné en ET avec les autres filtres (`86ab470`)
 - [x] Raccourcis, minuscule = action / majuscule = filtre : `f` favori (projet) / `F` filtre Favoris (remplace `*`) ; `r` report (remplace `J`) / `R` filtre à reporter → reportées → tous (remplace `r`) ; priorité `1` `2` `3` (remplace `p`) ; plus de `f` pour le Log (`/` puis `Tab`) ; `A` filtre Archivés ; `n` `n` nouveau projet (remplace `p`) (`7d022da`, `aa07421`)
 - [x] Raccourcis `t` / `T` plan journée, `c` / `C` chrono, `Maj+↑` / `Maj+↓` entre projets ; fiche : même disposition en lecture et en édition (`052a963`)

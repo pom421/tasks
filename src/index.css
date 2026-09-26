@@ -66,6 +66,11 @@
   * {
     @apply border-border;
   }
+  /* Place de la barre de défilement toujours réservée : la page ne se décale
+     pas quand un filtre la fait apparaître ou disparaître. */
+  html {
+    scrollbar-gutter: stable;
+  }
   body {
     @apply bg-background text-foreground antialiased;
     color-scheme: light dark;
