@@ -43,7 +43,7 @@ test('bouton Chrono : lance (icône pause pleine, toujours visible) puis met en 
   // En marche : visible même sans survol ; aucun texte ajouté à la ligne.
   await page.mouse.move(0, 0);
   await expect(chrono).toBeVisible();
-  await expect(une).toHaveText('Une');
+  await expect(une.locator('.title')).toHaveText('Une');
   expect(store.db.prepare('SELECT timer_started_at FROM task WHERE id = ?').get(data.une.id)).not.toEqual({ timer_started_at: null });
 
   await chrono.click();
@@ -140,5 +140,5 @@ test('non-régression : Log sans chrono ; ligne sans chrono inchangée', async (
   const logged = page.locator('.day li.task', { hasText: 'Une' });
   await logged.hover();
   await expect(logged.getByRole('button', { name: 'Chrono', exact: true })).toHaveCount(0);
-  await expect(row(page, 'Deux')).toHaveText('Deux');
+  await expect(row(page, 'Deux').locator('.title')).toHaveText('Deux');
 });

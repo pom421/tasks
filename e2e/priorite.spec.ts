@@ -26,7 +26,9 @@ test('clavier : 1 / 2 / 3 donnent la priorité, le même chiffre la retire, u an
   // Même chiffre : retirée ; u : rétablie.
   await page.keyboard.press('3');
   await expect(icon(page, 'Une')).toHaveAttribute('aria-label', 'Priorité');
-  await expect(icon(page, 'Une').locator('text')).toHaveCount(0);
+  // Sans priorité : « 1 » dans un carré vide (ce que donne un clic), pas une case vide.
+  await expect(icon(page, 'Une').locator('text')).toHaveText('1');
+  await expect(icon(page, 'Une').locator('rect')).toHaveAttribute('fill', 'none');
   await page.keyboard.press('u');
   await expect(icon(page, 'Une')).toHaveAttribute('aria-label', 'Priorité 3');
   expect(store.db.prepare('SELECT priority FROM task WHERE id = ?').get(une.id)).toEqual({ priority: 3 });
