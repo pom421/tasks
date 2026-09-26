@@ -16,12 +16,12 @@ interface ProjectFiltersProps {
   onArchivedOnly: () => void;
 }
 
-// Actif : texte à pleine intensité ; inactif : atténué. Hauteur des champs du
-// Log, pour que les deux colonnes restent alignées.
+// Actif : texte à pleine intensité ; inactif : atténué. Hauteur des champs du Log.
 const filterClass = (active: boolean) => cn('h-[26px]', active ? 'text-foreground' : 'text-muted-foreground');
 
-// Filtres de l'onglet Projets, sur la ligne des onglets (comme ceux du Log sur
-// la ligne de son titre), combinables (ET logique). Chacun n'est affiché que
+// Filtres de l'onglet Projets, sous les onglets, alignés à droite,
+// combinables (ET logique). Ligne réservée même vide : la liste ne bouge pas
+// quand un filtre apparaît. Chacun n'est affiché que
 // s'il peut servir (ou s'il est actif, pour pouvoir le couper) : compteurs sur
 // tous les projets, indépendamment des autres filtres actifs.
 // Boutons bascule sobres : toujours à contour ; icône vide, pleine quand le
@@ -33,10 +33,16 @@ export function ProjectFilters({ projects, jiraFilter, onJiraFilter, priorityFil
   const priorities = tasks.filter((t) => t.priority).length;
   const favorites = projects.filter((p) => p.favorite_at).length;
   const archived = projects.filter((p) => p.archived_at).length;
+  const show = {
+    jira: jiraWanted > 0 || jiraDone > 0 || jiraFilter !== 'none',
+    priority: priorities > 0 || Boolean(priorityFilter),
+    archived: archived > 0 || archivedOnly,
+    favorites: favorites > 0 || favoritesOnly,
+  };
   return (
-    <div role="group" aria-label="Filtres des projets" className="flex flex-wrap items-center gap-1.5">
+    <div role="group" aria-label="Filtres des projets" className="mt-3 flex min-h-[26px] flex-wrap items-center justify-end gap-1.5">
       {/* Report : un clic (ou R) passe à la suite : à reporter → reportées → tous. */}
-      {(jiraWanted > 0 || jiraDone > 0 || jiraFilter !== 'none') && (
+      {show.jira && (
         <Button
           id="jira-pending"
           className={filterClass(jiraFilter !== 'none')}
@@ -51,7 +57,7 @@ export function ProjectFilters({ projects, jiraFilter, onJiraFilter, priorityFil
         </Button>
       )}
       {/* Priorité : un clic (ou P) passe à la suite : 1 → 2 → 3 → toutes. */}
-      {(priorities > 0 || priorityFilter) && (
+      {show.priority && (
         <Button
           id="priority-filter"
           className={filterClass(Boolean(priorityFilter))}
@@ -63,7 +69,7 @@ export function ProjectFilters({ projects, jiraFilter, onJiraFilter, priorityFil
           {priorityFilter ? `Priorité ${priorityFilter}` : 'Priorités'}
         </Button>
       )}
-      {(archived > 0 || archivedOnly) && (
+      {show.archived && (
         <Button
           id="archived-only"
           className={filterClass(archivedOnly)}
@@ -74,7 +80,7 @@ export function ProjectFilters({ projects, jiraFilter, onJiraFilter, priorityFil
           <Archive aria-hidden fill={archivedOnly ? 'currentColor' : 'none'} /> Archivés
         </Button>
       )}
-      {(favorites > 0 || favoritesOnly) && (
+      {show.favorites && (
         <Button
           id="favorites-only"
           className={filterClass(favoritesOnly)}

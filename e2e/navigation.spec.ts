@@ -249,7 +249,7 @@ test('ligne de tâche : icônes alignées à droite, clic n’importe où sur la
   const une = page.locator('#projects li.task').first();
   const box = async (sel: string) => (await une.locator(sel).boundingBox())!;
   const rowBox = (await une.boundingBox())!;
-  // Icônes (report, détails, chrono, ☀ Plan journée, puis priorité) collées au bord droit de la ligne.
+  // Icônes (report, détails, chrono, ☀ Aujourd’hui, puis priorité) collées au bord droit de la ligne.
   const details = await box('.details');
   const timer = await box('.timer');
   const sun = await box('.day-toggle');
@@ -1416,21 +1416,31 @@ test('aide ? : raccourcis groupés, tout visible sur écran courant, liste qui d
   await expect(dialog).toHaveCount(0);
 });
 
-test('filtres des projets sur la ligne des onglets, à droite, alignés avec la ligne du Log', async ({ page, store, data }) => {
+test('filtres des projets sous les onglets, alignés à droite', async ({ page, store, data }) => {
   store.updateProject(data.alpha.id, { favorite: true });
   store.updateTask(data.tasks.une.id, { priority: 1 });
-  await page.setViewportSize({ width: 1280, height: 800 });
-  await reload(page);
-  const filters = page.getByRole('group', { name: 'Filtres des projets' });
-  await expect(filters.getByRole('button')).toHaveCount(2); // Priorités, Favoris
-  await expect(page.locator('header #favorites-only')).toHaveCount(0); // plus dans l'en-tête
-  const top = async (selector: string) => Math.round((await page.locator(selector).boundingBox())!.y);
-  const box = async (selector: string) => (await page.locator(selector).boundingBox())!;
-  expect(await top('#favorites-only')).toBe(await top('[role="tablist"]'));
-  expect(await top('#favorites-only')).toBe(await top('#log-search'));
-  expect((await box('#favorites-only')).height).toBe((await box('#log-search')).height);
-  // À droite de la colonne des projets, avant le Log.
-  const favorites = await box('#favorites-only');
-  expect(favorites.x + favorites.width).toBeLessThan((await box('#journal')).x);
-  expect(favorites.x).toBeGreaterThan((await box('[role="tablist"]')).x + 200);
+  for (const width of [1280, 375]) {
+    await page.setViewportSize({ width, height: 800 });
+    await reload(page);
+    const filters = page.getByRole('group', { name: 'Filtres des projets' });
+    await expect(filters.getByRole('button')).toHaveCount(2); // Priorités, Favoris
+    await expect(page.locator('header #favorites-only')).toHaveCount(0); // plus dans l'en-tête
+    const tabs = (await page.getByRole('tablist').boundingBox())!;
+    const box = (await filters.boundingBox())!;
+    const favorites = (await page.locator('#favorites-only').boundingBox())!;
+    const project = (await page.locator('.project').first().boundingBox())!;
+    // Sous les onglets (avec un espace), au-dessus des projets, calés à droite de la colonne.
+    expect(box.y).toBeGreaterThanOrEqual(tabs.y + tabs.height + 8);
+    expect(box.y + box.height).toBeLessThan(project.y);
+    expect(Math.round(favorites.x + favorites.width)).toBe(Math.round(project.x + project.width));
+  }
+});
+
+test('? ouvre l’aide, ? la referme', async ({ page }) => {
+  await page.keyboard.press('?');
+  await expect(page.getByRole('dialog', { name: 'Raccourcis' })).toBeVisible();
+  await page.keyboard.press('?');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.keyboard.press('?');
+  await expect(page.getByRole('dialog', { name: 'Raccourcis' })).toBeVisible();
 });

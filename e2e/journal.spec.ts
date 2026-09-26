@@ -83,7 +83,7 @@ test('< et > : jour précédent / suivant ayant des entrées, désactivés en bo
   await next.click();
   await expect(days(page)).toHaveText(['lundi 21 septembre 2026']);
   // Retour direct à aujourd'hui.
-  const todayButton = page.getByRole('button', { name: 'Aujourd’hui' });
+  const todayButton = page.getByRole('button', { name: 'Aujourd’hui', exact: true });
   await expect(date(page)).toHaveValue('2026-09-21'); // le champ date suit
   await todayButton.click();
   await expect(days(page)).toHaveText(['vendredi 25 septembre 2026']);
@@ -129,7 +129,7 @@ test('recherche : toutes les journées dont une tâche correspond (titre, conten
   ]);
   await expect(count).toHaveText('5 tâches trouvées dans 4 journées');
   await expect(page.getByRole('button', { name: 'Jour précédent' })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Aujourd’hui' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Aujourd’hui', exact: true })).toBeDisabled();
 
   await page.locator('#log-search').fill('ving-1');
   await expect(days(page)).toHaveText(['jeudi 24 septembre 2026']);

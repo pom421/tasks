@@ -31,11 +31,11 @@ const open = async (page: Page, path = '/') => {
 test('☀ au survol : ajoute au plan (soleil plein, toujours visible), puis retire', async ({ page, store, data }) => {
   await open(page);
   const une = row(page, 'Une');
-  await expect(une.getByRole('button', { name: 'Plan journée' })).toBeHidden();
+  await expect(une.getByRole('button', { name: 'Pour aujourd’hui' })).toBeHidden();
   await une.hover();
-  const sun = une.getByRole('button', { name: 'Plan journée' });
+  const sun = une.getByRole('button', { name: 'Pour aujourd’hui' });
   await expect(sun).toHaveAttribute('aria-pressed', 'false');
-  await expect(sun).toHaveAttribute('title', 'Ajouter au plan (t)');
+  await expect(sun).toHaveAttribute('title', 'Ajouter à Aujourd’hui (t)');
   await sun.click();
   await expect(sun).toHaveAttribute('aria-pressed', 'true');
   await expect(sun.locator('svg')).toHaveAttribute('fill', 'currentColor');
@@ -47,14 +47,14 @@ test('☀ au survol : ajoute au plan (soleil plein, toujours visible), puis reti
   await expect(sun).toHaveAttribute('aria-pressed', 'false');
 });
 
-test('onglet Plan journée : seulement les tâches choisies, par projet ; compteur 3/5 tâches', async ({ page, store, data }) => {
+test('onglet Aujourd’hui : seulement les tâches choisies, par projet ; compteur 3/5 tâches', async ({ page, store, data }) => {
   store.updateTask(data.une.id, { dayAt: TODAY });
   store.updateTask(data.trois.id, { dayAt: TODAY });
   store.updateTask(data.deux.id, { dayAt: '2026-09-24' }); // choisie hier : plus au plan
   await open(page);
   await expect(tab(page, 'Projets')).toHaveAttribute('aria-selected', 'true');
-  await tab(page, 'Plan journée').click();
-  await expect(tab(page, 'Plan journée')).toHaveAttribute('aria-selected', 'true');
+  await tab(page, 'Aujourd’hui').click();
+  await expect(tab(page, 'Aujourd’hui')).toHaveAttribute('aria-selected', 'true');
   await expect(page).toHaveURL(/\/plan$/);
 
   const day = page.locator('#day');
@@ -73,7 +73,7 @@ test('onglet Plan journée : seulement les tâches choisies, par projet ; compte
 
   // Rechargement : l'onglet est dans l'adresse.
   await page.reload();
-  await expect(tab(page, 'Plan journée')).toHaveAttribute('aria-selected', 'true');
+  await expect(tab(page, 'Aujourd’hui')).toHaveAttribute('aria-selected', 'true');
 });
 
 test('au-delà du maximum : 6/5 tâches en rouge ; maximum réglable', async ({ page, store, data }) => {
@@ -95,10 +95,10 @@ test('clavier : t ajoute / retire, T change d’onglet, u annule', async ({ page
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('ArrowDown'); // sur « Une »
   await page.keyboard.press('t');
-  await expect(row(page, 'Une').getByRole('button', { name: 'Plan journée' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(row(page, 'Une').getByRole('button', { name: 'Pour aujourd’hui' })).toHaveAttribute('aria-pressed', 'true');
 
   await page.keyboard.press('T');
-  await expect(tab(page, 'Plan journée')).toHaveAttribute('aria-selected', 'true');
+  await expect(tab(page, 'Aujourd’hui')).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('#day li.task .name')).toHaveText(['Une']);
 
   // Retirée depuis l'onglet : elle disparaît ; u la remet.
@@ -121,7 +121,7 @@ test('fiche : ☀ et t ajoutent au plan / en retirent', async ({ page, store, da
   await page.keyboard.press('ArrowDown'); // sur « Une »
   await page.keyboard.press('o');
   const dialog = page.getByRole('dialog');
-  const sun = dialog.getByRole('button', { name: 'Plan journée' });
+  const sun = dialog.getByRole('button', { name: 'Pour aujourd’hui' });
   await expect(sun).toHaveAttribute('aria-pressed', 'false');
   await sun.click();
   await expect(sun).toHaveAttribute('aria-pressed', 'true');
@@ -133,7 +133,7 @@ test('fiche : ☀ et t ajoutent au plan / en retirent', async ({ page, store, da
   await expect(sun).toHaveAttribute('aria-pressed', 'true');
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
-  await expect(row(page, 'Une').getByRole('button', { name: 'Plan journée' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(row(page, 'Une').getByRole('button', { name: 'Pour aujourd’hui' })).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('toutes faites : message exact', async ({ page, store, data }) => {
@@ -163,7 +163,7 @@ test('non-régression : Log sans ☀, filtres des projets inchangés dans l’on
   await expect(page.locator('#favorites-only')).toBeVisible();
   const logged = page.locator('#journal li.task', { hasText: 'Deux' });
   await logged.hover();
-  await expect(logged.getByRole('button', { name: 'Plan journée' })).toHaveCount(0);
+  await expect(logged.getByRole('button', { name: 'Pour aujourd’hui' })).toHaveCount(0);
   await page.keyboard.press('T');
   await expect(page.locator('#favorites-only')).toHaveCount(0);
   await page.keyboard.press('T');
@@ -177,6 +177,6 @@ test('non-régression : s et v n’ont plus d’effet (remplacés par t et T)', 
   await page.keyboard.press('s');
   await page.keyboard.press('v');
   await expect(tab(page, 'Projets')).toHaveAttribute('aria-selected', 'true');
-  await expect(row(page, 'Une').getByRole('button', { name: 'Plan journée' })).toHaveAttribute('aria-pressed', 'false');
+  await expect(row(page, 'Une').getByRole('button', { name: 'Pour aujourd’hui' })).toHaveAttribute('aria-pressed', 'false');
   expect(store.db.prepare('SELECT day_at FROM task WHERE id = ?').get(data.une.id)).toEqual({ day_at: null });
 });

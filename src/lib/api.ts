@@ -30,7 +30,7 @@ export interface TaskPatch {
   timer?: TimerAction;
   time_spent?: number; // annulation du chrono
   timer_started_at?: string | null;
-  day_at?: string | null; // Plan journée : date du jour, null = retirée
+  day_at?: string | null; // Aujourd’hui : date du jour, null = retirée
   priority?: Priority | null;
 }
 

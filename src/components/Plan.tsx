@@ -7,15 +7,15 @@ import { localToday } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
-// Plan journée d'une tâche à faire, partagé par la ligne et la fiche : t (ou ☀)
+// Aujourd’hui (plan du jour) d'une tâche à faire, partagé par la ligne et la fiche : t (ou ☀)
 // l'ajoute au plan du jour (date du navigateur) ou l'en retire. Annulable (u).
-// stay : dans l'onglet Plan journée, la ligne retirée disparaît, le curseur reste en place.
+// stay : dans l'onglet Aujourd’hui, la ligne retirée disparaît, le curseur reste en place.
 export function usePlan(task: Task) {
   const { undoable } = useActions();
   const inPlan = task.day_at === localToday();
   const toggle = () =>
     undoable({
-      label: inPlan ? 'retrait du plan' : 'ajout au plan',
+      label: inPlan ? 'retrait d’Aujourd’hui' : 'ajout à Aujourd’hui',
       focus: `task:${task.id}`,
       run: () => api.updateTask(task.id, { day_at: inPlan ? null : localToday() }),
       undo: () => api.updateTask(task.id, { day_at: task.day_at }),
@@ -43,9 +43,9 @@ export function PlanButton({ plan, hidden }: { plan: ReturnType<typeof usePlan>;
         plan.inPlan ? 'text-amber-500' : 'text-muted-foreground',
         !plan.inPlan && hidden && 'invisible group-hover:visible group-focus-within:visible',
       )}
-      aria-label="Plan journée"
+      aria-label="Pour aujourd’hui"
       aria-pressed={plan.inPlan}
-      title={plan.inPlan ? 'Retirer du plan (t)' : 'Ajouter au plan (t)'}
+      title={plan.inPlan ? 'Retirer d’Aujourd’hui (t)' : 'Ajouter à Aujourd’hui (t)'}
       onClick={plan.toggle}
     >
       <Sun aria-hidden fill={plan.inPlan ? 'currentColor' : 'none'} />

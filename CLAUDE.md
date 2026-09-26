@@ -16,7 +16,7 @@ modèle de données) et `docs/plan.md` (tâches en cours, décisions attendues).
   un effet, calculé sur **toutes** les données (jamais selon les autres
   filtres) ; un bouton actif reste visible pour pouvoir le couper.
 - **Zones indépendantes** : les filtres de l'onglet Projets (report, priorité,
-  Archivés, Favoris), sur la ligne des onglets, ne touchent que la zone des
+  Archivés, Favoris), sous les onglets, ne touchent que la zone des
   projets, combinés en ET. Le Log a ses propres filtres (recherche, journée,
   projet) sur la ligne de son titre.
 - **Icônes, pas de texte** : l'UX doit se comprendre par les icônes, sans

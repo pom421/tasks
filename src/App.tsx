@@ -20,7 +20,7 @@ interface Data {
   days: JournalDay[];
   settings: Settings;
   dates: string[]; // jours du Log ayant des entrées
-  dayDone: number; // Plan journée : tâches du plan déjà faites
+  dayDone: number; // Aujourd’hui : tâches du plan déjà faites
 }
 
 // Focus à appliquer une fois les nouvelles données affichées.
@@ -41,7 +41,7 @@ export function App() {
     dates: [],
     dayDone: 0,
   });
-  // Pages, sans routeur : la liste (/), son onglet « Plan journée » (/plan) et les réglages (/admin).
+  // Pages, sans routeur : la liste (/), son onglet « Aujourd’hui » (/plan) et les réglages (/admin).
   const [path, setPath] = useState(window.location.pathname);
   const dayView = path === '/plan';
   // Fiche d'une tâche : id, champ focalisé, open à false pendant l'animation de
@@ -211,7 +211,7 @@ export function App() {
         n: focusAdd,
         d: () => document.getElementById('filter-date')?.focus(),
         '/': () => document.getElementById('log-search')?.focus(),
-        // Filtres de la zone des projets : sans effet dans l'onglet Plan journée.
+        // Filtres de la zone des projets : sans effet dans l'onglet Aujourd’hui.
         R: () => !dayView && cycleJiraFilter(),
         F: () => !dayView && setFavoritesOnly((v) => !v),
         A: () => !dayView && setArchivedOnly((v) => !v),
@@ -298,44 +298,42 @@ export function App() {
         <Toolbar helpOpen={helpOpen} onHelpOpen={setHelpOpen} />
         <main className="lg:grid lg:grid-cols-2 lg:items-start">
           <div className="min-w-0 lg:pr-8 lg:pb-16">
-            {/* Onglets de la colonne, sur la ligne du titre du Log (même hauteur) ;
-                à droite, les filtres de l'onglet Projets (repliés sur écran étroit). */}
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 lg:mt-5">
-              <div role="tablist" aria-label="Vue" className="flex h-[26px] items-center gap-4">
-                {[
-                  { label: 'Projets', to: '/', selected: !dayView },
-                  { label: 'Plan journée', to: '/plan', selected: dayView },
-                ].map((tab) => (
-                  <button
-                    key={tab.to}
-                    type="button"
-                    role="tab"
-                    aria-selected={tab.selected}
-                    title="Projets / Plan journée (T)"
-                    className={cn(
-                      'border-b-2 font-semibold',
-                      tab.selected ? 'border-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
-                    )}
-                    onClick={() => navigate(tab.to)}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-              {!dayView && (
-                <ProjectFilters
-                  projects={data.projects}
-                  jiraFilter={jiraFilter}
-                  onJiraFilter={cycleJiraFilter}
-                  priorityFilter={priorityFilter}
-                  onPriorityFilter={cyclePriorityFilter}
-                  favoritesOnly={favoritesOnly}
-                  onFavoritesOnly={() => setFavoritesOnly((v) => !v)}
-                  archivedOnly={archivedOnly}
-                  onArchivedOnly={() => setArchivedOnly((v) => !v)}
-                />
-              )}
+            {/* Onglets de la colonne, sur la ligne du titre du Log (même hauteur). */}
+            <div role="tablist" aria-label="Vue" className="mt-3 flex h-[26px] items-center gap-4 lg:mt-5">
+              {[
+                { label: 'Projets', to: '/', selected: !dayView },
+                { label: 'Aujourd’hui', to: '/plan', selected: dayView },
+              ].map((tab) => (
+                <button
+                  key={tab.to}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab.selected}
+                  title="Projets / Aujourd’hui (T)"
+                  className={cn(
+                    'border-b-2 font-semibold',
+                    tab.selected ? 'border-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
+                  )}
+                  onClick={() => navigate(tab.to)}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
+            {/* Filtres de l'onglet Projets : sous les onglets, alignés à droite. */}
+            {!dayView && (
+              <ProjectFilters
+                projects={data.projects}
+                jiraFilter={jiraFilter}
+                onJiraFilter={cycleJiraFilter}
+                priorityFilter={priorityFilter}
+                onPriorityFilter={cyclePriorityFilter}
+                favoritesOnly={favoritesOnly}
+                onFavoritesOnly={() => setFavoritesOnly((v) => !v)}
+                archivedOnly={archivedOnly}
+                onArchivedOnly={() => setArchivedOnly((v) => !v)}
+              />
+            )}
             {dayView ? (
               <DayView projects={data.projects} dayDone={data.dayDone} capacity={data.settings.day_capacity} />
             ) : (

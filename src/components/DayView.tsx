@@ -11,7 +11,7 @@ interface DayViewProps {
   capacity: number; // maximum de tâches par jour (Réglages)
 }
 
-// Onglet « Plan journée » : seulement les tâches à faire du plan du jour
+// Onglet « Aujourd’hui » : seulement les tâches à faire du plan du jour
 // (t ou ☀), groupées par projet, sous le compteur « 3/5 tâches » (rouge au-delà
 // du maximum). Les tâches faites partent dans le Log mais restent comptées.
 export function DayView({ projects, dayDone, capacity }: DayViewProps) {
@@ -24,7 +24,7 @@ export function DayView({ projects, dayDone, capacity }: DayViewProps) {
   const over = total > capacity;
 
   return (
-    <section id="day" aria-label="Plan journée">
+    <section id="day" aria-label="Aujourd’hui">
       <p
         className={cn('day-count mt-3 text-sm', over ? 'font-medium text-destructive' : 'text-muted-foreground')}
         title={`Maximum : ${capacity} ${plural(capacity, 'tâche')} par jour (Réglages)`}

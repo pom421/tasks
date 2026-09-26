@@ -11,7 +11,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
   const id = useId();
   const [jiraBaseUrl, setJiraBaseUrl] = useState('');
   const [status, setStatus] = useState<{ ok?: string; error?: string }>({});
-  // Plan journée : maximum de tâches par jour (texte saisi, vérifié par le serveur).
+  // Aujourd’hui : maximum de tâches par jour (texte saisi, vérifié par le serveur).
   const [capacity, setCapacity] = useState('');
   const [dayStatus, setDayStatus] = useState<{ ok?: string; error?: string }>({});
   // Import .sqlite en deux temps (il remplace toute la base) : 1er clic = message,
@@ -147,7 +147,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
 
       <section aria-labelledby={`${id}-day`} className="mt-10">
         <h2 id={`${id}-day`} className="font-semibold">
-          Plan journée
+          Aujourd’hui
         </h2>
         <form className="mt-3 grid max-w-lg gap-2" onSubmit={saveCapacity} noValidate>
           <Label htmlFor={`${id}-capacity`}>Nombre de tâches maximum par jour</Label>

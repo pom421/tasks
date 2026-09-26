@@ -33,7 +33,7 @@ const isValidTicket = (s: string) => !s || JIRA_KEY_RE.test(s.toUpperCase()) || 
 // édition (titre, puis Tab : ticket, puis contenu Markdown) ; Ctrl+Entrée
 // enregistre et repasse en lecture ; un second Ctrl+Entrée (ou Échap) ferme.
 // Chrono comme sur la ligne : c lance / met en pause, C remet à zéro.
-// Plan journée comme sur la ligne : t ou ☀.
+// Aujourd’hui comme sur la ligne : t ou ☀.
 // Priorité comme sur la ligne : 1, 2, 3 (le même chiffre la retire) ou clic.
 // Tout est enregistré automatiquement, rien n'est perdu.
 // Accessibilité : focus piégé, titre et description annoncés (Radix),

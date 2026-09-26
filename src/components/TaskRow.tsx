@@ -21,7 +21,7 @@ import { PriorityButton, usePriority } from './Priority';
 // e l'ouvre directement en édition,
 // L l'ouvre sur l'identifiant du ticket,
 // c lance / met en pause le chrono, C l'arrête et le remet à zéro (tâches à faire),
-// t l'ajoute au plan journée ou l'en retire (tâches à faire),
+// t l'ajoute à Aujourd’hui ou l'en retire (tâches à faire),
 // 1, 2, 3 donnent la priorité (le même chiffre la retire),
 // x ou Suppr demande la suppression, un second appui la confirme,
 // Alt+↑ / Alt+↓ (ou Alt+k / Alt+j) déplacent la tâche (onMove, tâches à faire).

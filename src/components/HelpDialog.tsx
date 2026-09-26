@@ -13,7 +13,7 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
       [[['Maj+↑', 'Maj+↓'], ['K', 'J']], 'Projet précédent / suivant'],
       [[['Entrée']], 'Modifier le nom ; sur « + Ajouter », écrire'],
       [[['Échap']], 'Quitter l’édition sans enregistrer ; « + Ajouter » : vider, repasser en lecture'],
-      [[['T']], 'Onglet Projets / Plan journée'],
+      [[['T']], 'Onglet Projets / Aujourd’hui'],
     ],
   ],
   [
@@ -36,7 +36,7 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
       [[['r']], 'Report : à reporter → reporté → rien'],
       [[['c']], 'Chrono : lancer / mettre en pause'],
       [[['C']], 'Chrono à zéro'],
-      [[['t']], 'Plan journée : ajouter / retirer'],
+      [[['t']], 'Aujourd’hui : ajouter / retirer'],
       [[['x x']], 'Supprimer (ou Suppr ; Échap annule)'],
     ],
   ],
@@ -73,7 +73,7 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
       [[['Échap Échap']], 'Retirer tous les filtres (projets et Log)'],
       [[['u']], 'Annuler la dernière action, puis la précédente…'],
       [[['U']], 'Rétablir l’action annulée'],
-      [[['?']], 'Cette aide'],
+      [[['?']], 'Ouvrir / fermer cette aide'],
     ],
   ],
 ];
@@ -100,7 +100,15 @@ export function HelpDialog({ open, onOpenChange }: { open: boolean; onOpenChange
     <Dialog open={open} onOpenChange={onOpenChange}>
       {/* Hauteur limitée à l'écran : le titre reste, la liste défile. Pas de
           description (aria-describedby vide : pas d'avertissement Radix). */}
-      <DialogContent aria-describedby={undefined} className="max-h-[85vh] grid-rows-[auto_minmax(0,1fr)] gap-0 p-0 sm:max-w-4xl xl:max-w-6xl">
+      <DialogContent
+        aria-describedby={undefined}
+        // ? une 2e fois : ferme l'aide (bascule, comme Échap).
+        onKeyDown={(e) => {
+          if (e.key !== '?') return;
+          e.preventDefault();
+          onOpenChange(false);
+        }}
+        className="max-h-[85vh] grid-rows-[auto_minmax(0,1fr)] gap-0 p-0 sm:max-w-4xl xl:max-w-6xl">
         <DialogTitle className="border-b px-6 py-4">Raccourcis</DialogTitle>
         <div className="min-h-0 overflow-y-auto px-6 pt-4">
           {/* Colonnes dans un bloc à hauteur naturelle : elles s'équilibrent. */}

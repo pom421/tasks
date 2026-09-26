@@ -52,7 +52,7 @@ Chaque session démarre dans un conteneur neuf : les dépendances doivent y êtr
 
 ## Utilisation
 
-- Disposition : sur écran large, deux colonnes : onglets « Projets » / « Plan journée » à gauche et « Log » à droite (Log toujours visible, il défile seul) ; sur écran étroit, le Log est sous les projets.
+- Disposition : sur écran large, deux colonnes : onglets « Projets » / « Aujourd’hui » à gauche et « Log » à droite (Log toujours visible, il défile seul) ; sur écran étroit, le Log est sous les projets.
 - Cocher une tâche → elle passe dans le Log, datée du jour, barrée. La décocher → elle revient dans son projet.
 - Log (un cadre par jour) : fonctionne seul, les boutons de la zone des projets n'y touchent pas. Par défaut, aujourd'hui (même vide). Sur la ligne du titre, trois filtres :
   - recherche (`/`) : toutes les journées contenant une tâche dont le titre, le contenu ou le ticket contient le texte (sans tenir compte des majuscules ni des accents). `Échap` vide le champ ;
@@ -62,20 +62,20 @@ Chaque session démarre dans un conteneur neuf : les dépendances doivent y êtr
   - `<` / `>` passent au jour précédent / suivant qui a des entrées (désactivés en bout de liste et pendant une recherche) ; « Aujourd’hui », tout à droite, y ramène. Le nombre de résultats s'affiche au centre : « 5 tâches trouvées dans 2 journées ».
 - Nouveau projet → curseur directement sur la saisie de sa première tâche.
 - Projet : cœur ♡ = favori (plein et rouge quand actif, `f`). Au survol d'un projet : icônes archive (archiver / désarchiver, `a`) et corbeille (supprimer, `x` `x`), avec leur nom en info-bulle. Suppression toujours en deux temps, sans fenêtre de confirmation : 1er appui (`x` ou corbeille) = message de ce qui va être supprimé, 2e appui = suppression, `Échap` annule. Une tâche se supprime au clavier (`x` `x`). Tout est annulable (`u`), y compris la suppression : le projet revient avec toutes ses tâches, Log compris.
-- Dans l'onglet « Projets », sur la ligne des onglets et à droite (comme ceux du Log sur la ligne de son titre), quatre filtres de la **zone des projets** (sans effet sur le Log), combinables : report (`R` ou clic : « N tâches à reporter » → « N tâches reportées » → toutes), priorité (`P` ou clic : « Priorité 1 » → 2 → 3 → toutes), « Archivés » (seulement les projets archivés, `A`), « Favoris » (seulement les favoris, `F`). Chacun n'apparaît que s'il sert (au moins une tâche à faire à reporter ou reportée, une tâche à faire avec une priorité, un projet archivé, un favori) ; actif, son icône se remplit (pas de fond coloré).
+- Dans l'onglet « Projets », sous les onglets et alignés à droite, quatre filtres de la **zone des projets** (sans effet sur le Log), combinables : report (`R` ou clic : « N tâches à reporter » → « N tâches reportées » → toutes), priorité (`P` ou clic : « Priorité 1 » → 2 → 3 → toutes), « Archivés » (seulement les projets archivés, `A`), « Favoris » (seulement les favoris, `F`). Chacun n'apparaît que s'il sert (au moins une tâche à faire à reporter ou reportée, une tâche à faire avec une priorité, un projet archivé, un favori) ; actif, son icône se remplit (pas de fond coloré).
 - Souris : clic sur un nom pour le modifier (pour une tâche, n'importe où sur la ligne jusqu'aux icônes, alignées à droite). Titre trop long : coupé par « … », affiché en entier au survol (ou au focus clavier).
 - Fiche d'une tâche (`Maj+Entrée`, `o` ou icône 🗒) : titre complet, identifiant du ticket (`PROJ-123`), puis contenu en Markdown. L'icône 🗒 signale une tâche qui a du contenu.
   - Lecture seule par défaut. `e` (comme GitLab) passe tout en édition : titre, puis `Tab` → ticket, puis `Tab` → contenu. Double-clic sur le contenu : édition directement dedans.
   - `Ctrl+Entrée` (ou `Entrée` dans le titre / le ticket) enregistre et repasse en lecture seule ; un second `Ctrl+Entrée` (ou `Échap`) ferme. Enregistrement automatique.
   - Ouverte par `L` (ou `r` → reporté), la fiche démarre en édition sur le ticket et `Entrée` la ferme.
 - Chrono d'une tâche à faire : au survol de la ligne (et dans la fiche), ▷ lance le chrono (`c`) ; en marche, l'icône devient une pause pleine, toujours visible. Temps passé dans l'info-bulle de l'icône (« 12 min », puis « 2h34 ») ; dans la fiche, affiché à gauche des icônes (texte normal chrono en marche, atténué sinon ; aussi pour une tâche faite). ↻ remet à zéro (`C`, sans confirmation, annulable par `u`). Un seul chrono en marche à la fois. Cocher la tâche arrête son chrono.
-- Plan journée : au survol d'une tâche à faire (et dans la fiche), ☀ l'ajoute au plan du jour (`t`) ; au plan, le soleil est plein et reste visible. L'onglet « Plan journée » (`T`, adresse `/plan`) ne montre que ces tâches, par projet, sous un compteur « 3/5 tâches » (tâches du plan, faites comprises, sur le maximum par jour), en rouge au-delà du maximum. Une tâche cochée part dans le Log et reste comptée. Le plan vaut pour le jour même. Maximum réglable dans les Réglages (5 par défaut). Filtres de la zone des projets masqués dans cet onglet. Annulable (`u`).
+- Aujourd’hui (plan du jour) : au survol d'une tâche à faire (et dans la fiche), ☀ l'ajoute à Aujourd’hui (`t`) ; une fois ajoutée, le soleil est plein et reste visible. L'onglet « Aujourd’hui » (`T`, adresse `/plan`) ne montre que ces tâches, par projet, sous un compteur « 3/5 tâches » (tâches du plan, faites comprises, sur le maximum par jour), en rouge au-delà du maximum. Une tâche cochée part dans le Log et reste comptée. Le plan vaut pour le jour même. Maximum réglable dans les Réglages (5 par défaut). Filtres de la zone des projets masqués dans cet onglet. Annulable (`u`).
 - Priorité d'une tâche : icône chiffre à droite, pleine et colorée (1 rouge, 2 orange, 3 bleu), sinon « 1 » dans un carré à contour, au survol (ce que donne un clic). `1` `2` `3` sur la tâche donnent la priorité, le même chiffre la retire ; clic sur l'icône : aucune → 1 → 2 → 3 → aucune. Même icône et mêmes touches dans la fiche. Annulable (`u`).
 - Icônes d'une tâche : toutes à droite, même style (atténuées et vides ; pleines quand actives, et alors toujours visibles).
 - Report : une tâche passe « à reporter », puis « reporté » (badge après le titre : l'identifiant du ticket s'il y en a un, « reporté » sinon ; date du report en info-bulle).
-- Réglages (icône ⚙, page `/admin`, `Échap` pour revenir) : URL de base des tickets (ex. `https://entreprise.atlassian.net`), qui transforme les identifiants en liens (`URL/browse/PROJ-123`), conservée en base ; nombre de tâches maximum par jour (Plan journée) ; export / import des données.
+- Réglages (icône ⚙, page `/admin`, `Échap` pour revenir) : URL de base des tickets (ex. `https://entreprise.atlassian.net`), qui transforme les identifiants en liens (`URL/browse/PROJ-123`), conservée en base ; nombre de tâches maximum par jour (Aujourd’hui) ; export / import des données.
 
-Clavier (`?` affiche l'aide, groupée par thème : navigation, fiche, tâche, projet, filtres des projets, Log, général ; sur un petit écran, la liste défile sous le titre) :
+Clavier (`?` affiche l'aide, un 2e `?` ou `Échap` la ferme ; groupée par thème : navigation, fiche, tâche, projet, filtres des projets, Log, général ; sur un petit écran, la liste défile sous le titre) :
 
 | Touche | Action |
 |---|---|
@@ -93,8 +93,8 @@ Clavier (`?` affiche l'aide, groupée par thème : navigation, fiche, tâche, pr
 | `L` (majuscule) | Ouvrir la fiche sur le champ « Ticket » |
 | `c` | Chrono de la tâche : lancer / mettre en pause (aussi dans la fiche) |
 | `C` (majuscule) | Remettre le chrono à zéro (annulable par `u`) |
-| `t` | Ajouter la tâche au plan journée / l'en retirer (aussi dans la fiche) |
-| `T` (majuscule) | Onglet « Projets » / « Plan journée » |
+| `t` | Ajouter la tâche à Aujourd’hui / l'en retirer (aussi dans la fiche) |
+| `T` (majuscule) | Onglet « Projets » / « Aujourd’hui » |
 | `1` `2` `3` | Priorité 1, 2 ou 3 ; le même chiffre la retire (aussi dans la fiche) |
 | `R` (majuscule) | Projets : seulement les tâches à reporter → reportées → toutes (ou clic sur le bouton du report) |
 | `P` (majuscule) | Projets : seulement les tâches de priorité 1 → 2 → 3 → toutes (ou clic sur « Priorités ») |
@@ -103,7 +103,7 @@ Clavier (`?` affiche l'aide, groupée par thème : navigation, fiche, tâche, pr
 | `a` sur un projet | Archiver / désarchiver |
 | `A` (majuscule) | Afficher seulement les projets archivés (ou clic sur « Archivés ») |
 | `x` puis `x` | Supprimer la tâche ou le projet : le 1er appui affiche ce qui va être supprimé, le 2e supprime (`Échap` annule). `Suppr` marche aussi |
-| `u` | Annuler la dernière action, puis celle d'avant, aussi loin que l'historique remonte : créer, renommer, cocher / décocher, supprimer, déplacer, report, chrono, plan journée, priorité, date, modifications de la fiche ; sur un projet favori, archivage. Le curseur revient sur l'élément |
+| `u` | Annuler la dernière action, puis celle d'avant, aussi loin que l'historique remonte : créer, renommer, cocher / décocher, supprimer, déplacer, report, chrono, Aujourd’hui, priorité, date, modifications de la fiche ; sur un projet favori, archivage. Le curseur revient sur l'élément |
 | `U` (majuscule) | Rétablir (rejouer) l'action annulée, dans l'ordre. Une nouvelle action efface ce qui restait à rétablir |
 | `n` | Nouvelle tâche (dans le projet où est le curseur, sinon le dernier utilisé) |
 | `n` puis `n` | Nouveau projet (deux appuis rapprochés, comme `g` `g`) |
@@ -156,7 +156,7 @@ En dev, l'API est branchée dans le serveur Vite (`vite.config.ts`) : une seule 
 `project` (id, name, created_at, archived_at, favorite_at, position) : 1 projet a 0..n `task` (id, project_id, title, created_at, done_at, position, notes, jira_wanted_at, jira_at, jira_key, jira_url, time_spent, timer_started_at, day_at, priority).
 `setting` (key, value) : réglages de l'application (ex. `jira_base_url`, `day_capacity` = maximum de tâches par jour, 5 par défaut).
 `position` = ordre des projets, et ordre (priorité) des tâches dans leur projet.
-`notes` = contenu en Markdown. Chrono : `time_spent` = secondes cumulées, `timer_started_at` = chrono en marche depuis (UTC) ; temps passé = les deux additionnés. `day_at` = jour ('YYYY-MM-DD') pour lequel la tâche a été mise au plan (Plan journée). `priority` = 1 (P1, la plus haute) à 3, NULL = aucune. Une tâche est faite quand `done_at` est rempli (le journal, ce sont ces tâches-là), à reporter quand `jira_wanted_at` l'est et pas `jira_at`, reportée quand `jira_at` l'est. Ticket : `jira_key` (lien construit avec `jira_base_url`, qui peut donc changer) ou `jira_url` (lien complet). Liens en http(s) uniquement.
+`notes` = contenu en Markdown. Chrono : `time_spent` = secondes cumulées, `timer_started_at` = chrono en marche depuis (UTC) ; temps passé = les deux additionnés. `day_at` = jour ('YYYY-MM-DD') pour lequel la tâche a été mise au plan (Aujourd’hui). `priority` = 1 (P1, la plus haute) à 3, NULL = aucune. Une tâche est faite quand `done_at` est rempli (le journal, ce sont ces tâches-là), à reporter quand `jira_wanted_at` l'est et pas `jira_at`, reportée quand `jira_at` l'est. Ticket : `jira_key` (lien construit avec `jira_base_url`, qui peut donc changer) ou `jira_url` (lien complet). Liens en http(s) uniquement.
 ### Versions du schéma
 
 - Chaque évolution de la base est un **script numéroté** dans `server/migrations.ts` (version, nom, SQL). On ajoute une version en fin de liste, on ne modifie jamais un script publié.
