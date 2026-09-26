@@ -7,7 +7,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-- [~] Priorité des tâches (branche d'expérimentation `claude/priorite-ixjyv7`, pas encore sur `main`) : P1 rouge, P2 orange, P3 bleu ; `1` `2` `3` sur la ligne et dans la fiche ; migration 9
+- [~] Priorité des tâches (branche d'expérimentation `claude/priorite-ixjyv7`, pas encore sur `main`) : drapeau à droite, plein et coloré (P1 rouge, P2 orange, P3 bleu) ; `1` `2` `3` ou clic, sur la ligne et dans la fiche ; migration 9
 
 ## Décisions attendues
 
@@ -17,7 +17,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 - [?] Filtre « Archivés » actif : icône archive pleine = bloc noir (le trait
   intérieur disparaît). Remplissage gris clair à la place ?
 
-- [?] Priorité : badge placé devant le titre (repérage rapide) plutôt qu'après, comme le badge de report. Trier ou filtrer par priorité ?
+- [?] Priorité : trier ou filtrer par priorité ? Le drapeau sert aussi au filtre « à reporter » de la barre d'outils : changer l'un des deux ?
 - [?] Branches d'expérimentation (chrono, priorité, sélection du jour) : chacune ajoute la migration 9. À la fusion, renuméroter la 2e et la 3e (10, 11).
 
 ## Idées / plus tard

@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { EditableName } from './Editable';
 import { ReportBadge } from './ReportBadge';
 import { moveDirection } from '@/lib/nav';
-import { PriorityBadge, usePriority } from './Priority';
+import { PriorityButton, usePriority } from './Priority';
 
 // Ligne de tâche, à faire (liste des projets) ou faite (journal).
 // Clavier, où que soit le focus dans la ligne (hors champ de saisie) :
@@ -127,7 +127,6 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
     >
       <Checkbox checked={done} onCheckedChange={toggleDone} title={done ? 'Remettre à faire' : 'Marquer comme faite'} />
       <span className="title flex min-w-0 flex-1 items-center gap-1.5">
-        <PriorityBadge priority={task.priority} />
         <EditableName
           value={task.title}
           navKey={navKey}
@@ -139,18 +138,20 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
         />
         <ReportBadge task={task} />
         {hasDetails(task) && (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon-xs"
             tabIndex={-1}
-            className="details flex-none text-muted-foreground hover:text-foreground"
+            className="details flex-none text-muted-foreground"
             title="Voir le contenu (o ou Maj+Entrée)"
             aria-label="Voir les détails"
             onClick={() => openTask(task, 'notes')}
           >
-            <NotebookText className="size-3.5" aria-hidden />
-          </button>
+            <NotebookText aria-hidden />
+          </Button>
         )}
       </span>
+      {!confirmDelete && <PriorityButton priority={task.priority} onClick={priority.cycle} hidden />}
       {confirmDelete ? (
         <span className="confirm-delete flex-none text-xs text-destructive" role="alert">
           x pour supprimer · Échap pour annuler

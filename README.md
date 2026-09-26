@@ -67,7 +67,8 @@ Chaque session démarre dans un conteneur neuf : les dépendances doivent y êtr
   - Lecture seule par défaut. `e` (comme GitLab) passe tout en édition : titre, puis `Tab` → ticket, puis `Tab` → contenu. Double-clic sur le contenu : édition directement dedans.
   - `Ctrl+Entrée` (ou `Entrée` dans le titre / le ticket) enregistre et repasse en lecture seule ; un second `Ctrl+Entrée` (ou `Échap`) ferme. Enregistrement automatique.
   - Ouverte par `L` (ou `J` → reporté), la fiche démarre en édition sur le ticket et `Entrée` la ferme.
-- Priorité d'une tâche : P1 (rouge), P2 (orange), P3 (bleu), en badge devant le titre (dans la liste comme dans le Log). Au clavier `1` `2` `3` sur la tâche (la même touche retire la priorité) ; dans la fiche, boutons P1 P2 P3 (et mêmes touches). Annulable (`u`).
+- Priorité d'une tâche : drapeau à droite, plein et coloré (P1 rouge, P2 orange, P3 bleu), visible au survol sinon. `1` `2` `3` sur la tâche (la même touche la retire) ; clic sur le drapeau : aucune → P1 → P2 → P3 → aucune. Même icône et mêmes touches dans la fiche. Annulable (`u`).
+- Icônes d'une tâche : toutes à droite, même style (atténuées et vides ; pleines quand actives, et alors toujours visibles).
 - Report : une tâche passe « à reporter », puis « reporté » (badge après le titre : l'identifiant du ticket s'il y en a un, « reporté » sinon ; date du report en info-bulle).
 - Réglages (icône ⚙, page `/admin`, `Échap` pour revenir) : URL de base des tickets (ex. `https://entreprise.atlassian.net`), qui transforme les identifiants en liens (`URL/browse/PROJ-123`), conservée en base ; export / import des données.
 

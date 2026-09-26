@@ -237,9 +237,11 @@ test('ligne de tâche : icônes alignées à droite, clic n’importe où sur la
   const une = page.locator('#projects li.task').first();
   const box = async (sel: string) => (await une.locator(sel).boundingBox())!;
   const rowBox = (await une.boundingBox())!;
-  // Icônes (report, détails) collées au bord droit de la ligne.
+  // Icônes (report, détails, puis priorité) collées au bord droit de la ligne.
   const details = await box('.details');
-  expect(rowBox.x + rowBox.width - (details.x + details.width)).toBeLessThan(10);
+  const priority = await box('button.priority');
+  expect(rowBox.x + rowBox.width - (priority.x + priority.width)).toBeLessThan(10);
+  expect(priority.x - (details.x + details.width)).toBeLessThan(10);
   expect((await box('.report')).x).toBeGreaterThan(rowBox.x + rowBox.width / 2);
 
   // Clic à droite du texte, juste avant les icônes : le titre passe en édition.

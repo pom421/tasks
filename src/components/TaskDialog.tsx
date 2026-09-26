@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } f
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { PriorityButtons, usePriority } from './Priority';
+import { PriorityButton, usePriority } from './Priority';
 
 interface TaskDialogProps {
   task: Task | DoneTask;
@@ -189,13 +189,12 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
         <DialogTitle className={cn('pr-6 leading-snug [overflow-wrap:anywhere]', editing && 'sr-only')}>
           {values.title}
         </DialogTitle>
-        <DialogDescription>
-          {projectName} · {state}
-        </DialogDescription>
-
-        <div className="priority-line flex items-center gap-2 text-sm">
-          <span className="text-muted-foreground">Priorité :</span>
-          <PriorityButtons task={task} onSet={priority.set} />
+        {/* Icônes de la tâche à droite, comme sur la ligne. */}
+        <div className="flex min-h-6 items-center justify-between gap-2">
+          <DialogDescription>
+            {projectName} · {state}
+          </DialogDescription>
+          <PriorityButton priority={task.priority} onClick={priority.cycle} />
         </div>
 
         {editing ? (
@@ -265,7 +264,7 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
           <p id={`${id}-hint`} className="text-xs text-muted-foreground">
             {editing
               ? 'Tab : champ suivant · Ctrl+Entrée : enregistrer et repasser en lecture'
-              : 'e : modifier · 1 2 3 : priorité · Ctrl+Entrée ou Échap : fermer'}
+              : 'e : modifier · Ctrl+Entrée ou Échap : fermer'}
           </p>
           <DialogFooter>
             <Button type="button" onClick={close}>
