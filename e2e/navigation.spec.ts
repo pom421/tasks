@@ -1292,7 +1292,9 @@ test('aide ? : raccourcis groupés, tout visible sur écran courant, liste qui d
   const fits = () => list.evaluate((e) => e.scrollHeight <= e.clientHeight);
   expect(await fits()).toBe(true);
   // Écran bas : la fenêtre reste dans l'écran, seule la liste défile.
+  // Fermeture animée : attendre qu'elle soit finie, sinon ? est ignoré.
   await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
   await page.setViewportSize({ width: 1024, height: 500 });
   await page.keyboard.press('?');
   await expect(dialog).toBeVisible();
