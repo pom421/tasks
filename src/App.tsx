@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { DEFAULT_DAY_CAPACITY, jiraState, type JiraState, type JournalDay, type Priority, type Project, type Settings, type Task } from '../shared/types.ts';
 import { api } from '@/lib/api';
-import { ActionsContext, type Actions, type TaskField, type Undo } from '@/lib/actions';
+import { ActionsContext, type Actions, type TaskField } from '@/lib/actions';
+import { record, useHistory } from '@/lib/history';
 import { focusByKey, handleNavKey, restore, snapshot, type FocusSnapshot } from '@/lib/nav';
 import { Toolbar } from '@/components/Toolbar';
 import { ProjectList } from '@/components/ProjectList';
@@ -62,7 +63,8 @@ export function App() {
   // fiche puis J aussitôt) : aucune n'est perdue, la plus récente décide du focus.
   const pending = useRef<PendingFocus[]>([]);
   const lastProject = useRef<number | null>(null);
-  const lastUndo = useRef<Undo | null>(null);
+  // u / U en file : des appuis rapides s'enchaînent, chacun après l'affichage du précédent.
+  const replaying = useRef(Promise.resolve());
   // Instant du dernier n : un 2e n rapproché (n n) ouvre « Nouveau projet ».
   const lastN = useRef(0);
   // Instant du dernier Échap : un 2e rapproché (Échap Échap) retire tous les filtres.
@@ -109,7 +111,15 @@ export function App() {
     toast,
     settings: data.settings,
     navigate,
-    setUndo: (undo) => (lastUndo.current = undo),
+    undoable: ({ label, focus, run, undo, redo = run, stay }) =>
+      actions.act(
+        async () => {
+          const result = await run();
+          record({ label, focus: typeof focus === 'string' ? focus : focus(), undo, redo });
+          return result;
+        },
+        { stay },
+      ),
     openTask: (task, field = 'notes') =>
       setOpenTask((o) => ({ id: task.id, field, open: true, opening: (o?.opening ?? 0) + 1 })),
     setLastProject: (id) => (lastProject.current = id),
@@ -142,8 +152,7 @@ export function App() {
     const p = all.at(-1);
     if (!p) return;
     pending.current = [];
-    if (p.key) focusByKey(p.key);
-    else restore(p.snap, { stay: p.stay });
+    if (!p.key || !focusByKey(p.key)) restore(p.snap, { stay: p.stay });
     for (const entry of all) entry.applied();
   }, [data]);
 
@@ -153,16 +162,25 @@ export function App() {
     load(f).catch((err) => toast(err.message));
   };
 
-  // u : annule la dernière action (cocher, renommer, supprimer), une seule fois.
-  // Les modifications faites dans la fiche ne sont pas annulables.
-  const undo = () => {
-    const last = lastUndo.current;
-    lastUndo.current = null;
-    if (!last) return toast('Rien à annuler');
-    actions.act(async () => {
-      await last.run();
-      toast(`Annulé : ${last.label}`);
-      return { focus: last.focus };
+  // u : annule la dernière action de l'historique, U la rejoue. Si l'opération
+  // échoue (donnée modifiée ailleurs…), l'historique n'est plus fiable : vidé.
+  const replay = (direction: 'undo' | 'redo') => {
+    replaying.current = replaying.current.then(() => {
+      const history = useHistory.getState();
+      const entry = (direction === 'undo' ? history.past : history.future).at(-1);
+      if (!entry) return toast(direction === 'undo' ? 'Rien à annuler' : 'Rien à rétablir');
+      return actions.act(async () => {
+        try {
+          await entry[direction]();
+        } catch (err) {
+          history.clear();
+          throw err;
+        }
+        if (direction === 'undo') history.undone();
+        else history.redone();
+        toast(`${direction === 'undo' ? 'Annulé' : 'Rétabli'} : ${entry.label}`);
+        return { focus: entry.focus };
+      });
     });
   };
 
@@ -198,7 +216,8 @@ export function App() {
         A: () => !dayView && setArchivedOnly((v) => !v),
         P: () => !dayView && cyclePriorityFilter(),
         T: () => navigate(dayView ? '/' : '/plan'),
-        u: undo,
+        u: () => replay('undo'),
+        U: () => replay('redo'),
         '?': () => setHelpOpen(true),
         // Échap (hors élément de la liste) : réinitialise les filtres du Log.
         // Échap Échap (rapprochés, où que soit le curseur hors champ) : tous les

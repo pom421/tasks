@@ -1117,28 +1117,111 @@ test('zone « Log » : un cadre par jour', async ({ page, store, data }) => {
 
 // --- Annulation (u) ----------------------------------------------------------
 
-test('u annule la dernière action : cocher, puis renommer ; une seule fois', async ({ page, store, data }) => {
+test('u annule les actions une à une, U les rejoue ; une nouvelle action efface ce qui pouvait être rejoué', async ({ page, store, data }) => {
+  const titles = () => store.state().projects[0].tasks.map((t) => t.title);
+  const une = page.locator(`[data-nav-key="task:${data.tasks.une.id}"]`);
   await pressDown(page, 2); // « Une »
-  await page.keyboard.press(' ');
-  await expect(page.locator('#journal .name', { hasText: 'Une' })).toBeVisible();
-  await page.keyboard.press('u');
-  await expect(page.locator('#toast')).toHaveText('Annulé : tâche cochée');
-  await expect(page.locator('#projects .name', { hasText: 'Une' })).toBeVisible();
-  expect(store.state().projects[0].tasks.map((t) => t.title)).toEqual(['Une', 'Deux']);
-  expect(await current(page)).toBe(`task:${data.tasks.une.id}`); // focus restauré
-
   await page.keyboard.press('Enter');
   await page.keyboard.type('Une bis');
   await page.keyboard.press('Enter');
-  await expect(page.locator(`[data-nav-key="task:${data.tasks.une.id}"]`)).toHaveText('Une bis');
-  await page.keyboard.press('u');
-  await expect(page.locator(`[data-nav-key="task:${data.tasks.une.id}"]`)).toHaveText('Une');
-  expect(await current(page)).toBe(`task:${data.tasks.une.id}`);
+  await expect(une).toHaveText('Une bis');
+  await page.keyboard.press(' '); // cochée
+  await expect(page.locator('#journal .name', { hasText: 'Une bis' })).toBeVisible();
 
-  // Seule la dernière action est annulable.
+  // u, u : dans l'ordre inverse, focus sur l'élément concerné.
+  await page.keyboard.press('u');
+  await expect(page.locator('#toast')).toHaveText('Annulé : tâche cochée');
+  await expect(page.locator('#projects .name', { hasText: 'Une bis' })).toBeVisible();
+  await page.keyboard.press('u');
+  await expect(page.locator('#toast')).toHaveText('Annulé : renommage');
+  await expect(une).toHaveText('Une');
+  expect(await current(page)).toBe(`task:${data.tasks.une.id}`);
   await page.keyboard.press('u');
   await expect(page.locator('#toast')).toHaveText('Rien à annuler');
-  expect(store.state().projects[0].tasks[0].title).toBe('Une');
+
+  // U, U : rejoue dans l'ordre.
+  await page.keyboard.press('U');
+  await expect(page.locator('#toast')).toHaveText('Rétabli : renommage');
+  await expect(une).toHaveText('Une bis');
+  await page.keyboard.press('U');
+  await expect(page.locator('#toast')).toHaveText('Rétabli : tâche cochée');
+  await expect(page.locator('#journal .name', { hasText: 'Une bis' })).toBeVisible();
+  await page.keyboard.press('U');
+  await expect(page.locator('#toast')).toHaveText('Rien à rétablir');
+
+  // u puis nouvelle action : plus rien à rejouer.
+  await page.keyboard.press('u');
+  await expect(page.locator('#projects .name', { hasText: 'Une bis' })).toBeVisible();
+  await page.locator(`[data-nav-key="task:${data.tasks.deux.id}"]`).focus();
+  await page.keyboard.press('2');
+  await expect(row(page, data.tasks.deux.id).locator('.priority')).toHaveAttribute('aria-label', 'Priorité 2');
+  await page.keyboard.press('U');
+  await expect(page.locator('#toast')).toHaveText('Rien à rétablir');
+  expect(titles()).toEqual(['Une bis', 'Deux']);
+});
+
+test('u / U rapides : les appuis s’enchaînent sans se perdre', async ({ page, store, data }) => {
+  await page.locator(`[data-nav-key="task:${data.tasks.une.id}"]`).focus();
+  const icon = row(page, data.tasks.une.id).locator('.priority');
+  for (const key of ['1', '2', '3']) {
+    await page.keyboard.press(key);
+    await expect(icon).toHaveAttribute('aria-label', `Priorité ${key}`);
+  }
+  await page.keyboard.press('u');
+  await page.keyboard.press('u');
+  await page.keyboard.press('u');
+  await expect(page.locator('#toast')).toHaveText('Annulé : priorité 1');
+  await expect(icon).toHaveAttribute('aria-label', 'Priorité');
+  expect(store.state().projects[0].tasks[0].priority).toBeNull();
+  await page.keyboard.press('U');
+  await page.keyboard.press('U');
+  await expect(page.locator('#toast')).toHaveText('Rétabli : priorité 2');
+  await expect(icon).toHaveAttribute('aria-label', 'Priorité 2');
+  expect(store.state().projects[0].tasks[0].priority).toBe(2);
+});
+
+test('création annulable : u retire la tâche ou le projet créé, U le rétablit (même identifiant)', async ({ page, store, data }) => {
+  const add = page.locator(`[data-nav-key="add:${data.alpha.id}"]`);
+  await add.click();
+  await page.keyboard.type('Nouvelle');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#projects .name', { hasText: 'Nouvelle' })).toBeVisible();
+  const id = store.state().projects[0].tasks[2].id;
+  await page.keyboard.press('Escape'); // champ en lecture : les raccourcis marchent
+  await page.keyboard.press('u');
+  await expect(page.locator('#toast')).toHaveText('Annulé : ajout de la tâche');
+  await expect(page.locator('#projects .name', { hasText: 'Nouvelle' })).toHaveCount(0);
+  await page.keyboard.press('U');
+  await expect(page.locator(`[data-nav-key="task:${id}"]`)).toHaveText('Nouvelle');
+  await expect.poll(() => current(page)).toBe(`task:${id}`);
+
+  await page.locator('#new-project').click();
+  await page.keyboard.type('Gamma');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.project')).toHaveCount(3);
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('u');
+  await expect(page.locator('#toast')).toHaveText('Annulé : ajout du projet');
+  await expect(page.locator('.project')).toHaveCount(2);
+  await page.keyboard.press('U');
+  await expect(page.locator('.project', { hasText: 'Gamma' })).toHaveCount(1);
+});
+
+test('déplacements annulables : tâche et projet reviennent à leur place', async ({ page, store, data }) => {
+  await page.locator(`[data-nav-key="task:${data.tasks.deux.id}"]`).focus();
+  await page.keyboard.press('Alt+ArrowDown'); // en tête de Beta
+  await expect(page.locator(`#project-${data.beta.id} .task .name`)).toHaveText(['Deux', 'Trois']);
+  await page.locator(`[data-nav-key="project:${data.beta.id}"]`).focus();
+  await page.keyboard.press('Alt+ArrowUp');
+  await expect(page.locator('.project').first()).toHaveId(`project-${data.beta.id}`);
+  await page.keyboard.press('u');
+  await expect(page.locator('.project').first()).toHaveId(`project-${data.alpha.id}`);
+  await page.keyboard.press('u');
+  await expect(page.locator(`#project-${data.alpha.id} .task .name`)).toHaveText(['Une', 'Deux']);
+  expect(await current(page)).toBe(`task:${data.tasks.deux.id}`);
+  await page.keyboard.press('U');
+  await expect(page.locator(`#project-${data.beta.id} .task .name`)).toHaveText(['Deux', 'Trois']);
+  expect(store.state().projects[1].tasks.map((t) => t.title)).toEqual(['Deux', 'Trois']);
 });
 
 test('u après une suppression : la tâche revient avec son contenu, sélectionnée', async ({ page, store, data }) => {
@@ -1173,16 +1256,21 @@ test('u dans le Log : décocher puis annuler remet la tâche au même jour', asy
   expect(store.journal({ projectId: data.beta.id }).days[0].date).toBe('2026-09-20');
 });
 
-test('les modifications faites dans la fiche ne sont pas annulables', async ({ page, store }) => {
+test('modification dans la fiche annulable : u remet le titre d’avant, U le rétablit', async ({ page, store }) => {
   await pressDown(page, 2);
   await page.keyboard.press('e');
   await page.getByRole('dialog').getByLabel('Titre').fill('Une (fiche)');
   await page.keyboard.press('ControlOrMeta+Enter');
   await page.keyboard.press('ControlOrMeta+Enter');
   await expect(page.getByRole('dialog')).toHaveCount(0);
+  const une = page.locator('#projects .task .name').first();
+  await expect(une).toHaveText('Une (fiche)');
   await page.keyboard.press('u');
-  await expect(page.locator('#toast')).toHaveText('Rien à annuler');
-  expect(store.state().projects[0].tasks[0].title).toBe('Une (fiche)');
+  await expect(page.locator('#toast')).toHaveText('Annulé : modification de la fiche');
+  await expect(une).toHaveText('Une');
+  expect(store.state().projects[0].tasks[0].title).toBe('Une');
+  await page.keyboard.press('U');
+  await expect(une).toHaveText('Une (fiche)');
 });
 
 // --- Déplacement de projet ------------------------------------------------------

@@ -16,18 +16,14 @@ export const PRIORITY_COLOR: Record<Priority, string> = {
 // donne, le même chiffre la retire ; un clic sur l'icône passe à la suivante
 // (aucune → 1 → 2 → 3 → aucune). Annulable (u).
 export function usePriority(task: Task) {
-  const { act, setUndo } = useActions();
-  const set = (next: Priority | null) => {
-    const before = task.priority;
-    return act(async () => {
-      await api.updateTask(task.id, { priority: next });
-      setUndo({
-        label: next ? `priorité ${next}` : 'retrait de la priorité',
-        run: () => api.updateTask(task.id, { priority: before }),
-        focus: `task:${task.id}`,
-      });
+  const { undoable } = useActions();
+  const set = (next: Priority | null) =>
+    undoable({
+      label: next ? `priorité ${next}` : 'retrait de la priorité',
+      focus: `task:${task.id}`,
+      run: () => api.updateTask(task.id, { priority: next }),
+      undo: () => api.updateTask(task.id, { priority: task.priority }),
     });
-  };
   const cycle = () => set(task.priority === 3 ? null : (((task.priority ?? 0) + 1) as Priority));
   // Touches 1, 2, 3 ; true si la touche a été traitée.
   const onKey = (e: KeyboardEvent) => {

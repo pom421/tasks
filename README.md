@@ -103,7 +103,8 @@ Clavier (`?` affiche l'aide, groupée par thème : navigation, fiche, tâche, pr
 | `a` sur un projet | Archiver / désarchiver |
 | `A` (majuscule) | Afficher seulement les projets archivés (ou clic sur « Archivés ») |
 | `x` puis `x` | Supprimer la tâche ou le projet : le 1er appui affiche ce qui va être supprimé, le 2e supprime (`Échap` annule). `Suppr` marche aussi |
-| `u` | Annuler la dernière action : sur une tâche cocher / décocher, renommer, supprimer, chrono, plan journée, priorité ; sur un projet favori, archivage, suppression (une seule, pas les modifications faites dans la fiche). Le curseur revient sur l'élément |
+| `u` | Annuler la dernière action, puis celle d'avant… (50 au plus) : créer, renommer, cocher / décocher, supprimer, déplacer, report, chrono, plan journée, priorité, date, modifications de la fiche ; sur un projet favori, archivage. Le curseur revient sur l'élément |
+| `U` (majuscule) | Rétablir (rejouer) l'action annulée, dans l'ordre. Une nouvelle action efface ce qui restait à rétablir |
 | `n` | Nouvelle tâche (dans le projet où est le curseur, sinon le dernier utilisé) |
 | `n` puis `n` | Nouveau projet (deux appuis rapprochés, comme `g` `g`) |
 | `d` | Filtre du Log par journée |
@@ -142,6 +143,7 @@ src/              front React (Vite)
   components/ui/  composants shadcn/ui (copiés dans le projet, modifiables)
   lib/nav.ts      navigation clavier (focus, ↑/↓, restauration après re-rendu)
   lib/api.ts      appels au serveur, typés
+  lib/history.ts  historique u / U (store zustand, navigateur seulement, 50 actions)
 e2e/              tests d'interface (Playwright), 1 serveur + 1 base vierge par test
 ```
 

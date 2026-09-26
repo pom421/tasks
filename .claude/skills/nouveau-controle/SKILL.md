@@ -29,7 +29,7 @@ mêmes classes, même comportement. L'utilisateur veut une UX homogène.
   global (`src/App.tsx`, hors champs de saisie).
 - Destructif : 1er appui = message de ce qui va se passer, 2e = exécution,
   `Échap` annule ; souris = `confirm()`.
-- Annulable par `u` : `setUndo({ label, run, focus })` après succès.
+- Annulable par `u` et rejouable par `U` : `undoable({ label, focus, run, undo })` (au lieu de `act`) ; hors composant, `record()` de `src/lib/history.ts`.
 - Focus clavier conservé après l'action (`act()` restaure le focus).
 
 ## À mettre à jour

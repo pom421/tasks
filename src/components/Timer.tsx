@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 // Chrono d'une tâche à faire, partagé par la ligne et la fiche :
 // c lance / met en pause, C arrête et remet à zéro. Annulable (u).
 export function useTimer(task: Task) {
-  const { act, setUndo } = useActions();
+  const { undoable } = useActions();
   const running = Boolean(task.timer_started_at);
   const seconds = timeSpent(task);
 
@@ -21,11 +21,19 @@ export function useTimer(task: Task) {
     return () => clearInterval(timer);
   }, [running]);
 
+  // Annuler / rejouer remet le chrono tel qu'il était avant / après.
   const run = (action: TimerAction, label: string) => {
     const before = { time_spent: task.time_spent, timer_started_at: task.timer_started_at };
-    return act(async () => {
-      await api.updateTask(task.id, { timer: action });
-      setUndo({ label, run: () => api.updateTask(task.id, before), focus: `task:${task.id}` });
+    let after = before;
+    return undoable({
+      label,
+      focus: `task:${task.id}`,
+      run: async () => {
+        const t = (await api.updateTask(task.id, { timer: action })) as Task;
+        after = { time_spent: t.time_spent, timer_started_at: t.timer_started_at };
+      },
+      undo: () => api.updateTask(task.id, before),
+      redo: () => api.updateTask(task.id, after),
     });
   };
   const toggle = () => (running ? run('pause', 'pause du chrono') : run('start', 'lancement du chrono'));

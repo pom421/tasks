@@ -2,6 +2,7 @@ import { useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent }
 import { JIRA_KEY_RE, formatDuration, type DoneTask, type Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
 import type { TaskField } from '@/lib/actions';
+import { record } from '@/lib/history';
 import { focusByKey } from '@/lib/nav';
 import { renderMarkdown } from '@/lib/markdown';
 import { cn } from '@/lib/utils';
@@ -109,8 +110,19 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
     if (next.ticket !== saved.current.ticket) patch.jira_ticket = next.ticket || null;
     if (next.notes !== saved.current.notes.trim()) patch.notes = next.notes || null;
     if (!Object.keys(patch).length) return true;
+    // Valeurs d'avant, pour annuler (u) une fois la fiche fermée.
+    const before: typeof patch = {};
+    if ('title' in patch) before.title = saved.current.title;
+    if ('jira_ticket' in patch) before.jira_ticket = saved.current.ticket || null;
+    if ('notes' in patch) before.notes = saved.current.notes.trim() || null;
     try {
       await api.updateTask(task.id, patch);
+      record({
+        label: 'modification de la fiche',
+        focus: `task:${task.id}`,
+        undo: () => api.updateTask(task.id, before),
+        redo: () => api.updateTask(task.id, patch),
+      });
       saved.current = { ...next, changed: true };
       latest.current = { ...latest.current, ticket: next.ticket };
       setValues(latest.current);

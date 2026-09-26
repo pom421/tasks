@@ -22,8 +22,11 @@ function focusItem(el: HTMLElement | undefined) {
   else el.scrollIntoView({ block: 'nearest' });
 }
 
-export function focusByKey(key: string) {
-  focusItem(navItems().find((item) => item.dataset.navKey === key));
+// false si l'élément n'est pas affiché (ex. tâche dont la création est annulée).
+export function focusByKey(key: string): boolean {
+  const el = navItems().find((item) => item.dataset.navKey === key);
+  focusItem(el);
+  return Boolean(el);
 }
 
 // Focus donné par la navigation (↑/↓, j/k, gg/G, Début/Fin) : un champ

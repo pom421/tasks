@@ -7,7 +7,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-Rien.
+- [~] Branche `undo-historique` : historique d'annulation dans le navigateur (zustand, 50 actions) ; `u` annule une à une, `U` rejoue ; créations, déplacements, report, date et fiche désormais annulables. À relire avant fusion dans `main`
 
 ## Décisions attendues
 

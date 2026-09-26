@@ -11,20 +11,16 @@ import { Button } from '@/components/ui/button';
 // l'ajoute au plan du jour (date du navigateur) ou l'en retire. Annulable (u).
 // stay : dans l'onglet Plan journée, la ligne retirée disparaît, le curseur reste en place.
 export function usePlan(task: Task) {
-  const { act, setUndo } = useActions();
+  const { undoable } = useActions();
   const inPlan = task.day_at === localToday();
   const toggle = () =>
-    act(
-      async () => {
-        await api.updateTask(task.id, { day_at: inPlan ? null : localToday() });
-        setUndo({
-          label: inPlan ? 'retrait du plan' : 'ajout au plan',
-          run: () => api.updateTask(task.id, { day_at: task.day_at }),
-          focus: `task:${task.id}`,
-        });
-      },
-      { stay: true },
-    );
+    undoable({
+      label: inPlan ? 'retrait du plan' : 'ajout au plan',
+      focus: `task:${task.id}`,
+      run: () => api.updateTask(task.id, { day_at: inPlan ? null : localToday() }),
+      undo: () => api.updateTask(task.id, { day_at: task.day_at }),
+      stay: true,
+    });
   const onKey = (e: KeyboardEvent) => {
     if (e.key !== 't') return false;
     e.preventDefault();

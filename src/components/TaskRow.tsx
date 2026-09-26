@@ -26,7 +26,7 @@ import { PriorityButton, usePriority } from './Priority';
 // x ou Suppr demande la suppression, un second appui la confirme,
 // Alt+↑ / Alt+↓ (ou Alt+k / Alt+j) déplacent la tâche (onMove, tâches à faire).
 export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (direction: -1 | 1) => void }) {
-  const { act, openTask, setUndo } = useActions();
+  const { openTask, undoable } = useActions();
   const done = 'done_at' in task;
   const [editingDate, setEditingDate] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -35,35 +35,34 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
   const plan = usePlan(task);
   const priority = usePriority(task);
 
-  const patch = (body: TaskPatch, stay = false) => act(() => api.updateTask(task.id, body), { stay });
-
-  // Actions annulables (u) : l'annulation n'est mémorisée qu'une fois l'action réussie.
-  const undoable = (label: string, run: () => Promise<unknown>, undo: () => Promise<unknown>, stay = false) =>
-    act(
-      async () => {
-        await run();
-        setUndo({ label, run: undo, focus: navKey });
-      },
-      { stay },
-    );
+  // Modification annulable (u) et rejouable (U) : before = valeurs d'avant.
+  const change = (label: string, patch: TaskPatch, before: TaskPatch, stay = false) =>
+    undoable({
+      label,
+      focus: navKey,
+      run: () => api.updateTask(task.id, patch),
+      undo: () => api.updateTask(task.id, before),
+      stay,
+    });
   const toggleDone = () =>
     done
-      ? undoable('tâche décochée', () => api.updateTask(task.id, { done: false }), () => api.updateTask(task.id, { done_at: task.done_at }), true)
-      : undoable('tâche cochée', () => api.updateTask(task.id, { done: true, done_at: localToday() }), () => api.updateTask(task.id, { done: false }), true);
-  const rename = (title: string) =>
-    undoable('renommage', () => api.updateTask(task.id, { title }), () => api.updateTask(task.id, { title: task.title }));
+      ? change('tâche décochée', { done: false }, { done_at: task.done_at }, true)
+      : change('tâche cochée', { done: true, done_at: localToday() }, { done: false }, true);
+  const rename = (title: string) => change('renommage', { title }, { title: task.title });
   const NEXT: Record<JiraState, JiraState> = { none: 'wanted', wanted: 'done', done: 'none' };
+  const JIRA_LABEL: Record<JiraState, string> = { none: 'retrait du report', wanted: 'à reporter', done: 'reportée' };
   // r tapé plusieurs fois vite : chaque appui part du dernier état demandé
   // (pas de celui encore affiché) et les requêtes s'enchaînent dans l'ordre.
   const jira = useRef({ state: jiraState(task), pending: 0, queue: Promise.resolve() });
   if (!jira.current.pending) jira.current.state = jiraState(task);
   const cycleJira = () => {
     const j = jira.current;
-    const next = NEXT[j.state];
+    const before = j.state;
+    const next = NEXT[before];
     j.state = next;
     j.pending++;
     j.queue = j.queue.then(async () => {
-      await patch({ jira: next });
+      await change(JIRA_LABEL[next], { jira: next }, { jira: before });
       j.pending--;
       // Tout juste reportée (dernier appui) : on propose de renseigner le ticket.
       if (next === 'done' && !j.pending && !task.jira_key && !task.jira_url) openTask(task, 'jira');
@@ -72,12 +71,13 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
 
   const remove = () => {
     let deleted: Record<string, unknown> | undefined;
-    return undoable(
-      'suppression',
-      async () => (deleted = await api.deleteTask(task.id)),
-      () => api.restoreTask(deleted!),
-      true,
-    );
+    return undoable({
+      label: 'suppression',
+      focus: navKey,
+      run: async () => (deleted = await api.deleteTask(task.id)),
+      undo: () => api.restoreTask(deleted!),
+      stay: true,
+    });
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLLIElement>) => {
@@ -184,7 +184,7 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
                 className="text-xs"
                 defaultValue={task.done_at}
                 autoFocus
-                onChange={(e) => e.target.value && patch({ done_at: e.target.value })}
+                onChange={(e) => e.target.value && change('date changée', { done_at: e.target.value }, { done_at: task.done_at })}
                 onKeyDown={(e) => e.key === 'Escape' && setEditingDate(false)}
                 onBlur={() => setEditingDate(false)}
               />

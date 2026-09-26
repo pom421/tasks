@@ -21,37 +21,26 @@ interface ProjectCardProps {
 // a archiver / désarchiver, x ou Suppr demande la suppression, un second
 // appui la confirme ; Alt+↑ / Alt+↓ déplacent le projet. Tout est annulable (u).
 function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
-  const { act, setLastProject, setUndo } = useActions();
+  const { setLastProject, undoable } = useActions();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const archived = Boolean(p.archived_at);
   const favorite = Boolean(p.favorite_at);
   const navKey = `project:${p.id}`;
 
-  // L'annulation n'est mémorisée qu'une fois l'action réussie.
-  const undoable = (label: string, run: () => Promise<unknown>, undo: () => Promise<unknown>) =>
-    act(async () => {
-      await run();
-      setUndo({ label, run: undo, focus: navKey });
-    });
-  const toggleFavorite = () =>
-    undoable(
-      favorite ? 'retrait des favoris' : 'ajout aux favoris',
-      () => api.updateProject(p.id, { favorite: !favorite }),
-      () => api.updateProject(p.id, { favorite }),
-    );
-  const toggleArchived = () =>
-    undoable(
-      archived ? 'désarchivage' : 'archivage',
-      () => api.updateProject(p.id, { archived: !archived }),
-      () => api.updateProject(p.id, { archived }),
-    );
+  // Modification annulable (u) et rejouable (U) : before = valeurs d'avant.
+  type Patch = Parameters<typeof api.updateProject>[1];
+  const change = (label: string, patch: Patch, before: Patch) =>
+    undoable({ label, focus: navKey, run: () => api.updateProject(p.id, patch), undo: () => api.updateProject(p.id, before) });
+  const toggleFavorite = () => change(favorite ? 'retrait des favoris' : 'ajout aux favoris', { favorite: !favorite }, { favorite });
+  const toggleArchived = () => change(archived ? 'désarchivage' : 'archivage', { archived: !archived }, { archived });
   const remove = () => {
     let deleted: Record<string, unknown> | undefined;
-    return undoable(
-      'suppression du projet',
-      async () => (deleted = await api.deleteProject(p.id)),
-      () => api.restoreProject(deleted!),
-    );
+    return undoable({
+      label: 'suppression du projet',
+      focus: navKey,
+      run: async () => (deleted = await api.deleteProject(p.id)),
+      undo: () => api.restoreProject(deleted!),
+    });
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
@@ -86,13 +75,21 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
     if (!e.currentTarget.contains(e.relatedTarget)) setConfirmDelete(false);
   };
 
+  // Création : annuler la supprime, rejouer la restaure (même identifiant,
+  // les actions suivantes de l'historique la retrouvent).
   const addTask = async (title: string) => {
-    let ok = false;
-    await act(async () => {
-      await api.createTask(p.id, title);
-      ok = true;
+    let id = 0;
+    let deleted: Record<string, unknown> | undefined;
+    await undoable({
+      label: 'ajout de la tâche',
+      focus: () => `task:${id}`,
+      run: async () => {
+        id = ((await api.createTask(p.id, title)) as { id: number }).id;
+      },
+      undo: async () => (deleted = await api.deleteTask(id)),
+      redo: () => api.restoreTask(deleted!),
     });
-    return ok;
+    return id > 0;
   };
 
   return (
@@ -109,7 +106,7 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
           value={p.name}
           navKey={navKey}
           className={cn('font-semibold', confirmDelete && 'shrink-0')}
-          onSave={(name) => act(() => api.updateProject(p.id, { name }))}
+          onSave={(name) => change('renommage du projet', { name }, { name: p.name })}
         />
         <span className="count text-xs text-muted-foreground">{p.tasks.length || ''}</span>
         {/* Bouton bascule : nom fixe (« Favori »), état annoncé par aria-pressed. */}
@@ -189,7 +186,7 @@ export function ProjectList({ projects, archivedOnly, jiraFilter, priorityFilter
   // Filtres portant sur les tâches (report, priorité), combinés en ET.
   const taskFilter = jiraOnly || priorityFilter !== null;
   const keep = (t: Task) => (!jiraOnly || jiraState(t) === jiraFilter) && (!priorityFilter || t.priority === priorityFilter);
-  const { act } = useActions();
+  const { undoable } = useActions();
   const visible = projects
     .filter((p) => Boolean(p.archived_at) === archivedOnly) // Archivés : seulement eux
     .filter((p) => !favoritesOnly || p.favorite_at)
@@ -220,8 +217,14 @@ export function ProjectList({ projects, archivedOnly, jiraFilter, priorityFilter
     if (!neighbour) return;
     const others = projects.filter((p) => p.id !== project.id).map((p) => p.id);
     const index = others.indexOf(neighbour.id) + (direction > 0 ? 1 : 0);
+    const before = projects.findIndex((p) => p.id === project.id); // index parmi les autres une fois retiré
     moving.current = true;
-    await act(() => api.moveProject(project.id, index));
+    await undoable({
+      label: 'déplacement du projet',
+      focus: `project:${project.id}`,
+      run: () => api.moveProject(project.id, index),
+      undo: () => api.moveProject(project.id, before),
+    });
     moving.current = false;
   };
 
@@ -240,19 +243,32 @@ export function ProjectList({ projects, archivedOnly, jiraFilter, priorityFilter
     }
     if (!target) return;
     moving.current = true;
-    await act(() => api.moveTask(task.id, target.projectId, target.index));
+    // Déplacement permis sans filtre de tâches : ti est la vraie position.
+    await undoable({
+      label: 'déplacement de la tâche',
+      focus: `task:${task.id}`,
+      run: () => api.moveTask(task.id, target.projectId, target.index),
+      undo: () => api.moveTask(task.id, task.project_id, ti),
+    });
     moving.current = false;
   };
 
+  // Création : annuler le supprime, rejouer le restaure (même identifiant).
   const addProject = async (name: string) => {
-    let ok = false;
-    await act(async () => {
-      const project = await api.createProject(name);
-      ok = true;
-      // Projet neuf, sans tâche : on enchaîne sur la saisie de la première.
-      return { focus: `add:${project.id}` };
+    let id = 0;
+    let deleted: Record<string, unknown> | undefined;
+    await undoable({
+      label: 'ajout du projet',
+      focus: () => `project:${id}`,
+      run: async () => {
+        id = (await api.createProject(name)).id;
+        // Projet neuf, sans tâche : on enchaîne sur la saisie de la première.
+        return { focus: `add:${id}` };
+      },
+      undo: async () => (deleted = await api.deleteProject(id)),
+      redo: () => api.restoreProject(deleted!),
     });
-    return ok;
+    return id > 0;
   };
 
   return (
