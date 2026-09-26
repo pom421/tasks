@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } f
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { TimerButtons, useTimer } from './Timer';
 
 interface TaskDialogProps {
   task: Task | DoneTask;
@@ -28,11 +29,14 @@ const isValidTicket = (s: string) => !s || JIRA_KEY_RE.test(s.toUpperCase()) || 
 // Fiche d'une tâche, façon GitLab : lecture seule par défaut ; e passe tout en
 // édition (titre, puis Tab : ticket, puis contenu Markdown) ; Ctrl+Entrée
 // enregistre et repasse en lecture ; un second Ctrl+Entrée (ou Échap) ferme.
+// Chrono comme sur la ligne : t lance / met en pause, T remet à zéro.
 // Tout est enregistré automatiquement, rien n'est perdu.
 // Accessibilité : focus piégé, titre et description annoncés (Radix),
 // libellés reliés aux champs, erreurs annoncées.
 export function TaskDialog({ task, projectName, field, open, onClose }: TaskDialogProps) {
   const id = useId();
+  const done = 'done_at' in task;
+  const timer = useTimer(task);
   const [values, setValues] = useState({ title: task.title, ticket: ticketOf(task), notes: task.notes ?? '' });
   // Ouverte par e (édition complète) ou sur le ticket (L, J → reporté) : directement en édition.
   const [editing, setEditing] = useState(field !== 'notes');
@@ -137,6 +141,7 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const inField = (e.target as HTMLElement).matches('input, textarea');
+    if (!inField && !done && !e.ctrlKey && !e.metaKey && !e.altKey && timer.onKey(e)) return;
     if (e.key === 'e' && !editing && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault();
       startEditing();
@@ -149,7 +154,7 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
     }
   };
 
-  const state = 'done_at' in task ? `faite le ${task.done_at.split('-').reverse().join('/')}` : 'à faire';
+  const state = done ? `faite le ${task.done_at.split('-').reverse().join('/')}` : 'à faire';
   const errorFor = (f: Field) =>
     error?.field === f && (
       <p id={`${id}-${f}-error`} role="alert" className="text-sm text-destructive">
@@ -185,9 +190,13 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
         <DialogTitle className={cn('pr-6 leading-snug [overflow-wrap:anywhere]', editing && 'sr-only')}>
           {values.title}
         </DialogTitle>
-        <DialogDescription>
-          {projectName} · {state}
-        </DialogDescription>
+        {/* Icônes de la tâche à droite, comme sur la ligne. */}
+        <div className="flex min-h-6 items-center justify-between gap-2">
+          <DialogDescription>
+            {projectName} · {state}
+          </DialogDescription>
+          {!done && <TimerButtons timer={timer} />}
+        </div>
 
         {editing ? (
           <>

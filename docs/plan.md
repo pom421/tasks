@@ -7,7 +7,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-Rien.
+- [~] Chrono par tâche (branche d'expérimentation `claude/chrono-ixjyv7`, pas encore sur `main`) : ▷ / pause pleine (`t`), ↻ remise à zéro (`T`, sans confirmation), temps passé en info-bulle, sur la ligne et dans la fiche ; migration 9
 
 ## Décisions attendues
 
@@ -16,6 +16,9 @@ Rien.
   le Log pour ne pas les oublier ?
 - [?] Filtre « Archivés » actif : icône archive pleine = bloc noir (le trait
   intérieur disparaît). Remplissage gris clair à la place ?
+
+- [?] Chrono : un seul en marche à la fois (en lancer un met l'autre en pause). À garder ?
+- [?] Branches d'expérimentation (chrono, priorité, sélection du jour) : chacune ajoute la migration 9. À la fusion, renuméroter la 2e et la 3e (10, 11).
 
 ## Idées / plus tard
 

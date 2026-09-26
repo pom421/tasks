@@ -18,6 +18,11 @@ modèle de données) et `docs/plan.md` (tâches en cours, décisions attendues).
 - **Zones indépendantes** : les filtres du haut (à reporter, Archivés, Favoris)
   ne touchent que la zone des projets, combinés en ET. Le Log a ses propres
   filtres (recherche, journée, projet) sur la ligne de son titre.
+- **Icônes, pas de texte** : l'UX doit se comprendre par les icônes, sans
+  message d'explication ; l'info complémentaire va dans l'info-bulle. Icônes
+  d'une tâche toutes à droite, même style (`ghost` `icon-xs`, atténuée et vide,
+  pleine et colorée si active, alors toujours visible). Action annulable par
+  `u` : directe, sans confirmation.
 - **Clavier d'abord** : toute action a un raccourci, affiché dans l'aide `?`, le
   README et l'info-bulle. Action destructive au clavier : 1er appui = message
   de ce qui va se passer, 2e appui = exécution (`Échap` annule). Actions

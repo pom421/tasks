@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { EditableName } from './Editable';
 import { ReportBadge } from './ReportBadge';
 import { moveDirection } from '@/lib/nav';
+import { TimerButtons, useTimer } from './Timer';
 
 // Ligne de tâche, à faire (liste des projets) ou faite (journal).
 // Clavier, où que soit le focus dans la ligne (hors champ de saisie) :
@@ -17,6 +18,7 @@ import { moveDirection } from '@/lib/nav';
 // (rien -> à reporter -> reporté -> rien), o ou Maj+Entrée ouvre la fiche,
 // e l'ouvre directement en édition,
 // L l'ouvre sur l'identifiant du ticket,
+// t lance / met en pause le chrono, T l'arrête et le remet à zéro (tâches à faire),
 // x ou Suppr demande la suppression, un second appui la confirme,
 // Alt+↑ / Alt+↓ (ou Alt+k / Alt+j) déplacent la tâche (onMove, tâches à faire).
 export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (direction: -1 | 1) => void }) {
@@ -25,6 +27,7 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
   const [editingDate, setEditingDate] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const navKey = `task:${task.id}`;
+  const timer = useTimer(task);
 
   const patch = (body: TaskPatch, stay = false) => act(() => api.updateTask(task.id, body), { stay });
 
@@ -90,6 +93,10 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
       else setConfirmDelete(true);
       return;
     }
+    if (!done && timer.onKey(e)) {
+      setConfirmDelete(false);
+      return;
+    }
     if (confirmDelete && e.key === 'Escape') e.stopPropagation();
     setConfirmDelete(false); // toute autre touche annule la demande
     if (e.key === ' ' && target.getAttribute('role') !== 'checkbox') {
@@ -134,18 +141,26 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
         />
         <ReportBadge task={task} />
         {hasDetails(task) && (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon-xs"
             tabIndex={-1}
-            className="details flex-none text-muted-foreground hover:text-foreground"
+            className="details flex-none text-muted-foreground"
             title="Voir le contenu (o ou Maj+Entrée)"
             aria-label="Voir les détails"
             onClick={() => openTask(task, 'notes')}
           >
-            <NotebookText className="size-3.5" aria-hidden />
-          </button>
+            <NotebookText aria-hidden />
+          </Button>
         )}
       </span>
+      {/* Chrono : visible au survol, toujours visible en marche (icône pause pleine). */}
+      {!done && !confirmDelete && (
+        <TimerButtons
+          timer={timer}
+          className={timer.running ? undefined : 'invisible group-hover:visible group-focus-within:visible'}
+        />
+      )}
       {confirmDelete ? (
         <span className="confirm-delete flex-none text-xs text-destructive" role="alert">
           x pour supprimer · Échap pour annuler

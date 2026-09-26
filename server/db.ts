@@ -12,6 +12,7 @@ import type {
   Settings,
   State,
   Task,
+  TimerAction,
 } from '../shared/types.ts';
 
 export interface TaskPatch {
@@ -21,12 +22,20 @@ export interface TaskPatch {
   jiraKey?: string | null;
   jiraUrl?: string | null;
   notes?: string | null;
+  timer?: TimerAction;
+  timeSpent?: number; // annulation : valeurs du chrono remises telles quelles
+  timerStartedAt?: string | null;
 }
 import type { ImportItem } from './markdown.ts';
 import { LATEST_VERSION, migrate, schemaVersion, type MigrationReport } from './migrations.ts';
 
 // À reporter dans Jira : marquée mais pas encore reportée.
 const JIRA_PENDING = 'jira_wanted_at IS NOT NULL AND jira_at IS NULL';
+
+// Chrono : secondes écoulées depuis le lancement (jamais négatif).
+const ELAPSED = "MAX(0, CAST(ROUND((julianday('now') - julianday(timer_started_at)) * 86400) AS INTEGER))";
+// Chrono mis en pause : la période en cours rejoint le temps cumulé.
+const PAUSE = `time_spent = time_spent + ${ELAPSED}, timer_started_at = NULL`;
 
 // Lignes brutes renvoyées par SQLite (toutes les colonnes).
 export interface ProjectRow {
@@ -139,7 +148,7 @@ export class Store {
       'tasks'
     >[];
     const tasks = this.db
-      .prepare('SELECT id, project_id, title, jira_wanted_at, jira_at, jira_key, jira_url, notes FROM task WHERE done_at IS NULL ORDER BY position, id')
+      .prepare('SELECT id, project_id, title, jira_wanted_at, jira_at, jira_key, jira_url, notes, time_spent, timer_started_at FROM task WHERE done_at IS NULL ORDER BY position, id')
       .all() as unknown as Task[];
     const byProject = new Map<number, Project>(projects.map((p) => [p.id, { ...p, tasks: [] }]));
     for (const t of tasks) byProject.get(t.project_id)?.tasks.push({ ...t });
@@ -192,7 +201,7 @@ export class Store {
     const rows = this.db
       .prepare(
         `SELECT t.id, t.title, t.done_at, t.jira_wanted_at, t.jira_at, t.jira_key, t.jira_url, t.notes,
-                t.project_id, p.name AS project_name
+                t.time_spent, t.timer_started_at, t.project_id, p.name AS project_name
          FROM task t JOIN project p ON p.id = t.project_id
          WHERE ${where.join(' AND ')}
          ORDER BY t.done_at DESC, p.id, t.id`,
@@ -279,10 +288,22 @@ export class Store {
   // doneAt : 'YYYY-MM-DD' pour marquer faite, null pour remettre à faire.
   // jira : état du suivi Jira ('none' efface aussi le ticket) ;
   // jiraKey / jiraUrl : ticket (clé ou lien complet) ; notes : détails (Markdown).
+  // timer : chrono (un seul en marche à la fois ; une tâche faite l'arrête).
   updateTask(id: number, patch: TaskPatch) {
-    const { title, doneAt, jira, jiraKey, jiraUrl, notes } = patch;
+    const { title, doneAt, jira, jiraKey, jiraUrl, notes, timer, timeSpent, timerStartedAt } = patch;
     if (title !== undefined) this.db.prepare('UPDATE task SET title = ? WHERE id = ?').run(title, id);
+    if (doneAt) this.db.prepare(`UPDATE task SET ${PAUSE} WHERE id = ? AND timer_started_at IS NOT NULL`).run(id);
     if (doneAt !== undefined) this.db.prepare('UPDATE task SET done_at = ? WHERE id = ?').run(doneAt, id);
+    if (timer === 'start') {
+      this.db.prepare(`UPDATE task SET ${PAUSE} WHERE timer_started_at IS NOT NULL AND id != ?`).run(id);
+      this.db
+        .prepare("UPDATE task SET timer_started_at = COALESCE(timer_started_at, datetime('now')) WHERE id = ? AND done_at IS NULL")
+        .run(id);
+    }
+    if (timer === 'pause') this.db.prepare(`UPDATE task SET ${PAUSE} WHERE id = ? AND timer_started_at IS NOT NULL`).run(id);
+    if (timer === 'reset') this.db.prepare('UPDATE task SET time_spent = 0, timer_started_at = NULL WHERE id = ?').run(id);
+    if (timeSpent !== undefined) this.db.prepare('UPDATE task SET time_spent = ? WHERE id = ?').run(timeSpent, id);
+    if (timerStartedAt !== undefined) this.db.prepare('UPDATE task SET timer_started_at = ? WHERE id = ?').run(timerStartedAt, id);
     if (jira !== undefined) {
       const set = {
         none: 'jira_wanted_at = NULL, jira_at = NULL, jira_key = NULL, jira_url = NULL',
@@ -353,12 +374,12 @@ export class Store {
     this.db
       .prepare(
         `INSERT INTO task (id, project_id, title, created_at, done_at, position, notes,
-                           jira_wanted_at, jira_at, jira_key, jira_url)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                           jira_wanted_at, jira_at, jira_key, jira_url, time_spent, timer_started_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         row.id, row.project_id, row.title, row.created_at, row.done_at, row.position, row.notes,
-        row.jira_wanted_at, row.jira_at, row.jira_key, row.jira_url,
+        row.jira_wanted_at, row.jira_at, row.jira_key, row.jira_url, row.time_spent, row.timer_started_at,
       );
     return this.task(row.id)!;
   }
