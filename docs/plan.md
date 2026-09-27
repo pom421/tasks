@@ -7,7 +7,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-- [~] Onglet « Prochainement » renommé « Suivant » (`S`, `/suivant`) ; icônes d'une tâche toujours à la même place (étiquettes d'abord, tags coupés) ; un cadre rouge par jour d'échéance dépassée ; icônes distinctes (calendrier prévue, réveil échéance, sablier durée) ; placeholder « Tags… » sans « (#) » ; démo enrichie
+Rien.
 
 ## Décisions attendues
 
@@ -37,6 +37,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
+- [x] Onglet « Prochainement » renommé « Suivant » (`S`, `/suivant`) ; icônes d'une tâche toujours à la même place (étiquettes d'abord, tags coupés) ; un cadre rouge par jour d'échéance dépassée ; icônes distinctes (calendrier prévue, réveil échéance, sablier durée) ; placeholder « Tags… » sans « (#) » ; démo enrichie (`4e9b2e1`, `39e4504`)
 - [x] Date prévue (fusionnée avec ☀ / `day_at`), échéance et tags (migration 13) : fiche (`e`), étiquettes sur la ligne, « Aujourd’hui » avec les tâches en retard, onglet « Prochainement » (agenda), filtre `#` avec autocomplétion dans Projets et dans le Log (`81045b0`)
 - [x] « Jira » renommé « bugtracker » partout (base, API, types, interface, tests, docs) : colonnes `bugtracker_*` et réglage `bugtracker_base_url` par la migration 12 (`e6648ce`)
 - [x] Persistance avec Drizzle ORM (1.0 RC, pilote `node:sqlite`) : schéma visible dans `server/schema.ts`, types déduits, test de cohérence schéma / migrations, skill `drizzle` ; migrations SQL gardées, `drizzle-kit` écarté (`3e8ca97`)
