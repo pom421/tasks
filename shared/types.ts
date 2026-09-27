@@ -1,22 +1,15 @@
 // Types échangés entre le serveur et le front (réponses de l'API).
+// Types des lignes : déduits du schéma de la base (import de types seulement,
+// rien de Drizzle n'arrive dans le front).
+import type { ProjectRow, TaskRow } from '../server/schema.ts';
 
 // Suivi Jira : rien -> à reporter (jira_wanted_at) -> reportée (jira_at).
 export type JiraState = 'none' | 'wanted' | 'done';
 
-export interface Task {
-  id: number;
-  project_id: number;
-  title: string;
-  jira_wanted_at: string | null; // marquée « à reporter dans Jira »
-  jira_at: string | null; // reportée dans Jira
-  jira_key: string | null; // clé du ticket (PROJ-123), lien construit avec l'URL Jira d'entreprise
-  jira_url: string | null; // ou lien complet vers le ticket (http/https)
-  notes: string | null; // détails, en Markdown
-  priority: Priority | null; // P1 (la plus haute) à P3, null = aucune
-  day_at: string | null; // choisie pour la journée du 'YYYY-MM-DD' (Plan journée)
-  time_spent: number; // chrono : secondes cumulées (hors période en cours)
-  timer_started_at: string | null; // chrono en marche depuis (UTC, 'YYYY-MM-DD HH:MM:SS')
-}
+// Tâche à faire telle que l'API la renvoie : colonnes de la table task
+// (sens de chaque colonne : server/schema.ts), sans la date de fin, l'ordre et
+// la date de création.
+export type Task = Omit<TaskRow, 'done_at' | 'position' | 'created_at'>;
 
 // Chrono : lancer, mettre en pause, arrêter et remettre à zéro.
 export type TimerAction = 'start' | 'pause' | 'reset';
@@ -61,11 +54,7 @@ export function jiraState(t: Pick<Task, 'jira_wanted_at' | 'jira_at'>): JiraStat
   return t.jira_wanted_at ? 'wanted' : 'none';
 }
 
-export interface Project {
-  id: number;
-  name: string;
-  archived_at: string | null;
-  favorite_at: string | null;
+export interface Project extends Pick<ProjectRow, 'id' | 'name' | 'archived_at' | 'favorite_at'> {
   tasks: Task[]; // tâches à faire uniquement
 }
 

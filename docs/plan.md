@@ -7,7 +7,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-Rien.
+- [~] Persistance avec Drizzle ORM (1.0 RC, pilote `node:sqlite`) : schéma visible dans `server/schema.ts`, types déduits, test de cohérence schéma / migrations, skill `drizzle` ; migrations SQL gardées, `drizzle-kit` écarté
 
 ## Décisions attendues
 
@@ -24,6 +24,7 @@ Rien.
 
 ## Idées / plus tard
 
+- [ ] Drizzle : passer à la 1.0 stable quand elle sort (épinglée en `1.0.0-rc.4`)
 - [ ] Supprimer les branches distantes fusionnées `ui/taches-icones-a-droite` et `ui/disposition-deux-colonnes` (à faire sur GitHub)
 - [ ] ~~Animations des listes~~ : AutoAnimate essayé puis retiré (rendu jugé pire). Ne pas reproposer sans nouvelle demande.
 - [ ] Corbeille durable (table `trash` : JSON du projet + tâches) si l'annulation

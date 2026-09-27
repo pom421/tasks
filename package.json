@@ -35,6 +35,7 @@
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "dompurify": "3.4.15",
+    "drizzle-orm": "1.0.0-rc.4",
     "lucide-react": "1.47.0",
     "marked": "18.0.13",
     "radix-ui": "1.6.7",

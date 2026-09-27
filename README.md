@@ -1,7 +1,7 @@
 # Tâches
 
 Tâches par projet + journal de ce qui a été fait, jour par jour.
-SPA React + TypeScript (Vite, Tailwind, shadcn/ui), petit serveur Node + SQLite sans dépendance.
+SPA React + TypeScript (Vite, Tailwind, shadcn/ui), petit serveur Node + SQLite (`node:sqlite`, requêtes par Drizzle ORM).
 
 ## Lancer en local
 
@@ -135,12 +135,13 @@ Import / export (page Réglages) :
 server/           Node exécute le TypeScript tel quel (pas d'étape de build)
   index.ts        point d'entrée : sert l'API et le front compilé (dist/)
   app.ts          routes API, fichiers statiques, sécurité
-  db.ts           accès SQLite
+  schema.ts       schéma de la base (Drizzle) : tables, colonnes, sens ; types déduits
+  db.ts           accès SQLite (requêtes Drizzle)
   migrations.ts   scripts de migration numérotés et leur application
   migrate.ts      commande pnpm db:migrate
   markdown.ts     import du markdown
   test/           tests API (node:test)
-shared/types.ts   types échangés entre serveur et front
+shared/types.ts   types échangés entre serveur et front (dérivés du schéma)
 src/              front React (Vite)
   App.tsx         état, chargement des données, raccourcis globaux
   components/     Toolbar, ProjectFilters, ProjectList, TaskRow, TaskDialog, ReportBadge, Journal, SettingsPage…
@@ -156,13 +157,15 @@ En dev, l'API est branchée dans le serveur Vite (`vite.config.ts`) : une seule 
 
 ## Modèle de données
 
+Description complète et commentée : [`server/schema.ts`](server/schema.ts) (une base migrée doit lui correspondre exactement, `server/test/schema.test.ts`). En bref :
+
 `project` (id, name, created_at, archived_at, favorite_at, position) : 1 projet a 0..n `task` (id, project_id, title, created_at, done_at, position, notes, jira_wanted_at, jira_at, jira_key, jira_url, time_spent, timer_started_at, day_at, priority).
 `setting` (key, value) : réglages de l'application (ex. `jira_base_url`, `day_capacity` = maximum de tâches par jour, 5 par défaut).
 `position` = ordre des projets, et ordre (priorité) des tâches dans leur projet.
 `notes` = contenu en Markdown. Chrono : `time_spent` = secondes cumulées, `timer_started_at` = chrono en marche depuis (UTC) ; temps passé = les deux additionnés. `day_at` = jour ('YYYY-MM-DD') pour lequel la tâche a été mise au plan (Aujourd’hui). `priority` = 1 (P1, la plus haute) à 3, NULL = aucune. Une tâche est faite quand `done_at` est rempli (le journal, ce sont ces tâches-là), à reporter quand `jira_wanted_at` l'est et pas `jira_at`, reportée quand `jira_at` l'est. Ticket : `jira_key` (lien construit avec `jira_base_url`, qui peut donc changer) ou `jira_url` (lien complet). Liens en http(s) uniquement.
 ### Versions du schéma
 
-- Chaque évolution de la base est un **script numéroté** dans `server/migrations.ts` (version, nom, SQL). On ajoute une version en fin de liste, on ne modifie jamais un script publié.
+- Chaque évolution de la base est un **script numéroté** dans `server/migrations.ts` (version, nom, SQL), reportée dans `server/schema.ts`. On ajoute une version en fin de liste, on ne modifie jamais un script publié.
 - À l'ouverture (démarrage ou import d'une base), les scripts manquants sont appliqués **dans l'ordre**, chacun dans une transaction : une base en version 2 passe en version 6 via 3, 4, 5 et 6.
 - Suivi dans la table technique `schema_migration` (version, nom, version de l'outil, date d'application).
 - Avant de migrer une base existante, une **sauvegarde** est faite à côté : `tasks.db.v2.bak` (si elle existe déjà, elle n'est pas écrasée : `tasks.db.v2.2.bak`, etc.).

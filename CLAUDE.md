@@ -35,6 +35,7 @@ données : `README.md` ; tâches et décisions attendues : `docs/plan.md`.
 - `raccourcis` : avant toute touche ajoutée, changée ou retirée.
 - `capture-ecran` : vérifier un rendu visuel (`pnpm demo` : base de démo).
 - `migration` : évolution du schéma de la base.
+- `drizzle` : requêtes, types et schéma (`server/schema.ts`).
 
 ## Façon de travailler
 

@@ -3,7 +3,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { type DeletedProject, type ProjectPatch, type ProjectRow, type Store, type TaskPatch, type TaskRow, isDate, today } from './db.ts';
+import { type DeletedProject, type ProjectPatch, type Store, type TaskPatch, isDate, today } from './db.ts';
+import type { ProjectRow, TaskRow } from './schema.ts';
 import { JIRA_KEY_RE, PRIORITIES, type JiraState, type Priority, type Settings, type TimerAction } from '../shared/types.ts';
 import { parseMarkdown } from './markdown.ts';
 

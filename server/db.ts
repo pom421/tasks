@@ -1,6 +1,10 @@
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
+import { and, count, desc, eq, getColumns, gte, isNotNull, isNull, lte, ne, or, sql, type SQL } from 'drizzle-orm';
+import { drizzle, type NodeSQLiteDatabase } from 'drizzle-orm/node-sqlite';
+import type { SQLiteUpdateSetSource } from 'drizzle-orm/sqlite-core';
+import { project, setting, task, type ProjectRow, type TaskRow } from './schema.ts';
 import type {
   DoneTask,
   ImportResult,
@@ -12,10 +16,11 @@ import type {
   Project,
   Settings,
   State,
-  Task,
   TimerAction,
 } from '../shared/types.ts';
 import { DEFAULT_DAY_CAPACITY } from '../shared/types.ts';
+import type { ImportItem } from './markdown.ts';
+import { LATEST_VERSION, migrate, schemaVersion, type MigrationReport } from './migrations.ts';
 
 export interface TaskPatch {
   title?: string;
@@ -30,26 +35,20 @@ export interface TaskPatch {
   dayAt?: string | null;
   priority?: Priority | null;
 }
-import type { ImportItem } from './markdown.ts';
-import { LATEST_VERSION, migrate, schemaVersion, type MigrationReport } from './migrations.ts';
 
 // À reporter dans Jira : marquée mais pas encore reportée.
-const JIRA_PENDING = 'jira_wanted_at IS NOT NULL AND jira_at IS NULL';
+const JIRA_PENDING = and(isNotNull(task.jira_wanted_at), isNull(task.jira_at));
+
+const NOW = sql`datetime('now')`;
 
 // Chrono : secondes écoulées depuis le lancement (jamais négatif).
-const ELAPSED = "MAX(0, CAST(ROUND((julianday('now') - julianday(timer_started_at)) * 86400) AS INTEGER))";
+const ELAPSED = sql`MAX(0, CAST(ROUND((julianday('now') - julianday(${task.timer_started_at})) * 86400) AS INTEGER))`;
 // Chrono mis en pause : la période en cours rejoint le temps cumulé.
-const PAUSE = `time_spent = time_spent + ${ELAPSED}, timer_started_at = NULL`;
+const PAUSE = { time_spent: sql`${task.time_spent} + ${ELAPSED}`, timer_started_at: null };
+const RUNNING = isNotNull(task.timer_started_at);
 
-// Lignes brutes renvoyées par SQLite (toutes les colonnes).
-export interface ProjectRow {
-  id: number;
-  name: string;
-  created_at: string;
-  archived_at: string | null;
-  favorite_at: string | null;
-  position: number;
-}
+// Colonnes d'une tâche renvoyées par l'API (type Task).
+const { done_at: _doneAt, position: _position, created_at: _createdAt, ...TASK } = getColumns(task);
 
 // Projet supprimé avec toutes ses tâches (faites comprises), pour pouvoir l'annuler.
 export interface DeletedProject {
@@ -61,12 +60,6 @@ export interface ProjectPatch {
   name?: string;
   archived?: boolean;
   favorite?: boolean;
-}
-
-export interface TaskRow extends Task {
-  created_at: string;
-  done_at: string | null;
-  position: number;
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -85,7 +78,7 @@ export function today(): string {
 export const fold = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 
 // Ouvre la base et l'amène à la dernière version du schéma (voir migrations.ts).
-function openDb(file: string): { db: DatabaseSync; migration: MigrationReport } {
+function openDb(file: string): { db: DatabaseSync; orm: NodeSQLiteDatabase; migration: MigrationReport } {
   const db = new DatabaseSync(file);
   db.exec('PRAGMA foreign_keys = ON');
   // Ne pas exécuter de fonctions SQL appelées depuis le schéma (vues, triggers) d'une base importée.
@@ -93,7 +86,7 @@ function openDb(file: string): { db: DatabaseSync; migration: MigrationReport } 
   // Recherche sans tenir compte de la casse ni des accents (« reunion » trouve « Réunion »).
   db.function('fold', { deterministic: true }, (value) => (typeof value === 'string' ? fold(value) : null));
   try {
-    return { db, migration: migrate(db, file) };
+    return { db, orm: drizzle({ client: db }), migration: migrate(db, file) };
   } catch (err) {
     db.close();
     throw err;
@@ -127,16 +120,22 @@ export function validateDbFile(file: string) {
   }
 }
 
+// Position suivante : en fin de liste des projets, ou des tâches du projet.
+const nextProjectPosition = () => sql`(SELECT COALESCE(MAX(${project.position}) + 1, 0) FROM ${project})`;
+const nextTaskPosition = (projectId: number) =>
+  sql`(SELECT COALESCE(MAX(${task.position}) + 1, 0) FROM ${task} WHERE ${task.project_id} = ${projectId})`;
+
 export class Store {
   readonly file: string;
-  db: DatabaseSync;
+  db: DatabaseSync; // accès SQL brut (migrations, tests)
+  orm: NodeSQLiteDatabase; // requêtes typées par le schéma (schema.ts)
   // Migrations appliquées à l'ouverture (vide si la base était à jour).
   migration: MigrationReport;
 
   constructor(file: string) {
     this.file = file;
     if (file !== ':memory:') fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
-    ({ db: this.db, migration: this.migration } = openDb(file));
+    ({ db: this.db, orm: this.orm, migration: this.migration } = openDb(file));
     if (file !== ':memory:') fs.chmodSync(file, 0o600);
   }
 
@@ -149,20 +148,21 @@ export class Store {
   // day : journée de « Plan journée » ('YYYY-MM-DD', celle du navigateur), pour
   // compter les tâches choisies déjà faites.
   state(day?: string): State {
-    const projects = this.db.prepare('SELECT id, name, archived_at, favorite_at FROM project ORDER BY position, id').all() as Omit<
-      Project,
-      'tasks'
-    >[];
-    const tasks = this.db
-      .prepare('SELECT id, project_id, title, jira_wanted_at, jira_at, jira_key, jira_url, notes, time_spent, timer_started_at, day_at, priority FROM task WHERE done_at IS NULL ORDER BY position, id')
-      .all() as unknown as Task[];
+    const { id, name, archived_at, favorite_at } = getColumns(project);
+    const projects = this.orm
+      .select({ id, name, archived_at, favorite_at })
+      .from(project)
+      .orderBy(project.position, project.id)
+      .all();
+    const tasks = this.orm.select(TASK).from(task).where(isNull(task.done_at)).orderBy(task.position, task.id).all();
     const byProject = new Map<number, Project>(projects.map((p) => [p.id, { ...p, tasks: [] }]));
-    for (const t of tasks) byProject.get(t.project_id)?.tasks.push({ ...t });
-    const { n } = this.db.prepare(`SELECT count(*) AS n FROM task WHERE ${JIRA_PENDING}`).get() as { n: number };
-    const dayDone = day
-      ? (this.db.prepare('SELECT count(*) AS n FROM task WHERE day_at = ? AND done_at IS NOT NULL').get(day) as { n: number }).n
-      : 0;
-    return { projects: [...byProject.values()], jiraPending: n, dayDone, settings: this.settings() };
+    for (const t of tasks) byProject.get(t.project_id)?.tasks.push(t);
+    const dayDone = day ? this.count(and(eq(task.day_at, day), isNotNull(task.done_at))) : 0;
+    return { projects: [...byProject.values()], jiraPending: this.count(JIRA_PENDING), dayDone, settings: this.settings() };
+  }
+
+  private count(where: SQL | undefined): number {
+    return this.orm.select({ n: count() }).from(task).where(where).get()!.n;
   }
 
   // Période [from, to] incluse, bornes facultatives ('YYYY-MM-DD').
@@ -174,68 +174,59 @@ export class Store {
   // fenêtre à l'autre.
   // q : recherche dans le titre, le contenu et le ticket (casse et accents ignorés).
   journal({ from, to, projectId, jiraPending, q, limit }: JournalFilter = {}): Journal {
-    const where = ['t.done_at IS NOT NULL'];
-    const params: (string | number)[] = [];
-    if (projectId) {
-      where.push('t.project_id = ?');
-      params.push(projectId);
-    }
-    if (jiraPending) where.push(JIRA_PENDING.replaceAll('jira_', 't.jira_'));
+    const where: (SQL | undefined)[] = [isNotNull(task.done_at)];
+    if (projectId) where.push(eq(task.project_id, projectId));
+    if (jiraPending) where.push(JIRA_PENDING);
     if (q) {
       // % et _ saisis sont cherchés tels quels, pas comme jokers SQL.
       const pattern = '%' + fold(q).replace(/[\\%_]/g, (c) => '\\' + c) + '%';
-      const cols = ['t.title', 't.notes', 't.jira_key', 't.jira_url'];
-      where.push('(' + cols.map((c) => `fold(${c}) LIKE ? ESCAPE '\\'`).join(' OR ') + ')');
-      params.push(...cols.map(() => pattern));
+      const cols = [task.title, task.notes, task.jira_key, task.jira_url];
+      where.push(or(...cols.map((c) => sql`fold(${c}) LIKE ${pattern} ESCAPE '\\'`)));
     }
-    const dates = (
-      this.db.prepare(`SELECT DISTINCT t.done_at AS d FROM task t WHERE ${where.join(' AND ')} ORDER BY d`).all(...params) as { d: string }[]
-    ).map((r) => r.d);
+    const dates = this.orm
+      .selectDistinct({ d: task.done_at })
+      .from(task)
+      .where(and(...where))
+      .orderBy(task.done_at)
+      .all()
+      .map((r) => r.d!);
     if (limit) {
       const window = dates.filter((d) => (!from || d >= from) && (!to || d <= to)).slice(-limit);
       if (!window.length) return { days: [], dates };
       [from, to] = [window[0], window.at(-1)];
     }
-    if (from) {
-      where.push('t.done_at >= ?');
-      params.push(from);
-    }
-    if (to) {
-      where.push('t.done_at <= ?');
-      params.push(to);
-    }
+    if (from) where.push(gte(task.done_at, from));
+    if (to) where.push(lte(task.done_at, to));
     if (!from && !to && !projectId && !jiraPending && !q) {
       const last = dates.at(-1);
       if (!last) return { days: [], dates };
-      where.push('t.done_at = ?');
-      params.push(last);
+      where.push(eq(task.done_at, last));
     }
-    const rows = this.db
-      .prepare(
-        `SELECT t.id, t.title, t.done_at, t.jira_wanted_at, t.jira_at, t.jira_key, t.jira_url, t.notes,
-                t.time_spent, t.timer_started_at, t.day_at, t.priority, t.project_id, p.name AS project_name
-         FROM task t JOIN project p ON p.id = t.project_id
-         WHERE ${where.join(' AND ')}
-         ORDER BY t.done_at DESC, p.id, t.id`,
-      )
-      .all(...params) as unknown as DoneTask[];
+    // done_at jamais NULL ici (filtré plus haut).
+    const rows = this.orm
+      .select({ ...TASK, done_at: task.done_at, project_name: project.name })
+      .from(task)
+      .innerJoin(project, eq(project.id, task.project_id))
+      .where(and(...where))
+      .orderBy(desc(task.done_at), project.id, task.id)
+      .all() as DoneTask[];
     const days: JournalDay[] = [];
     for (const r of rows) {
       let day = days.at(-1);
       if (day?.date !== r.done_at) days.push((day = { date: r.done_at, tasks: [] }));
-      day.tasks.push({ ...r });
+      day.tasks.push(r);
     }
     return { days, dates };
   }
 
   // --- Projets -------------------------------------------------------------
 
-  private project(id: number | bigint): ProjectRow | undefined {
-    return this.db.prepare('SELECT * FROM project WHERE id = ?').get(id) as ProjectRow | undefined;
+  private project(id: number): ProjectRow | undefined {
+    return this.orm.select().from(project).where(eq(project.id, id)).get();
   }
 
-  private task(id: number | bigint): TaskRow | undefined {
-    return this.db.prepare('SELECT * FROM task WHERE id = ?').get(id) as TaskRow | undefined;
+  private task(id: number): TaskRow | undefined {
+    return this.orm.select().from(task).where(eq(task.id, id)).get();
   }
 
   hasProject(id: number): boolean {
@@ -243,58 +234,45 @@ export class Store {
   }
 
   createProject(name: string): ProjectRow {
-    const { lastInsertRowid } = this.db.prepare('INSERT INTO project (name, position) VALUES (?, (SELECT COALESCE(MAX(position) + 1, 0) FROM project))').run(name);
-    return this.project(lastInsertRowid)!;
+    return this.orm.insert(project).values({ name, position: nextProjectPosition() }).returning().get();
   }
 
   updateProject(id: number, { name, archived, favorite }: ProjectPatch) {
-    if (name !== undefined) this.db.prepare('UPDATE project SET name = ? WHERE id = ?').run(name, id);
-    if (archived !== undefined) {
-      this.db
-        .prepare(`UPDATE project SET archived_at = ${archived ? "datetime('now')" : 'NULL'} WHERE id = ?`)
-        .run(id);
-    }
-    if (favorite !== undefined) {
-      this.db
-        .prepare(`UPDATE project SET favorite_at = ${favorite ? "datetime('now')" : 'NULL'} WHERE id = ?`)
-        .run(id);
-    }
+    const set: SQLiteUpdateSetSource<typeof project> = {};
+    if (name !== undefined) set.name = name;
+    if (archived !== undefined) set.archived_at = archived ? NOW : null;
+    if (favorite !== undefined) set.favorite_at = favorite ? NOW : null;
+    if (Object.keys(set).length) this.orm.update(project).set(set).where(eq(project.id, id)).run();
     return this.project(id);
   }
 
   // Renvoie le projet supprimé et ses tâches, pour pouvoir l'annuler.
   deleteProject(id: number): DeletedProject | undefined {
-    const project = this.project(id);
-    if (!project) return undefined;
-    const tasks = this.db.prepare('SELECT * FROM task WHERE project_id = ? ORDER BY id').all(id) as unknown as TaskRow[];
-    this.db.prepare('DELETE FROM project WHERE id = ?').run(id);
-    return { project, tasks };
+    const row = this.project(id);
+    if (!row) return undefined;
+    const tasks = this.orm.select().from(task).where(eq(task.project_id, id)).orderBy(task.id).all();
+    this.orm.delete(project).where(eq(project.id, id)).run();
+    return { project: row, tasks };
   }
 
   // Annulation d'une suppression : réinsère le projet et ses tâches à
   // l'identique (mêmes id), tout ou rien.
   restoreProject({ project: p, tasks }: DeletedProject): DeletedProject {
-    this.db.exec('BEGIN');
-    try {
-      this.db
-        .prepare('INSERT INTO project (id, name, created_at, archived_at, favorite_at, position) VALUES (?, ?, ?, ?, ?, ?)')
-        .run(p.id, p.name, p.created_at, p.archived_at, p.favorite_at, p.position);
-      for (const t of tasks) this.restoreTask(t);
-      this.db.exec('COMMIT');
-    } catch (err) {
-      this.db.exec('ROLLBACK');
-      throw err;
-    }
+    this.orm.transaction((tx) => {
+      tx.insert(project).values(p).run();
+      for (const t of tasks) tx.insert(task).values(t).run();
+    });
     return { project: this.project(p.id)!, tasks: tasks.map((t) => this.task(t.id)!) };
   }
 
   // --- Tâches --------------------------------------------------------------
 
   createTask(projectId: number, title: string): TaskRow {
-    const { lastInsertRowid } = this.db
-      .prepare('INSERT INTO task (project_id, title, position) VALUES (?, ?, (SELECT COALESCE(MAX(position) + 1, 0) FROM task WHERE project_id = ?))')
-      .run(projectId, title, projectId);
-    return this.task(lastInsertRowid)!;
+    return this.orm
+      .insert(task)
+      .values({ project_id: projectId, title, position: nextTaskPosition(projectId) })
+      .returning()
+      .get();
   }
 
   // doneAt : 'YYYY-MM-DD' pour marquer faite, null pour remettre à faire.
@@ -305,32 +283,32 @@ export class Store {
   // priority : 1 à 3, null = aucune.
   updateTask(id: number, patch: TaskPatch) {
     const { title, doneAt, jira, jiraKey, jiraUrl, notes, timer, timeSpent, timerStartedAt, dayAt, priority } = patch;
-    if (title !== undefined) this.db.prepare('UPDATE task SET title = ? WHERE id = ?').run(title, id);
-    if (doneAt) this.db.prepare(`UPDATE task SET ${PAUSE} WHERE id = ? AND timer_started_at IS NOT NULL`).run(id);
-    if (doneAt !== undefined) this.db.prepare('UPDATE task SET done_at = ? WHERE id = ?').run(doneAt, id);
+    const update = (set: SQLiteUpdateSetSource<typeof task>, where: SQL | undefined = undefined) =>
+      this.orm.update(task).set(set).where(and(eq(task.id, id), where)).run();
+    if (doneAt) update(PAUSE, RUNNING);
+    if (doneAt !== undefined) update({ done_at: doneAt });
     if (timer === 'start') {
-      this.db.prepare(`UPDATE task SET ${PAUSE} WHERE timer_started_at IS NOT NULL AND id != ?`).run(id);
-      this.db
-        .prepare("UPDATE task SET timer_started_at = COALESCE(timer_started_at, datetime('now')) WHERE id = ? AND done_at IS NULL")
-        .run(id);
+      this.orm.update(task).set(PAUSE).where(and(RUNNING, ne(task.id, id))).run();
+      update({ timer_started_at: sql`COALESCE(${task.timer_started_at}, ${NOW})` }, isNull(task.done_at));
     }
-    if (timer === 'pause') this.db.prepare(`UPDATE task SET ${PAUSE} WHERE id = ? AND timer_started_at IS NOT NULL`).run(id);
-    if (timer === 'reset') this.db.prepare('UPDATE task SET time_spent = 0, timer_started_at = NULL WHERE id = ?').run(id);
-    if (timeSpent !== undefined) this.db.prepare('UPDATE task SET time_spent = ? WHERE id = ?').run(timeSpent, id);
-    if (timerStartedAt !== undefined) this.db.prepare('UPDATE task SET timer_started_at = ? WHERE id = ?').run(timerStartedAt, id);
-    if (jira !== undefined) {
-      const set = {
-        none: 'jira_wanted_at = NULL, jira_at = NULL, jira_key = NULL, jira_url = NULL',
-        wanted: "jira_wanted_at = COALESCE(jira_wanted_at, datetime('now')), jira_at = NULL",
-        done: "jira_wanted_at = COALESCE(jira_wanted_at, datetime('now')), jira_at = COALESCE(jira_at, datetime('now'))",
-      }[jira];
-      this.db.prepare(`UPDATE task SET ${set} WHERE id = ?`).run(id);
-    }
-    if (jiraKey !== undefined) this.db.prepare('UPDATE task SET jira_key = ? WHERE id = ?').run(jiraKey, id);
-    if (jiraUrl !== undefined) this.db.prepare('UPDATE task SET jira_url = ? WHERE id = ?').run(jiraUrl, id);
-    if (notes !== undefined) this.db.prepare('UPDATE task SET notes = ? WHERE id = ?').run(notes, id);
-    if (dayAt !== undefined) this.db.prepare('UPDATE task SET day_at = ? WHERE id = ?').run(dayAt, id);
-    if (priority !== undefined) this.db.prepare('UPDATE task SET priority = ? WHERE id = ?').run(priority, id);
+    if (timer === 'pause') update(PAUSE, RUNNING);
+    if (timer === 'reset') update({ time_spent: 0, timer_started_at: null });
+    // Le reste en une seule écriture ; l'ordre compte : jira 'none' efface le
+    // ticket, jiraKey / jiraUrl le remplacent ensuite.
+    const set: SQLiteUpdateSetSource<typeof task> = {};
+    if (title !== undefined) set.title = title;
+    if (timeSpent !== undefined) set.time_spent = timeSpent;
+    if (timerStartedAt !== undefined) set.timer_started_at = timerStartedAt;
+    if (jira === 'none') Object.assign(set, { jira_wanted_at: null, jira_at: null, jira_key: null, jira_url: null });
+    if (jira === 'wanted' || jira === 'done') set.jira_wanted_at = sql`COALESCE(${task.jira_wanted_at}, ${NOW})`;
+    if (jira === 'wanted') set.jira_at = null;
+    if (jira === 'done') set.jira_at = sql`COALESCE(${task.jira_at}, ${NOW})`;
+    if (jiraKey !== undefined) set.jira_key = jiraKey;
+    if (jiraUrl !== undefined) set.jira_url = jiraUrl;
+    if (notes !== undefined) set.notes = notes;
+    if (dayAt !== undefined) set.day_at = dayAt;
+    if (priority !== undefined) set.priority = priority;
+    if (Object.keys(set).length) update(set);
     return this.task(id);
   }
 
@@ -338,23 +316,21 @@ export class Store {
   // cible (qui peut être un autre projet). Renvoie false si la tâche n'existe
   // pas ou est déjà faite. Les positions du projet cible sont renumérotées.
   moveTask(id: number, projectId: number, index: number): boolean {
-    const task = this.task(id);
-    if (!task || task.done_at !== null) return false;
-    const ids = (
-      this.db
-        .prepare('SELECT id FROM task WHERE project_id = ? AND done_at IS NULL AND id != ? ORDER BY position, id')
-        .all(projectId, id) as { id: number }[]
-    ).map((r) => r.id);
+    const row = this.task(id);
+    if (!row || row.done_at !== null) return false;
+    const ids = this.orm
+      .select({ id: task.id })
+      .from(task)
+      .where(and(eq(task.project_id, projectId), isNull(task.done_at), ne(task.id, id)))
+      .orderBy(task.position, task.id)
+      .all()
+      .map((r) => r.id);
     ids.splice(Math.min(Math.max(index, 0), ids.length), 0, id);
-    const update = this.db.prepare('UPDATE task SET project_id = ?, position = ? WHERE id = ?');
-    this.db.exec('BEGIN');
-    try {
-      ids.forEach((taskId, position) => update.run(projectId, position, taskId));
-      this.db.exec('COMMIT');
-    } catch (err) {
-      this.db.exec('ROLLBACK');
-      throw err;
-    }
+    this.orm.transaction((tx) => {
+      ids.forEach((taskId, position) =>
+        tx.update(task).set({ project_id: projectId, position }).where(eq(task.id, taskId)).run(),
+      );
+    });
     return true;
   }
 
@@ -362,42 +338,28 @@ export class Store {
   // les positions sont renumérotées. false si le projet n'existe pas.
   moveProject(id: number, index: number): boolean {
     if (!this.project(id)) return false;
-    const ids = (
-      this.db.prepare('SELECT id FROM project WHERE id != ? ORDER BY position, id').all(id) as { id: number }[]
-    ).map((r) => r.id);
+    const ids = this.orm
+      .select({ id: project.id })
+      .from(project)
+      .where(ne(project.id, id))
+      .orderBy(project.position, project.id)
+      .all()
+      .map((r) => r.id);
     ids.splice(Math.min(Math.max(index, 0), ids.length), 0, id);
-    const update = this.db.prepare('UPDATE project SET position = ? WHERE id = ?');
-    this.db.exec('BEGIN');
-    try {
-      ids.forEach((projectId, position) => update.run(position, projectId));
-      this.db.exec('COMMIT');
-    } catch (err) {
-      this.db.exec('ROLLBACK');
-      throw err;
-    }
+    this.orm.transaction((tx) => {
+      ids.forEach((projectId, position) => tx.update(project).set({ position }).where(eq(project.id, projectId)).run());
+    });
     return true;
   }
 
   // Renvoie la tâche supprimée (toutes ses colonnes), pour pouvoir l'annuler.
   deleteTask(id: number): TaskRow | undefined {
-    const row = this.task(id);
-    if (row) this.db.prepare('DELETE FROM task WHERE id = ?').run(id);
-    return row;
+    return this.orm.delete(task).where(eq(task.id, id)).returning().get();
   }
 
   // Annulation d'une suppression : réinsère la tâche à l'identique (même id).
   restoreTask(row: TaskRow): TaskRow {
-    this.db
-      .prepare(
-        `INSERT INTO task (id, project_id, title, created_at, done_at, position, notes,
-                           jira_wanted_at, jira_at, jira_key, jira_url, time_spent, timer_started_at, day_at, priority)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
-        row.id, row.project_id, row.title, row.created_at, row.done_at, row.position, row.notes,
-        row.jira_wanted_at, row.jira_at, row.jira_key, row.jira_url, row.time_spent, row.timer_started_at, row.day_at, row.priority,
-      );
-    return this.task(row.id)!;
+    return this.orm.insert(task).values(row).returning().get();
   }
 
   hasTask(id: number): boolean {
@@ -408,43 +370,40 @@ export class Store {
 
   // title null = projet seul. Réutilise les projets existants de même nom.
   importItems(items: ImportItem[]): ImportResult {
-    const find = this.db.prepare('SELECT id FROM project WHERE lower(name) = lower(?)');
-    const insertProject = this.db.prepare('INSERT INTO project (name, position) VALUES (?, (SELECT COALESCE(MAX(position) + 1, 0) FROM project))');
-    const insertTask = this.db.prepare(
-      'INSERT INTO task (project_id, title, done_at, position) VALUES (?, ?, ?, (SELECT COALESCE(MAX(position) + 1, 0) FROM task WHERE project_id = ?))',
-    );
-    const ids = new Map<string, number | bigint>();
+    const ids = new Map<string, number>();
     let projects = 0;
     let tasks = 0;
-    this.db.exec('BEGIN');
-    try {
-      for (const { project, title, doneAt } of items) {
-        const key = project.toLowerCase();
-        if (!ids.has(key)) {
-          let id = (find.get(project) as { id: number } | undefined)?.id as number | bigint | undefined;
-          if (!id) {
-            id = insertProject.run(project).lastInsertRowid;
+    this.orm.transaction((tx) => {
+      for (const { project: name, title, doneAt } of items) {
+        const key = name.toLowerCase();
+        let projectId = ids.get(key);
+        if (projectId === undefined) {
+          projectId = tx
+            .select({ id: project.id })
+            .from(project)
+            .where(sql`lower(${project.name}) = lower(${name})`)
+            .get()?.id;
+          if (projectId === undefined) {
+            projectId = tx.insert(project).values({ name, position: nextProjectPosition() }).returning().get().id;
             projects++;
           }
-          ids.set(key, id);
+          ids.set(key, projectId);
         }
         if (title) {
-          insertTask.run(ids.get(key)!, title, doneAt ?? null, ids.get(key)!);
+          tx.insert(task)
+            .values({ project_id: projectId, title, done_at: doneAt ?? null, position: nextTaskPosition(projectId) })
+            .run();
           tasks++;
         }
       }
-      this.db.exec('COMMIT');
-    } catch (err) {
-      this.db.exec('ROLLBACK');
-      throw err;
-    }
+    });
     return { projects, tasks };
   }
 
   // --- Réglages ------------------------------------------------------------
 
   settings(): Settings {
-    const rows = this.db.prepare('SELECT key, value FROM setting').all() as { key: string; value: string | null }[];
+    const rows = this.orm.select().from(setting).all();
     const map = new Map(rows.map((r) => [r.key, r.value]));
     return {
       jira_base_url: map.get('jira_base_url') ?? null,
@@ -453,10 +412,10 @@ export class Store {
   }
 
   updateSettings(patch: Partial<Settings>): Settings {
-    const upsert = this.db.prepare(
-      'INSERT INTO setting (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value',
-    );
-    for (const [key, value] of Object.entries(patch)) upsert.run(key, value === null || value === undefined ? null : String(value));
+    for (const [key, v] of Object.entries(patch)) {
+      const value = v === null || v === undefined ? null : String(v);
+      this.orm.insert(setting).values({ key, value }).onConflictDoUpdate({ target: setting.key, set: { value } }).run();
+    }
     return this.settings();
   }
 
@@ -472,6 +431,6 @@ export class Store {
     for (const suffix of ['-wal', '-shm']) fs.rmSync(this.file + suffix, { force: true });
     fs.copyFileSync(file, this.file);
     fs.chmodSync(this.file, 0o600);
-    ({ db: this.db, migration: this.migration } = openDb(this.file));
+    ({ db: this.db, orm: this.orm, migration: this.migration } = openDb(this.file));
   }
 }
