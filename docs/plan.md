@@ -7,13 +7,13 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-- [~] Essai : Log en onglet (« Projets » / « Aujourd’hui » / « Log »), `L` bascule Projets ↔ Log (`L` sur une tâche n'ouvre plus la fiche sur le ticket : `e` / `o` suffisent) ; curseur gardé par onglet ; une seule colonne ; Log sur les 5 derniers jours ayant des entrées, pagination de 5 en 5, bouton « Courant », filtres = jours qui correspondent, recherche soulignée en jaune (fluo en sombre) ; `←` / `→` pour la pagination ; `pnpm demo` (base de démonstration) ; `P` / `T` / `L` vont à leur onglet, `Alt+←` / `Alt+→` onglet voisin, filtre priorité sur `!` (au lieu de `P`) ; Log filtré sur un projet : nom du projet gardé au-dessus des tâches ; skill `raccourcis` (état des lieux et propositions avant toute touche), consignes `.md` resserrées (branche `claude/log-tab-keyboard-shortcut-1b56a8`)
+- [~] Log en onglet (« Projets » / « Aujourd’hui » / « Log », une colonne) : `P` / `T` / `L` vont à leur onglet, `Alt+←` / `Alt+→` onglet voisin, curseur gardé par onglet ; filtre priorité sur `!` ; `L` n'ouvre plus la fiche sur le ticket
+- [~] Log sur les 5 derniers jours ayant des entrées : pagination `<` / `>` (ou `←` / `→`), bouton « Courant », filtres = jours qui correspondent, date = fin de la période, recherche soulignée en jaune, projet toujours affiché ; `pnpm demo`
+- [~] Skill `raccourcis` ; consignes `.md` resserrées
 
 ## Décisions attendues
 
-- [?] Log en onglet : garder l'essai (plus de Log visible à côté des projets) ?
 - [?] Log : aujourd'hui sans entrée n'apparaît plus (avant : cadre « Rien de fait ce jour-là »). À réafficher ?
-
 - [?] Compteur « N tâches à reporter » : ne compte plus les tâches **faites** à
   reporter (elles gardent leur badge dans le Log). Ajouter un indicateur dans
   le Log pour ne pas les oublier ?
