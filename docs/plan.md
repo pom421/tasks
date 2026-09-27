@@ -7,7 +7,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-- [~] Essai : Log en onglet (« Projets » / « Aujourd’hui » / « Log »), `L` bascule Projets ↔ Log (`L` sur une tâche n'ouvre plus la fiche sur le ticket : `e` / `o` suffisent) ; curseur gardé par onglet ; une seule colonne ; Log sur les 5 derniers jours ayant des entrées, pagination de 5 en 5, bouton « Courant », filtres = jours qui correspondent, recherche soulignée en jaune (fluo en sombre) ; `←` / `→` pour la pagination ; `pnpm demo` (base de démonstration) ; `P` / `T` / `L` vont à leur onglet, `Alt+←` / `Alt+→` onglet voisin, filtre priorité sur `!` (au lieu de `P`) ; Log filtré sur un projet : nom du projet gardé au-dessus des tâches (branche `claude/log-tab-keyboard-shortcut-1b56a8`)
+- [~] Essai : Log en onglet (« Projets » / « Aujourd’hui » / « Log »), `L` bascule Projets ↔ Log (`L` sur une tâche n'ouvre plus la fiche sur le ticket : `e` / `o` suffisent) ; curseur gardé par onglet ; une seule colonne ; Log sur les 5 derniers jours ayant des entrées, pagination de 5 en 5, bouton « Courant », filtres = jours qui correspondent, recherche soulignée en jaune (fluo en sombre) ; `←` / `→` pour la pagination ; `pnpm demo` (base de démonstration) ; `P` / `T` / `L` vont à leur onglet, `Alt+←` / `Alt+→` onglet voisin, filtre priorité sur `!` (au lieu de `P`) ; Log filtré sur un projet : nom du projet gardé au-dessus des tâches ; skill `raccourcis` (état des lieux et propositions avant toute touche), consignes `.md` resserrées (branche `claude/log-tab-keyboard-shortcut-1b56a8`)
 
 ## Décisions attendues
 

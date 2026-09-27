@@ -1,73 +1,62 @@
 # Consignes pour Claude
 
-App de tâches par projet + Log quotidien. Voir `README.md` (usage, architecture,
-modèle de données) et `docs/plan.md` (tâches en cours, décisions attendues).
+App de tâches par projet + Log quotidien. Usage, architecture et modèle de
+données : `README.md` ; tâches et décisions attendues : `docs/plan.md`.
 
-## Règles répétées par l'utilisateur
+## Règles de l'utilisateur
 
-- **Simple avant tout** : petit code, facile à maintenir. Pas de dépendance ni
-  d'abstraction sans besoin réel. En cas de doute, la solution la plus simple.
-- **UX homogène** : un nouvel élément suit le comportement des éléments du même
-  type (mêmes boutons bascule, mêmes raccourcis, mêmes messages). Avant de
-  livrer, comparer avec l'existant.
-- **Sobre** : pas de fond coloré pour marquer un état. Bouton à contour ; état
-  actif = icône pleine (vide sinon) et texte normal (atténué sinon).
-- **Afficher seulement ce qui sert** : un bouton de filtre n'apparaît que s'il a
-  un effet, calculé sur **toutes** les données (jamais selon les autres
-  filtres) ; un bouton actif reste visible pour pouvoir le couper.
-- **Zones indépendantes** : les filtres de l'onglet Projets (report, priorité,
-  Archivés, Favoris), sous les onglets, ne touchent que la zone des
-  projets, combinés en ET. L'onglet Log a ses propres filtres (recherche,
-  date, projet), eux aussi sous les onglets.
-- **Icônes, pas de texte** : l'UX doit se comprendre par les icônes, sans
-  message d'explication ; l'info complémentaire va dans l'info-bulle. Icônes
-  d'une tâche toutes à droite, même style (`ghost` `icon-xs`, atténuée et vide,
-  pleine et colorée si active, alors toujours visible). Action annulable par
-  `u` : directe, sans confirmation.
-- **Clavier d'abord** : toute action a un raccourci, affiché dans l'aide `?`, le
-  README et l'info-bulle. Action destructive au clavier : 1er appui = message
-  de ce qui va se passer, 2e appui = exécution (`Échap` annule). Actions
-  annulables par `u`.
-- **Accessible** : bouton icône = `aria-label` + `title` (info-bulle) + icône
-  `aria-hidden` ; bouton bascule = nom fixe + `aria-pressed`.
+- **Simple avant tout** : petit code, pas de dépendance ni d'abstraction sans
+  besoin réel. En cas de doute, le plus simple.
+- **UX homogène** : un nouvel élément copie le comportement de ceux du même type
+  (boutons, raccourcis, messages). Comparer avec l'existant avant de livrer.
+- **Sobre** : pas de fond coloré pour un état ; bouton à contour, actif = icône
+  pleine et texte normal.
+- **Afficher seulement ce qui sert** : un filtre n'apparaît que s'il a un effet
+  sur **toutes** les données ; actif, il reste visible.
+- **Zones indépendantes** : filtres de l'onglet Projets (report, priorité,
+  Archivés, Favoris) et du Log (recherche, date, projet), chacun dans sa zone.
+- **Icônes, pas de texte** : l'info complémentaire va dans l'info-bulle. Icônes
+  d'une tâche à droite (`ghost` `icon-xs`, vide et atténuée, pleine et colorée
+  si active).
+- **Clavier d'abord** : toute action a un raccourci (aide `?`, README,
+  info-bulle). L'utilisateur choisit les touches : skill `raccourcis`.
+- **Annulable, pas confirmé** : action directe, annulable par `u` ; destructif
+  au clavier en deux appuis (`Échap` annule).
+- **Accessible** : bouton icône = `aria-label` + `title` + icône `aria-hidden` ;
+  bascule = nom fixe + `aria-pressed`.
+- **Messages exacts**, y compris avec plusieurs filtres combinés.
 - **Tout en français** : interface, messages, commentaires, commits.
-- **Messages exacts** : un message (liste vide, compteur…) décrit précisément la
-  situation, y compris quand plusieurs filtres sont combinés.
 
-## Skills du projet (`.claude/skills/`)
+## Skills (`.claude/skills/`)
 
-- `livrer` : vérifications, documentation, commit, push, rappel CI (fin de chaque demande).
+- `livrer` : fin de chaque demande (vérifications, docs, commit, push, CI).
 - `verifier-ci` : résultat de la CI, correction si rouge.
-- `nouveau-controle` : liste de contrôle avant tout nouvel élément d'interface.
-- `capture-ecran` : vérifier un rendu visuel avec des données choisies.
+- `nouveau-controle` : avant tout bouton, filtre ou action.
+- `raccourcis` : avant toute touche ajoutée, changée ou retirée.
+- `capture-ecran` : vérifier un rendu visuel (`pnpm demo` : base de démo).
 - `migration` : évolution du schéma de la base.
 
 ## Façon de travailler
 
-- Pousser directement sur `main`, puis vérifier la CI (GitHub Actions) quelques
-  minutes après ; corriger tout de suite si rouge.
-- Chaque demande : code + tests e2e (dont non-régression) + README + aide `?`
-  + `docs/plan.md` mis à jour.
-- Avant de pousser : `pnpm typecheck`, `pnpm test`, `pnpm test:e2e`.
-- Base : ne jamais modifier une migration publiée ; ajouter la suivante dans
-  `server/migrations.ts`.
+- Chaque demande : code + tests e2e (dont non-régression) + README + aide `?` +
+  `docs/plan.md`.
+- Pousser sur `main` après `pnpm typecheck`, `pnpm test`, `pnpm test:e2e`, puis
+  vérifier la CI.
 - pnpm uniquement (version épinglée, pas de scripts d'installation).
 
 ## Pièges connus
 
-- Conteneur cloud : dépendances installées par le hook `SessionStart`
-  (`scripts/setup-cloud.sh`) ; Chromium du conteneur détecté par
-  `playwright.config.ts`, `pnpm test:e2e` marche tel quel (ne pas lancer
-  `playwright install`).
-- Tests e2e : attendre ce qui est **affiché** (attribut, texte), pas l'état de la
-  base, sinon course avec la mise à jour de l'interface (échec CI déjà vu).
-- Boutons visibles au survol seulement (`invisible group-hover:visible`) :
-  survoler avant `getByRole`, sinon absents de l'arbre d'accessibilité.
-- Ne pas lancer `pkill -f` / `pgrep` avec un motif qui correspond à la commande
-  elle-même : le shell se tue.
+- Tests e2e : attendre ce qui est **affiché** (attribut, texte), pas l'état de
+  la base (course avec l'interface, échec CI déjà vu).
+- Boutons visibles au survol (`invisible group-hover:visible`) : survoler avant
+  `getByRole`.
+- Conteneur cloud : dépendances par le hook `SessionStart`, Chromium détecté par
+  `playwright.config.ts` (ne pas lancer `playwright install`).
+- `pkill -f` / `pgrep` : jamais avec un motif qui correspond à la commande
+  elle-même (le shell se tue).
 
-## Réponses à l'utilisateur
+## Réponses
 
-- En français, courtes, en listes à puces ; une phrase d'intro sur le rôle.
-- Ton de mentor : expliquer le « pourquoi » et donner un point à retenir.
-- Signaler les choix faits sans demande explicite et les points à trancher.
+- En français, courtes, en puces ; une phrase d'intro.
+- Ton de mentor : le « pourquoi » et un point à retenir.
+- Signaler les choix faits sans demande et les points à trancher.

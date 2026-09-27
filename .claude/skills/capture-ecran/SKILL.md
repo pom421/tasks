@@ -6,17 +6,15 @@ description: Faire une capture d'écran de l'app avec des données choisies, pou
 # Capture d'écran
 
 1. Copier `.claude/skills/capture-ecran/zz-shot.spec.ts` dans `e2e/` et
-   l'adapter : données créées via `store` (voir `server/db.ts` : `createProject`,
-   `createTask`, `updateTask`, `updateProject`), actions à faire (clics,
-   touches), une ou plusieurs captures.
-   Le fichier est un module ES : `import fs from 'node:fs'`, jamais `require`.
-2. Lancer :
-   ```sh
-   SHOT_DIR=<scratchpad> pnpm exec playwright test e2e/zz-shot.spec.ts
-   ```
-3. **Supprimer** `e2e/zz-shot.spec.ts` (ne jamais le commiter).
-4. Lire les images (outil Read) et vérifier le rendu. Attention : la souris reste
-   sur le dernier élément cliqué (état survol) ; `page.mouse.move(0, 0)` avant la
-   capture.
-5. Pour vérifier un style calculé, écrire la valeur dans un fichier du scratchpad
-   (`getComputedStyle`), car `console.log` n'apparaît pas dans la sortie.
+   l'adapter : données via `store` (`createProject`, `createTask`, `updateTask`,
+   `updateProject` de `server/db.ts`), actions, captures. Module ES : `import`,
+   jamais `require`.
+2. `SHOT_DIR=<scratchpad> pnpm exec playwright test e2e/zz-shot.spec.ts`
+   (après `vite build` si le code du front a changé).
+3. **Supprimer** `e2e/zz-shot.spec.ts` (jamais commité).
+4. Lire les images. `page.mouse.move(0, 0)` avant une capture (sinon état survol).
+   Style calculé : l'écrire dans un fichier du scratchpad (`console.log`
+   n'apparaît pas).
+
+Pour que l'utilisateur voie lui-même : `pnpm demo` (base `data/demo.db`, 8 jours
+de Log), configuration `tasks-demo` de `.claude/launch.json`.

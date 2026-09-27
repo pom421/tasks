@@ -6,18 +6,15 @@ description: Faire évoluer le schéma de la base SQLite (nouvelle colonne, tabl
 # Migration de la base
 
 1. `server/migrations.ts` : ajouter **en fin de liste**
-   `{ version: N+1, name: '<nom en français>', sql: `...` }`.
-   Ne **jamais** modifier une migration déjà publiée (des bases l'ont appliquée).
-   Chaque migration tourne dans sa transaction ; une sauvegarde `.vN.bak` est
-   faite automatiquement avant de migrer une base existante.
-2. `server/db.ts` : type de ligne (`ProjectRow`, `TaskRow`…), requêtes `SELECT`
-   explicites (ex. état de `state()`), écritures, et les fonctions de
-   suppression / restauration (`deleteProject`, `restoreProject`, `restoreTask`)
-   si la colonne doit survivre à une annulation.
-3. `server/app.ts` : validation des entrées (`restoredTask`, `restoredProject`,
-   routes PATCH) ; tout ce qui vient du client est revérifié.
-4. `shared/types.ts` : types échangés avec le front.
-5. `README.md` : section « Modèle de données ».
-6. Test API dans `server/test/api.test.ts` : écriture, lecture, et si besoin
-   annulation (DELETE puis restore à l'identique).
-7. Vérifier `pnpm db:migrate` sur une copie de `data/tasks.db` si elle existe.
+   `{ version: N+1, name: '<nom en français>', sql: `...` }`. Ne **jamais**
+   modifier une migration publiée. Transaction et sauvegarde `.vN.bak`
+   automatiques.
+2. `server/db.ts` : type de ligne (`TaskRow`…), `SELECT` explicites, écritures,
+   et suppression / restauration (`deleteProject`, `restoreProject`,
+   `restoreTask`) si la colonne doit survivre à une annulation.
+3. `server/app.ts` : revalider les entrées (`restoredTask`, `restoredProject`,
+   routes PATCH).
+4. `shared/types.ts`, puis `README.md` (« Modèle de données »).
+5. Test dans `server/test/api.test.ts` : écriture, lecture, annulation
+   (DELETE puis restauration à l'identique).
+6. `pnpm db:migrate` sur une copie de `data/tasks.db` si elle existe.
