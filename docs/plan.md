@@ -7,9 +7,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-- [~] Log en onglet (« Projets » / « Aujourd’hui » / « Log », une colonne) : `P` / `T` / `L` vont à leur onglet, `Alt+←` / `Alt+→` onglet voisin, curseur gardé par onglet ; filtre priorité sur `!` ; `L` n'ouvre plus la fiche sur le ticket
-- [~] Log sur les 5 derniers jours ayant des entrées : pagination `<` / `>` (ou `←` / `→`), bouton « Courant », filtres = jours qui correspondent, date = fin de la période, recherche soulignée en jaune, projet toujours affiché ; `pnpm demo`
-- [~] Skill `raccourcis` ; consignes `.md` resserrées
+Rien.
 
 ## Décisions attendues
 
@@ -36,6 +34,9 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
+- [x] Log en onglet (« Projets » / « Aujourd’hui » / « Log », une colonne) : `P` / `T` / `L` vont à leur onglet, `Alt+←` / `Alt+→` onglet voisin, curseur gardé par onglet ; filtre priorité sur `!` ; `L` n'ouvre plus la fiche sur le ticket (`03e404a`)
+- [x] Log sur les 5 derniers jours ayant des entrées : pagination `<` / `>` (ou `←` / `→`), bouton « Courant », filtres = jours qui correspondent, date = fin de la période, recherche soulignée en jaune, projet toujours affiché ; `pnpm demo` (`03e404a`)
+- [x] Skill `raccourcis` ; consignes `.md` resserrées (`03e404a`)
 - [x] Titre coupé : info-bulle au focus clavier après un court délai (500 ms), rien si on passe vite dessus avec j / k
 - [x] Filtres des projets sous les onglets, alignés à droite (plus d'espace sur mobile, ligne réservée même vide) ; onglet « Plan journée » renommé « Aujourd’hui » (☀ : « Pour aujourd’hui », adresse `/plan` gardée) ; `?` une 2e fois ferme l'aide
 - [x] Filtres des projets déplacés dans l'onglet « Projets », sur la ligne des onglets à droite (comme le Log), à la hauteur des champs du Log ; l'en-tête ne garde que le titre, l'aide et les réglages
