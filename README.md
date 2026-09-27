@@ -52,9 +52,9 @@ Chaque session démarre dans un conteneur neuf : les dépendances doivent y êtr
 
 ## Utilisation
 
-- Disposition : sur écran large, deux colonnes : onglets « Projets » / « Aujourd’hui » à gauche et « Log » à droite (Log toujours visible, il défile seul) ; sur écran étroit, le Log est sous les projets.
+- Disposition : une colonne, trois onglets : « Projets » (`/`), « Aujourd’hui » (`T`, `/plan`) et « Log » (`l`, `/log`). `T` ou `l` une 2e fois revient sur « Projets ».
 - Cocher une tâche → elle passe dans le Log, datée du jour, barrée. La décocher → elle revient dans son projet.
-- Log (un cadre par jour) : fonctionne seul, les boutons de la zone des projets n'y touchent pas. Par défaut, aujourd'hui (même vide). Sur la ligne du titre, trois filtres :
+- Log (un cadre par jour) : fonctionne seul, les boutons de la zone des projets n'y touchent pas. Par défaut, aujourd'hui (même vide). Sous les onglets, alignés à droite, trois filtres :
   - recherche (`/`) : toutes les journées contenant une tâche dont le titre, le contenu ou le ticket contient le texte (sans tenir compte des majuscules ni des accents). `Échap` vide le champ ;
   - journée (`d`) : le Log de ce jour. Pendant une recherche, elle la limite à ce jour ; vide = toutes les journées ;
   - projet.
@@ -95,6 +95,7 @@ Clavier (`?` affiche l'aide, un 2e `?` ou `Échap` la ferme ; groupée par thèm
 | `C` (majuscule) | Remettre le chrono à zéro (annulable par `u`) |
 | `t` | Ajouter la tâche à Aujourd’hui / l'en retirer (aussi dans la fiche) |
 | `T` (majuscule) | Onglet « Projets » / « Aujourd’hui » |
+| `l` (minuscule) | Onglet « Projets » / « Log » |
 | `1` `2` `3` | Priorité 1, 2 ou 3 ; le même chiffre la retire (aussi dans la fiche) |
 | `R` (majuscule) | Projets : seulement les tâches à reporter → reportées → toutes (ou clic sur le bouton du report) |
 | `P` (majuscule) | Projets : seulement les tâches de priorité 1 → 2 → 3 → toutes (ou clic sur « Priorités ») |
@@ -107,8 +108,8 @@ Clavier (`?` affiche l'aide, un 2e `?` ou `Échap` la ferme ; groupée par thèm
 | `U` (majuscule) | Rétablir (rejouer) l'action annulée, dans l'ordre. Une nouvelle action efface ce qui restait à rétablir |
 | `n` | Nouvelle tâche (dans le projet où est le curseur, sinon le dernier utilisé) |
 | `n` puis `n` | Nouveau projet (deux appuis rapprochés, comme `g` `g`) |
-| `d` | Filtre du Log par journée |
-| `/` | Rechercher dans le Log |
+| `d` | Filtre du Log par journée (passe dans l'onglet Log) |
+| `/` | Rechercher dans le Log (passe dans l'onglet Log) |
 
 L'historique d'annulation est gardé en mémoire vive, dans l'onglet : on peut annuler autant d'actions que cette mémoire le permet, sans autre limite. Il se vide au rechargement de la page ; chaque `u` / `U`, lui, est enregistré en base comme toute modification.
 

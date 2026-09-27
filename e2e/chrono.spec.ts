@@ -144,10 +144,11 @@ test('non-régression : Log sans chrono ; ligne sans chrono inchangée', async (
   store.updateTask(data.une.id, { timeSpent: 90 * 60 });
   store.updateTask(data.une.id, { doneAt: '2026-09-25' });
   await open(page);
+  await expect(row(page, 'Deux').locator('.title')).toHaveText('Deux');
+  await page.keyboard.press('l'); // onglet Log
   const logged = page.locator('.day li.task', { hasText: 'Une' });
   await logged.hover();
   await expect(logged.getByRole('button', { name: 'Chrono', exact: true })).toHaveCount(0);
-  await expect(row(page, 'Deux').locator('.title')).toHaveText('Deux');
 });
 
 test('fiche : durée en cours (2h34) et durée d’une tâche faite', async ({ page, store, data }) => {
@@ -164,6 +165,7 @@ test('fiche : durée en cours (2h34) et durée d’une tâche faite', async ({ p
   await expect(dialog).toHaveCount(0);
 
   // Tâche faite (Log) : durée affichée, sans bouton de chrono.
+  await page.keyboard.press('l');
   await page.locator('#journal li.task .name', { hasText: 'Deux' }).focus();
   await page.keyboard.press('o');
   await expect(dialog.locator('.time-spent')).toHaveText('45 min');

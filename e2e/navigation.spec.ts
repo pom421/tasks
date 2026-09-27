@@ -140,18 +140,22 @@ test('Entrée sur une tâche : modification enregistrée', async ({ page, store,
 test('Espace coche la tâche ; le focus reste à la même place', async ({ page, store, data }) => {
   await pressDown(page, 2);
   await page.keyboard.press(' ');
-  await expect(page.locator('#journal .name', { hasText: 'Une' })).toBeVisible();
+  await expect(page.locator('#projects .name', { hasText: 'Une' })).toHaveCount(0);
   expect(store.state().projects[0].tasks.map((t) => t.title)).toEqual(['Deux']);
   expect(await current(page)).toBe(`task:${data.tasks.deux.id}`);
+  await page.keyboard.press('l'); // onglet Log
+  await expect(page.locator('#journal .name', { hasText: 'Une' })).toBeVisible();
 });
 
 test('Espace dans le journal décoche la tâche', async ({ page, store, data }) => {
   store.updateTask(data.tasks.trois.id, { doneAt: '2026-09-25' });
-  await reload(page);
+  await page.goto('/log');
   await expect(page.locator('#journal .name', { hasText: 'Trois' })).toBeVisible();
   await page.keyboard.press('End');
   expect(await current(page)).toBe(`task:${data.tasks.trois.id}`);
   await page.keyboard.press(' ');
+  await expect(page.locator('#journal .name', { hasText: 'Trois' })).toHaveCount(0);
+  await page.keyboard.press('l'); // onglet Projets
   await expect(page.locator('#projects .name', { hasText: 'Trois' })).toBeVisible();
   expect(store.state().projects[1].tasks[0].title).toBe('Trois');
 });
@@ -393,10 +397,11 @@ test('badge « reporté » conservé dans le journal, et J y fonctionne aussi', 
   await expect(row.locator('.report')).toBeVisible();
   await pressDown(page, 6);
   await page.keyboard.press(' ');
+  await expect(row).toHaveCount(0);
+  // Onglet Log : la tâche est le premier élément.
+  await page.keyboard.press('l');
   await expect(page.locator(`#journal li.task:has([data-nav-key="task:${data.tasks.trois.id}"]) .report-done`)).toBeVisible();
-
-  // Plus de tâche dans Beta : le focus remonte sur le projet ; descendre jusqu'au Log.
-  await pressDown(page, 3);
+  await pressDown(page, 1);
   expect(await current(page)).toBe(`task:${data.tasks.trois.id}`);
   await page.keyboard.press('r');
   await expect(row.locator('.report')).toHaveCount(0);
@@ -630,7 +635,7 @@ test('clavier sur un projet : f favori, a archiver, x x supprimer, u annule tout
   await page.keyboard.press('f');
   await expect(heart).toHaveAttribute('aria-pressed', 'true');
   expect(beta()!.favorite_at).toBeTruthy();
-  await expect(page.locator('#filter-project')).not.toBeFocused(); // pas le raccourci global
+  await expect(page.getByRole('tab', { name: 'Projets' })).toHaveAttribute('aria-selected', 'true'); // pas un raccourci global
   await page.keyboard.press('u');
   await expect(heart).toHaveAttribute('aria-pressed', 'false');
   expect(beta()!.favorite_at).toBeNull();
@@ -854,7 +859,10 @@ test('compteur « à reporter » : filtre la zone des projets seulement (R ou cl
   await page.keyboard.press('R');
   await expect(counter).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#projects .name')).toHaveText(['Alpha', 'Deux']);
+  await page.keyboard.press('l');
   await expect(page.locator('#journal .name')).toHaveText(['Trois', 'Faite à reporter']); // Log inchangé
+  await page.keyboard.press('l'); // retour aux projets : filtre gardé
+  await expect(counter).toHaveAttribute('aria-pressed', 'true');
 
   // 2e appui : les reportées (aucune ici) ; 3e : plus de filtre.
   await counter.click();
@@ -863,6 +871,7 @@ test('compteur « à reporter » : filtre la zone des projets seulement (R ou cl
   await counter.click();
   await expect(counter).toHaveAttribute('aria-pressed', 'false');
   await expect(page.locator('#projects .name')).toHaveText(['Alpha', 'Une', 'Deux', 'Beta']);
+  await page.keyboard.press('l');
   await expect(page.locator('#journal .name')).toHaveText(['Trois', 'Faite à reporter']);
 });
 
@@ -890,7 +899,7 @@ test('R : à reporter → reportées → toutes ; bouton visible avec des report
   await page.locator('body').press('f');
   await page.locator('body').press('r');
   await expect(counter).toHaveAttribute('aria-pressed', 'false');
-  await expect(page.locator('#filter-project')).not.toBeFocused();
+  await expect(page.getByRole('tab', { name: 'Projets' })).toHaveAttribute('aria-selected', 'true');
 });
 
 // Non-régression : les boutons sous la barre d'outils ne touchent qu'à la zone des projets.
@@ -904,13 +913,21 @@ test('boutons à reporter, Archivés, Favoris : le Log ne change pas', async ({ 
   await reload(page);
 
   const log = page.locator('#journal');
-  const snapshot = async () => ({
-    names: await log.locator('.name').allTextContents(),
-    labels: await log.locator('.project-label').allTextContents(),
-    count: await page.locator('#log-count').textContent(),
-    date: await page.locator('#filter-date').inputValue(),
-    options: await page.locator('#filter-project option').allTextContents(),
-  });
+  // Photo du Log, dans son onglet (l), puis retour aux projets (l).
+  const snapshot = async () => {
+    await page.keyboard.press('l');
+    await expect(log.locator('.day')).toHaveCount(1);
+    const shot = {
+      names: await log.locator('.name').allTextContents(),
+      labels: await log.locator('.project-label').allTextContents(),
+      count: await page.locator('#log-count').textContent(),
+      date: await page.locator('#filter-date').inputValue(),
+      options: await page.locator('#filter-project option').allTextContents(),
+    };
+    await page.keyboard.press('l');
+    await expect(page.locator('#projects')).toBeVisible();
+    return shot;
+  };
   const before = await snapshot();
   expect(before.names).toEqual(['Trois', 'Gamma faite']); // tâche d'un projet archivé comprise
   expect(before.options).toEqual(['Tous les projets', 'Alpha', 'Beta', 'Gamma (archivé)']);
@@ -938,8 +955,10 @@ test('boutons à reporter, Archivés, Favoris : le Log ne change pas', async ({ 
   expect(await snapshot()).toEqual(before);
 
   // Et le Log filtré (recherche) ne touche pas à la zone des projets.
+  await page.keyboard.press('l');
   await page.locator('#log-search').fill('Gamma');
   await expect(log.locator('.name')).toHaveText(['Gamma faite']);
+  await page.getByRole('tab', { name: 'Projets' }).click();
   await expect(page.locator('#projects .name')).toHaveText(['Alpha', 'Une']);
 });
 
@@ -1061,31 +1080,19 @@ test('e sur une tâche : fiche ouverte directement en édition, titre sélection
   await expect.poll(() => current(page)).toBe(`task:${data.tasks.deux.id}`);
 });
 
-test('écran large : projets à gauche, Log à droite, toujours visible ; écran étroit : l’un sous l’autre', async ({ page, store, data }) => {
-  for (let i = 0; i < 30; i++) store.createTask(data.beta.id, `Tâche ${i}`);
-  await page.setViewportSize({ width: 1280, height: 600 });
-  await reload(page);
-  const projects = (await page.locator('#projects').boundingBox())!;
-  const log = (await page.locator('#journal').boundingBox())!;
-  expect(log.x).toBeGreaterThan(projects.x + projects.width - 1); // à droite
-  // En haut, à la même hauteur : onglet « Projets » en face du titre « Log ».
-  const projectsTitle = (await page.getByRole('tab', { name: 'Projets' }).boundingBox())!;
-  const logTitle = (await page.locator('#journal').getByRole('heading', { name: 'Log' }).boundingBox())!;
-  expect(Math.abs(projectsTitle.y - logTitle.y)).toBeLessThan(2);
-
-  // Tâche cochée tout en bas de la liste : elle apparaît dans le Log, visible sans défiler.
-  const last = page.locator('#projects .task .name', { hasText: 'Tâche 29' });
-  await last.focus();
-  await page.keyboard.press(' ');
-  await expect(page.locator('#journal .task .name', { hasText: 'Tâche 29' })).toBeInViewport();
-
-  await page.setViewportSize({ width: 800, height: 600 });
-  const narrowProjects = (await page.locator('#projects').boundingBox())!;
-  const narrowLog = (await page.locator('#journal').boundingBox())!;
-  expect(narrowLog.y).toBeGreaterThan(narrowProjects.y + narrowProjects.height); // dessous
-  expect(Math.abs(narrowLog.x - narrowProjects.x)).toBeLessThan(2);
-  // Écran étroit : les onglets restent là (seul moyen de changer de vue à la souris).
-  await expect(page.getByRole('tab', { name: 'Projets' })).toBeVisible();
+test('une colonne : le Log, dans son onglet, prend la place des projets (écran large comme étroit)', async ({ page }) => {
+  for (const width of [1280, 800]) {
+    await page.setViewportSize({ width, height: 600 });
+    await reload(page);
+    await expect(page.getByRole('tab')).toHaveText(['Projets', 'Aujourd’hui', 'Log']);
+    await expect(page.locator('#journal')).toHaveCount(0);
+    const projects = (await page.locator('#projects').boundingBox())!;
+    await page.keyboard.press('l');
+    const log = (await page.locator('#journal').boundingBox())!;
+    expect(Math.abs(log.x - projects.x), `${width}`).toBeLessThan(2);
+    expect(Math.abs(log.width - projects.width), `${width}`).toBeLessThan(2);
+    await page.keyboard.press('l');
+  }
 });
 
 test('Log : une tâche cochée est barrée ; décochée, elle ne l’est plus', async ({ page }) => {
@@ -1094,19 +1101,23 @@ test('Log : une tâche cochée est barrée ; décochée, elle ne l’est plus', 
   await expect(inProjects).not.toHaveCSS('text-decoration-line', 'line-through');
   await inProjects.focus();
   await page.keyboard.press(' ');
+  await expect(inProjects).toHaveCount(0);
+  await page.keyboard.press('l');
   const inLog = page.locator('#journal .task .name', { hasText: /^Une$/ });
   await expect(inLog).toHaveCSS('text-decoration-line', 'line-through');
   await inLog.focus();
   await page.keyboard.press(' ');
+  await expect(inLog).toHaveCount(0);
+  await page.keyboard.press('l');
   await expect(page.locator('#projects .task .name', { hasText: /^Une$/ })).not.toHaveCSS('text-decoration-line', 'line-through');
 });
 
 test('zone « Log » : un cadre par jour', async ({ page, store, data }) => {
   store.updateTask(data.tasks.une.id, { doneAt: '2026-09-20' });
   store.updateTask(data.tasks.deux.id, { doneAt: '2026-09-21' });
-  await reload(page);
+  await page.goto('/log');
   const log = page.getByRole('region', { name: 'Log' });
-  await expect(log.getByRole('heading', { name: 'Log' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Log' })).toHaveAttribute('aria-selected', 'true');
   await log.locator('#log-search').fill('e'); // Une (le 20) et Deux (le 21)
   const days = log.locator('.day');
   await expect(days).toHaveCount(2);
@@ -1126,7 +1137,7 @@ test('u annule les actions une à une, U les rejoue ; une nouvelle action efface
   await page.keyboard.press('Enter');
   await expect(une).toHaveText('Une bis');
   await page.keyboard.press(' '); // cochée
-  await expect(page.locator('#journal .name', { hasText: 'Une bis' })).toBeVisible();
+  await expect(page.locator('#projects .name', { hasText: 'Une bis' })).toHaveCount(0);
 
   // u, u : dans l'ordre inverse, focus sur l'élément concerné.
   await page.keyboard.press('u');
@@ -1145,7 +1156,7 @@ test('u annule les actions une à une, U les rejoue ; une nouvelle action efface
   await expect(une).toHaveText('Une bis');
   await page.keyboard.press('U');
   await expect(page.locator('#toast')).toHaveText('Rétabli : tâche cochée');
-  await expect(page.locator('#journal .name', { hasText: 'Une bis' })).toBeVisible();
+  await expect(page.locator('#projects .name', { hasText: 'Une bis' })).toHaveCount(0);
   await page.keyboard.press('U');
   await expect(page.locator('#toast')).toHaveText('Rien à rétablir');
 
@@ -1245,12 +1256,13 @@ test('u après une suppression : la tâche revient avec son contenu, sélectionn
 
 test('u dans le Log : décocher puis annuler remet la tâche au même jour', async ({ page, store, data }) => {
   store.updateTask(data.tasks.trois.id, { doneAt: '2026-09-20' });
-  await reload(page);
+  await page.goto('/log');
   await page.getByRole('button', { name: 'Jour précédent' }).click(); // Log sur le 20
   await expect(page.locator('#journal .name', { hasText: 'Trois' })).toBeVisible();
   await page.keyboard.press('End');
   await page.keyboard.press(' ');
-  await expect(page.locator('#projects .name', { hasText: 'Trois' })).toBeVisible();
+  await expect(page.locator('#journal .name', { hasText: 'Trois' })).toHaveCount(0);
+  expect(store.state().projects[1].tasks.map((t) => t.title)).toEqual(['Trois']);
   await page.keyboard.press('u');
   await expect(page.locator('#journal .name', { hasText: 'Trois' })).toBeVisible();
   expect(store.journal({ projectId: data.beta.id }).days[0].date).toBe('2026-09-20');
@@ -1356,9 +1368,10 @@ test('Échap Échap : retire tous les filtres (projets et Log) ; un seul Échap 
   store.updateTask(data.tasks.une.id, { jira: 'wanted', priority: 1 });
   store.updateProject(store.createProject('Gamma').id, { archived: true });
   store.updateTask(store.createTask(data.beta.id, 'Une ancienne').id, { doneAt: '2026-09-01' });
-  await reload(page);
+  await page.goto('/log');
   await page.locator('#log-search').fill('Une');
   await expect(page.locator('#journal .name')).toHaveText(['Une ancienne']); // recherche appliquée
+  await page.getByRole('tab', { name: 'Projets' }).click();
   await page.locator(`[data-nav-key="task:${data.tasks.une.id}"]`).focus();
   await page.keyboard.press('R');
   await page.keyboard.press('P');
@@ -1375,9 +1388,10 @@ test('Échap Échap : retire tous les filtres (projets et Log) ; un seul Échap 
   for (const id of ['#jira-pending', '#priority-filter', '#favorites-only', '#archived-only']) {
     await expect(pressed(id), id).toHaveAttribute('aria-pressed', 'false');
   }
+  await expect(page.locator('#projects .project-head .name')).toHaveText(['Alpha', 'Beta']);
+  await page.keyboard.press('l');
   await expect(page.locator('#log-search')).toHaveValue('');
   await expect(page.locator('#journal .name')).toHaveCount(0); // Log revenu à aujourd'hui
-  await expect(page.locator('#projects .project-head .name')).toHaveText(['Alpha', 'Beta']);
 });
 
 // Chromium des tests masque les barres de défilement (pas de décalage visible) :

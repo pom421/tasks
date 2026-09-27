@@ -14,6 +14,7 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
       [[['Entrée']], 'Modifier le nom ; sur « + Ajouter », écrire'],
       [[['Échap']], 'Quitter l’édition sans enregistrer ; « + Ajouter » : vider, repasser en lecture'],
       [[['T']], 'Onglet Projets / Aujourd’hui'],
+      [[['l']], 'Onglet Projets / Log'],
     ],
   ],
   [
@@ -62,8 +63,8 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
   [
     'Log',
     [
-      [[['/']], 'Rechercher (Tab : journée, projet)'],
-      [[['d']], 'Choisir une journée'],
+      [[['/']], 'Rechercher, depuis tout onglet (Tab : journée, projet)'],
+      [[['d']], 'Choisir une journée, depuis tout onglet'],
       [[['Échap']], 'Vider la recherche, retirer les filtres du Log'],
     ],
   ],

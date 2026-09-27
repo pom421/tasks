@@ -69,11 +69,12 @@ test('onglet Aujourd’hui : seulement les tâches choisies, par projet ; compte
   await row(page, 'Une').getByRole('checkbox').click();
   await expect(day.locator('li.task .name')).toHaveText(['Trois']);
   await expect(day.locator('.day-count')).toHaveText('2/5 tâches');
-  await expect(page.locator('#journal li.task', { hasText: 'Une' })).toBeVisible();
 
   // Rechargement : l'onglet est dans l'adresse.
   await page.reload();
   await expect(tab(page, 'Aujourd’hui')).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('l'); // onglet Log
+  await expect(page.locator('#journal li.task', { hasText: 'Une' })).toBeVisible();
 });
 
 test('au-delà du maximum : 6/5 tâches en rouge ; maximum réglable', async ({ page, store, data }) => {
@@ -161,9 +162,13 @@ test('non-régression : Log sans ☀, filtres des projets inchangés dans l’on
   store.updateTask(data.deux.id, { doneAt: TODAY });
   await open(page);
   await expect(page.locator('#favorites-only')).toBeVisible();
+  await page.keyboard.press('l'); // onglet Log
   const logged = page.locator('#journal li.task', { hasText: 'Deux' });
   await logged.hover();
   await expect(logged.getByRole('button', { name: 'Pour aujourd’hui' })).toHaveCount(0);
+  await expect(page.locator('#favorites-only')).toHaveCount(0);
+  await page.keyboard.press('l');
+  await expect(page.locator('#favorites-only')).toBeVisible();
   await page.keyboard.press('T');
   await expect(page.locator('#favorites-only')).toHaveCount(0);
   await page.keyboard.press('T');

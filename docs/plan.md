@@ -7,9 +7,11 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-Rien.
+- [~] Essai : Log en onglet (« Projets » / « Aujourd’hui » / « Log »), `l` bascule Projets ↔ Log ; une seule colonne (branche `claude/log-tab-keyboard-shortcut-1b56a8`)
 
 ## Décisions attendues
+
+- [?] Log en onglet : garder l'essai (plus de Log visible à côté des projets) ? Raccourci `l` minuscule car `L` ouvre déjà la fiche sur le ticket d'une tâche.
 
 - [?] Compteur « N tâches à reporter » : ne compte plus les tâches **faites** à
   reporter (elles gardent leur badge dans le Log). Ajouter un indicateur dans

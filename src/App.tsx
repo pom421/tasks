@@ -1,3 +1,4 @@
+import { flushSync } from 'react-dom';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { DEFAULT_DAY_CAPACITY, type JiraState, type JournalDay, type Priority, type Project, type Settings, type Task } from '../shared/types.ts';
 import { api } from '@/lib/api';
@@ -41,9 +42,12 @@ export function App() {
     dates: [],
     dayDone: 0,
   });
-  // Pages, sans routeur : la liste (/), son onglet « Aujourd’hui » (/plan) et les réglages (/admin).
+  // Pages, sans routeur : trois onglets, Projets (/), Aujourd’hui (/plan) et
+  // Log (/log), et les réglages (/admin).
   const [path, setPath] = useState(window.location.pathname);
   const dayView = path === '/plan';
+  const logView = path === '/log';
+  const projectsView = !dayView && !logView;
   // Fiche d'une tâche : id, champ focalisé, open à false pendant l'animation de
   // fermeture ; opening numérote les ouvertures (formulaire neuf à chaque fois).
   const [openTask, setOpenTask] = useState<{ id: number; field: TaskField; open: boolean; opening: number } | null>(null);
@@ -207,16 +211,22 @@ export function App() {
         if (field === document.activeElement) field?.blur();
         field?.focus();
       };
+      // Champ du Log : passe d'abord dans l'onglet Log (affiché aussitôt).
+      const focusLog = (id: string) => {
+        if (!logView) flushSync(() => navigate('/log'));
+        document.getElementById(id)?.focus();
+      };
       const keys: Record<string, () => void> = {
         n: focusAdd,
-        d: () => document.getElementById('filter-date')?.focus(),
-        '/': () => document.getElementById('log-search')?.focus(),
-        // Filtres de la zone des projets : sans effet dans l'onglet Aujourd’hui.
-        R: () => !dayView && cycleJiraFilter(),
-        F: () => !dayView && setFavoritesOnly((v) => !v),
-        A: () => !dayView && setArchivedOnly((v) => !v),
-        P: () => !dayView && cyclePriorityFilter(),
+        d: () => focusLog('filter-date'),
+        '/': () => focusLog('log-search'),
+        // Filtres de la zone des projets : seulement dans l'onglet Projets.
+        R: () => projectsView && cycleJiraFilter(),
+        F: () => projectsView && setFavoritesOnly((v) => !v),
+        A: () => projectsView && setArchivedOnly((v) => !v),
+        P: () => projectsView && cyclePriorityFilter(),
         T: () => navigate(dayView ? '/' : '/plan'),
+        l: () => navigate(logView ? '/' : '/log'),
         u: () => replay('undo'),
         U: () => replay('redo'),
         '?': () => setHelpOpen(true),
@@ -292,24 +302,23 @@ export function App() {
           }}
         />
       )}
-      {/* Écran large : projets à gauche, Log à droite (une tâche cochée y apparaît
-          aussitôt) ; écran étroit : l'un sous l'autre. */}
-      <div className="mx-auto max-w-2xl px-4 lg:max-w-6xl">
+      {/* Une colonne : un onglet à la fois (Projets, Aujourd’hui ou Log). */}
+      <div className="mx-auto max-w-2xl px-4">
         <Toolbar helpOpen={helpOpen} onHelpOpen={setHelpOpen} />
-        <main className="lg:grid lg:grid-cols-2 lg:items-start">
-          <div className="min-w-0 lg:pr-8 lg:pb-16">
-            {/* Onglets de la colonne, sur la ligne du titre du Log (même hauteur). */}
+        <main className="pb-16">
+          <div className="min-w-0">
             <div role="tablist" aria-label="Vue" className="mt-3 flex h-[26px] items-center gap-4 lg:mt-5">
               {[
-                { label: 'Projets', to: '/', selected: !dayView },
-                { label: 'Aujourd’hui', to: '/plan', selected: dayView },
+                { label: 'Projets', to: '/', selected: projectsView, title: 'Projets (T depuis Aujourd’hui, l depuis le Log)' },
+                { label: 'Aujourd’hui', to: '/plan', selected: dayView, title: 'Aujourd’hui (T)' },
+                { label: 'Log', to: '/log', selected: logView, title: 'Log (l)' },
               ].map((tab) => (
                 <button
                   key={tab.to}
                   type="button"
                   role="tab"
                   aria-selected={tab.selected}
-                  title="Projets / Aujourd’hui (T)"
+                  title={tab.title}
                   className={cn(
                     'border-b-2 font-semibold',
                     tab.selected ? 'border-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
@@ -321,7 +330,7 @@ export function App() {
               ))}
             </div>
             {/* Filtres de l'onglet Projets : sous les onglets, alignés à droite. */}
-            {!dayView && (
+            {projectsView && (
               <ProjectFilters
                 projects={data.projects}
                 jiraFilter={jiraFilter}
@@ -334,13 +343,12 @@ export function App() {
                 onArchivedOnly={() => setArchivedOnly((v) => !v)}
               />
             )}
-            {dayView ? (
-              <DayView projects={data.projects} dayDone={data.dayDone} capacity={data.settings.day_capacity} />
-            ) : (
+            {dayView && <DayView projects={data.projects} dayDone={data.dayDone} capacity={data.settings.day_capacity} />}
+            {logView && <Journal days={data.days} dates={data.dates} projects={data.projects} filter={filter} onFilter={changeFilter} />}
+            {projectsView && (
               <ProjectList projects={data.projects} archivedOnly={archivedOnly} jiraFilter={jiraFilter} priorityFilter={priorityFilter} favoritesOnly={favoritesOnly} />
             )}
           </div>
-          <Journal days={data.days} dates={data.dates} projects={data.projects} filter={filter} onFilter={changeFilter} />
         </main>
       </div>
       {message && (

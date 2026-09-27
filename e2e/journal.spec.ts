@@ -6,7 +6,7 @@ test.beforeEach(async ({ page, store }) => {
   const p = store.createProject('Alpha');
   const done = [['Vingt', '2026-09-20'], ['Vingt et un A', '2026-09-21'], ['Vingt et un B', '2026-09-21'], ['Vingt-trois', '2026-09-23']];
   for (const [title, doneAt] of done) store.updateTask(store.createTask(p.id, title).id, { doneAt });
-  await page.goto('/');
+  await page.goto('/log');
   // Sans filtre : aujourd'hui (date figée au vendredi 25), même vide.
   await expect(page.locator('#journal .day h3')).toHaveText(['vendredi 25 septembre 2026']);
   await expect(page.locator('#journal .day .empty')).toHaveText('Rien de fait ce jour-là.');
@@ -40,18 +40,59 @@ test('d : focus sur la date ; saisie au clavier, année appliquée seulement com
   await expect(date(page)).toBeFocused();
 });
 
-test('titre et filtres (recherche, date, projet) sur la même ligne', async ({ page }) => {
+test('onglet Log : filtres (recherche, date, projet) sur une ligne sous les onglets, alignés à droite', async ({ page }) => {
+  const box = async (sel: string) => (await page.locator(sel).boundingBox())!;
   const middle = async (sel: string) => {
-    const b = (await page.locator(sel).boundingBox())!;
+    const b = await box(sel);
     return b.y + b.height / 2;
   };
-  const title = await middle('#journal h2');
-  for (const sel of ['#log-search', '#filter-date', '#filter-project']) {
-    expect(Math.abs((await middle(sel)) - title), sel).toBeLessThan(4);
+  const tabs = await box('[role="tablist"]');
+  const line = await middle('#log-search');
+  expect(line).toBeGreaterThan(tabs.y + tabs.height);
+  for (const sel of ['#filter-date', '#filter-project']) {
+    expect(Math.abs((await middle(sel)) - line), sel).toBeLessThan(4);
   }
+  const log = await box('#journal');
+  const project = await box('#filter-project');
+  expect(Math.abs(project.x + project.width - (log.x + log.width))).toBeLessThan(2);
   // Réinitialiser (visible quand un filtre est actif) reste aussi sur la ligne.
   await date(page).fill('2026-09-20');
-  expect(Math.abs((await middle('#filter-reset')) - title)).toBeLessThan(4);
+  expect(Math.abs((await middle('#filter-reset')) - line)).toBeLessThan(4);
+});
+
+test('l : onglet Log, un 2e l revient sur Projets ; / et d y passent aussi', async ({ page }) => {
+  const tab = (name: string) => page.getByRole('tab', { name, exact: true });
+  await expect(tab('Log')).toHaveAttribute('aria-selected', 'true');
+  await expect(tab('Log')).toHaveAttribute('title', 'Log (l)');
+  await page.keyboard.press('l');
+  await expect(tab('Projets')).toHaveAttribute('aria-selected', 'true');
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.locator('#journal')).toHaveCount(0);
+  await expect(page.locator('#projects .project')).toHaveCount(1);
+  await page.keyboard.press('l');
+  await expect(tab('Log')).toHaveAttribute('aria-selected', 'true');
+  await expect(page).toHaveURL(/\/log$/);
+  await expect(page.locator('#projects')).toHaveCount(0);
+  // Depuis Aujourd’hui : l va au Log ; T depuis le Log va à Aujourd’hui.
+  await page.keyboard.press('T');
+  await expect(tab('Aujourd’hui')).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('l');
+  await expect(tab('Log')).toHaveAttribute('aria-selected', 'true');
+  // Clic sur l'onglet.
+  await tab('Projets').click();
+  await expect(tab('Projets')).toHaveAttribute('aria-selected', 'true');
+  await tab('Log').click();
+  await expect(tab('Log')).toHaveAttribute('aria-selected', 'true');
+  // / et d depuis Projets : passent dans l'onglet Log, sur le champ.
+  await page.keyboard.press('l');
+  await page.keyboard.press('/');
+  await expect(tab('Log')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#log-search')).toBeFocused();
+  await page.locator('#log-search').press('Escape');
+  await page.locator('#journal').click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press('l');
+  await page.keyboard.press('d');
+  await expect(date(page)).toBeFocused();
 });
 
 test('Réinitialiser : retour à aujourd’hui', async ({ page }) => {
