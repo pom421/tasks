@@ -62,7 +62,7 @@ export function ProjectFilters({ projects, jiraFilter, onJiraFilter, priorityFil
           id="priority-filter"
           className={filterClass(Boolean(priorityFilter))}
           aria-pressed={Boolean(priorityFilter)}
-          title="Priorité 1 → 2 → 3 → toutes (P)"
+          title="Priorité 1 → 2 → 3 → toutes (!)"
           onClick={onPriorityFilter}
         >
           <PriorityIcon priority={priorityFilter} noDigit className={cn(priorityFilter && PRIORITY_COLOR[priorityFilter])} />

@@ -13,8 +13,8 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
       [[['Maj+↑', 'Maj+↓'], ['K', 'J']], 'Projet précédent / suivant'],
       [[['Entrée']], 'Modifier le nom ; sur « + Ajouter », écrire'],
       [[['Échap']], 'Quitter l’édition sans enregistrer ; « + Ajouter » : vider, repasser en lecture'],
-      [[['T']], 'Onglet Projets / Aujourd’hui'],
-      [[['L']], 'Onglet Projets / Log'],
+      [[['P', 'T', 'L']], 'Onglet Projets, Aujourd’hui, Log'],
+      [[['Alt+←', 'Alt+→']], 'Onglet précédent / suivant'],
     ],
   ],
   [
@@ -54,7 +54,7 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
     'Filtres des projets',
     [
       [[['R']], 'À reporter → reportées → toutes'],
-      [[['P']], 'Priorité 1 → 2 → 3 → toutes'],
+      [[['!']], 'Priorité 1 → 2 → 3 → toutes'],
       [[['F']], 'Projets favoris seulement'],
       [[['A']], 'Projets archivés seulement'],
     ],

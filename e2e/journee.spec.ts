@@ -111,7 +111,7 @@ test('clavier : t ajoute / retire, T change d’onglet, u annule', async ({ page
   await page.keyboard.press('u');
   await expect(page.locator('#day li.task .name')).toHaveText(['Une']);
 
-  await page.keyboard.press('T');
+  await page.keyboard.press('P');
   await expect(tab(page, 'Projets')).toHaveAttribute('aria-selected', 'true');
   expect(store.db.prepare('SELECT day_at FROM task WHERE id = ?').get(data.une.id)).toEqual({ day_at: TODAY });
 });
@@ -167,11 +167,11 @@ test('non-régression : Log sans ☀, filtres des projets inchangés dans l’on
   await logged.hover();
   await expect(logged.getByRole('button', { name: 'Pour aujourd’hui' })).toHaveCount(0);
   await expect(page.locator('#favorites-only')).toHaveCount(0);
-  await page.keyboard.press('L');
+  await page.keyboard.press('P');
   await expect(page.locator('#favorites-only')).toBeVisible();
   await page.keyboard.press('T');
   await expect(page.locator('#favorites-only')).toHaveCount(0);
-  await page.keyboard.press('T');
+  await page.keyboard.press('P');
   await expect(page.locator('#favorites-only')).toBeVisible();
 });
 

@@ -155,7 +155,7 @@ test('Espace dans le journal décoche la tâche', async ({ page, store, data }) 
   expect(await current(page)).toBe(`task:${data.tasks.trois.id}`);
   await page.keyboard.press(' ');
   await expect(page.locator('#journal .name', { hasText: 'Trois' })).toHaveCount(0);
-  await page.keyboard.press('L'); // onglet Projets
+  await page.keyboard.press('P'); // onglet Projets
   await expect(page.locator('#projects .name', { hasText: 'Trois' })).toBeVisible();
   expect(store.state().projects[1].tasks[0].title).toBe('Trois');
 });
@@ -864,7 +864,7 @@ test('compteur « à reporter » : filtre la zone des projets seulement (R ou cl
   await expect(page.locator('#projects .name')).toHaveText(['Alpha', 'Deux']);
   await page.keyboard.press('L');
   await expect(page.locator('#journal .name')).toHaveText(['Trois', 'Faite à reporter']); // Log inchangé
-  await page.keyboard.press('L'); // retour aux projets : filtre gardé
+  await page.keyboard.press('P'); // retour aux projets : filtre gardé
   await expect(counter).toHaveAttribute('aria-pressed', 'true');
 
   // 2e appui : les reportées (aucune ici) ; 3e : plus de filtre.
@@ -927,7 +927,7 @@ test('boutons à reporter, Archivés, Favoris : le Log ne change pas', async ({ 
       date: await page.locator('#filter-date').inputValue(),
       options: await page.locator('#filter-project option').allTextContents(),
     };
-    await page.keyboard.press('L');
+    await page.keyboard.press('P');
     await expect(page.locator('#projects')).toBeVisible();
     return shot;
   };
@@ -1094,7 +1094,7 @@ test('une colonne : le Log, dans son onglet, prend la place des projets (écran 
     const log = (await page.locator('#journal').boundingBox())!;
     expect(Math.abs(log.x - projects.x), `${width}`).toBeLessThan(2);
     expect(Math.abs(log.width - projects.width), `${width}`).toBeLessThan(2);
-    await page.keyboard.press('L');
+    await page.keyboard.press('P');
   }
 });
 
@@ -1123,12 +1123,12 @@ test('onglets : chacun garde la position du curseur (L, T ou clic) ; L sur une t
   await page.keyboard.press('End');
   expect(await current(page)).toBe(`task:${quatre.id}`);
 
-  await page.keyboard.press('T'); // retour aux projets
+  await page.keyboard.press('P'); // retour aux projets
   await expect(tab('Projets')).toHaveAttribute('aria-selected', 'true');
   expect(await current(page)).toBe(onCinq);
   await page.keyboard.press('L');
   expect(await current(page)).toBe(inLog);
-  await page.keyboard.press('L');
+  await page.keyboard.press('P');
   expect(await current(page)).toBe(onCinq);
   await page.keyboard.press('T');
   expect(await current(page)).toBe(`task:${quatre.id}`);
@@ -1151,7 +1151,7 @@ test('Log : une tâche cochée est barrée ; décochée, elle ne l’est plus', 
   await inLog.focus();
   await page.keyboard.press(' ');
   await expect(inLog).toHaveCount(0);
-  await page.keyboard.press('L');
+  await page.keyboard.press('P');
   await expect(page.locator('#projects .task .name', { hasText: /^Une$/ })).not.toHaveCSS('text-decoration-line', 'line-through');
 });
 
@@ -1417,7 +1417,7 @@ test('Échap Échap : retire tous les filtres (projets et Log) ; un seul Échap 
   await page.getByRole('tab', { name: 'Projets' }).click();
   await page.locator(`[data-nav-key="task:${data.tasks.une.id}"]`).focus();
   await page.keyboard.press('R');
-  await page.keyboard.press('P');
+  await page.keyboard.press('!');
   await page.keyboard.press('F');
   const pressed = (id: string) => page.locator(id);
   for (const id of ['#jira-pending', '#priority-filter', '#favorites-only']) await expect(pressed(id)).toHaveAttribute('aria-pressed', 'true');

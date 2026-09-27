@@ -54,7 +54,7 @@ Chaque session démarre dans un conteneur neuf : les dépendances doivent y êtr
 
 ## Utilisation
 
-- Disposition : une colonne, trois onglets : « Projets » (`/`), « Aujourd’hui » (`T`, `/plan`) et « Log » (`L`, `/log`). `T` ou `L` une 2e fois revient sur « Projets ». Chaque onglet garde la position du curseur : en y revenant, il est sur le même élément.
+- Disposition : une colonne, trois onglets : « Projets » (`P`, `/`), « Aujourd’hui » (`T`, `/plan`) et « Log » (`L`, `/log`) ; `Alt+←` / `Alt+→` passent à l'onglet précédent / suivant (en boucle). Chaque onglet garde la position du curseur : en y revenant, il est sur le même élément.
 - Cocher une tâche → elle passe dans le Log, datée du jour, barrée. La décocher → elle revient dans son projet.
 - Log (un cadre par jour) : fonctionne seul, les boutons de la zone des projets n'y touchent pas. Il montre les 5 derniers jours ayant des entrées (une semaine de travail ; jours vides sautés). Sous les onglets, alignés à droite, trois filtres, combinés : seuls restent les jours qui ont une tâche correspondante :
   - recherche (`/`) : tâches dont le titre, le contenu ou le ticket contient le texte (sans tenir compte des majuscules ni des accents), le texte trouvé souligné dans les titres. `Échap` vide le champ ;
@@ -64,7 +64,7 @@ Chaque session démarre dans un conteneur neuf : les dépendances doivent y êtr
   - `<` / `>` (ou `←` / `→`) passent aux 5 jours précédents / suivants (désactivés en bout de liste) ; « Courant », tout à droite, ramène aux 5 derniers jours. Le nombre de résultats s'affiche au centre : « 6 tâches trouvées dans 5 journées ».
 - Nouveau projet → curseur directement sur la saisie de sa première tâche.
 - Projet : cœur ♡ = favori (plein et rouge quand actif, `f`). Au survol d'un projet : icônes archive (archiver / désarchiver, `a`) et corbeille (supprimer, `x` `x`), avec leur nom en info-bulle. Suppression toujours en deux temps, sans fenêtre de confirmation : 1er appui (`x` ou corbeille) = message de ce qui va être supprimé, 2e appui = suppression, `Échap` annule. Une tâche se supprime au clavier (`x` `x`). Tout est annulable (`u`), y compris la suppression : le projet revient avec toutes ses tâches, Log compris.
-- Dans l'onglet « Projets », sous les onglets et alignés à droite, quatre filtres de la **zone des projets** (sans effet sur le Log), combinables : report (`R` ou clic : « N tâches à reporter » → « N tâches reportées » → toutes), priorité (`P` ou clic : « Priorité 1 » → 2 → 3 → toutes), « Archivés » (seulement les projets archivés, `A`), « Favoris » (seulement les favoris, `F`). Chacun n'apparaît que s'il sert (au moins une tâche à faire à reporter ou reportée, une tâche à faire avec une priorité, un projet archivé, un favori) ; actif, son icône se remplit (pas de fond coloré).
+- Dans l'onglet « Projets », sous les onglets et alignés à droite, quatre filtres de la **zone des projets** (sans effet sur le Log), combinables : report (`R` ou clic : « N tâches à reporter » → « N tâches reportées » → toutes), priorité (`!` ou clic : « Priorité 1 » → 2 → 3 → toutes), « Archivés » (seulement les projets archivés, `A`), « Favoris » (seulement les favoris, `F`). Chacun n'apparaît que s'il sert (au moins une tâche à faire à reporter ou reportée, une tâche à faire avec une priorité, un projet archivé, un favori) ; actif, son icône se remplit (pas de fond coloré).
 - Souris : clic sur un nom pour le modifier (pour une tâche, n'importe où sur la ligne jusqu'aux icônes, alignées à droite). Titre trop long : coupé par « … », affiché en entier au survol (ou au focus clavier).
 - Fiche d'une tâche (`Maj+Entrée`, `o` ou icône 🗒) : titre complet, identifiant du ticket (`PROJ-123`), puis contenu en Markdown. L'icône 🗒 signale une tâche qui a du contenu.
   - Lecture seule par défaut. `e` (comme GitLab) passe tout en édition : titre, puis `Tab` → ticket, puis `Tab` → contenu. Double-clic sur le contenu : édition directement dedans.
@@ -95,11 +95,11 @@ Clavier (`?` affiche l'aide, un 2e `?` ou `Échap` la ferme ; groupée par thèm
 | `c` | Chrono de la tâche : lancer / mettre en pause (aussi dans la fiche) |
 | `C` (majuscule) | Remettre le chrono à zéro (annulable par `u`) |
 | `t` | Ajouter la tâche à Aujourd’hui / l'en retirer (aussi dans la fiche) |
-| `T` (majuscule) | Onglet « Projets » / « Aujourd’hui » |
-| `L` (majuscule) | Onglet « Projets » / « Log » |
+| `P` / `T` / `L` (majuscules) | Onglet « Projets » / « Aujourd’hui » / « Log » |
+| `Alt+←` / `Alt+→` | Onglet précédent / suivant (en boucle) |
 | `1` `2` `3` | Priorité 1, 2 ou 3 ; le même chiffre la retire (aussi dans la fiche) |
 | `R` (majuscule) | Projets : seulement les tâches à reporter → reportées → toutes (ou clic sur le bouton du report) |
-| `P` (majuscule) | Projets : seulement les tâches de priorité 1 → 2 → 3 → toutes (ou clic sur « Priorités ») |
+| `!` | Projets : seulement les tâches de priorité 1 → 2 → 3 → toutes (ou clic sur « Priorités ») |
 | `f` sur un projet | Favori / plus favori |
 | `F` (majuscule) | Afficher seulement les projets favoris (ou clic sur « Favoris ») |
 | `a` sur un projet | Archiver / désarchiver |

@@ -48,6 +48,12 @@ export function App() {
   const dayView = path === '/plan';
   const logView = path === '/log';
   const projectsView = !dayView && !logView;
+  // Onglets, dans l'ordre (Alt+← / Alt+→) ; P, T, L vont directement à l'un d'eux.
+  const TABS = [
+    { label: 'Projets', to: '/', key: 'P', selected: projectsView },
+    { label: 'Aujourd’hui', to: '/plan', key: 'T', selected: dayView },
+    { label: 'Log', to: '/log', key: 'L', selected: logView },
+  ];
   // Fiche d'une tâche : id, champ focalisé, open à false pendant l'animation de
   // fermeture ; opening numérote les ouvertures (formulaire neuf à chaque fois).
   const [openTask, setOpenTask] = useState<{ id: number; field: TaskField; open: boolean; opening: number } | null>(null);
@@ -57,7 +63,7 @@ export function App() {
   const [jiraFilter, setJiraFilter] = useState<JiraState>('none');
   const cycleJiraFilter = () => setJiraFilter((f) => NEXT_JIRA_FILTER[f]);
   const [archivedOnly, setArchivedOnly] = useState(false);
-  // Filtre priorité (P) : aucun → 1 → 2 → 3 → aucun.
+  // Filtre priorité (!) : aucun → 1 → 2 → 3 → aucun.
   const [priorityFilter, setPriorityFilter] = useState<Priority | null>(null);
   const cyclePriorityFilter = () => setPriorityFilter((p) => (p === 3 ? null : (((p ?? 0) + 1) as Priority)));
   const [favoritesOnly, setFavoritesOnly] = useState(false);
@@ -210,10 +216,16 @@ export function App() {
     if (path === '/admin') return;
     const onKey = (e: KeyboardEvent) => {
       handleNavKey(e);
-      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
       const target = e.target as HTMLElement;
       // Champ « + Ajouter » en lecture (atteint par la navigation) : raccourcis actifs.
-      if (target.closest('input:not([readonly]), select, textarea, [role="dialog"]')) return;
+      if (e.defaultPrevented || target.closest('input:not([readonly]), select, textarea, [role="dialog"]')) return;
+      // Alt+← / Alt+→ : onglet précédent / suivant (en boucle).
+      if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        e.preventDefault();
+        const i = TABS.findIndex((t) => t.selected) + (e.key === 'ArrowLeft' ? -1 : 1);
+        return navigate(TABS[(i + TABS.length) % TABS.length].to);
+      }
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
       // n : champ d'ajout du projet où est le curseur (projet ou une de ses
       // tâches), sinon du dernier projet utilisé, sinon du premier ; aucun
       // projet : « Nouveau projet ». Un 2e n rapproché : voir l'effet suivant.
@@ -240,9 +252,8 @@ export function App() {
         R: () => projectsView && cycleJiraFilter(),
         F: () => projectsView && setFavoritesOnly((v) => !v),
         A: () => projectsView && setArchivedOnly((v) => !v),
-        P: () => projectsView && cyclePriorityFilter(),
-        T: () => navigate(dayView ? '/' : '/plan'),
-        L: () => navigate(logView ? '/' : '/log'),
+        '!': () => projectsView && cyclePriorityFilter(),
+        ...Object.fromEntries(TABS.map((t) => [t.key, () => navigate(t.to)])),
         // Log : 5 jours précédents / suivants (bouton désactivé : sans effet).
         ArrowLeft: () => logView && document.getElementById('day-prev')?.click(),
         ArrowRight: () => logView && document.getElementById('day-next')?.click(),
@@ -327,17 +338,13 @@ export function App() {
         <main className="pb-16">
           <div className="min-w-0">
             <div role="tablist" aria-label="Vue" className="mt-3 flex h-[26px] items-center gap-4 lg:mt-5">
-              {[
-                { label: 'Projets', to: '/', selected: projectsView, title: 'Projets (T depuis Aujourd’hui, L depuis le Log)' },
-                { label: 'Aujourd’hui', to: '/plan', selected: dayView, title: 'Aujourd’hui (T)' },
-                { label: 'Log', to: '/log', selected: logView, title: 'Log (L)' },
-              ].map((tab) => (
+              {TABS.map((tab) => (
                 <button
                   key={tab.to}
                   type="button"
                   role="tab"
                   aria-selected={tab.selected}
-                  title={tab.title}
+                  title={`${tab.label} (${tab.key})`}
                   className={cn(
                     'border-b-2 font-semibold',
                     tab.selected ? 'border-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
