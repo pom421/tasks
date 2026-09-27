@@ -14,6 +14,10 @@ interface EditableNameProps {
   display?: ReactNode;
 }
 
+// Info-bulle du titre coupé, au focus clavier : délai pour parcourir la liste
+// (j / k) sans qu'elle s'affiche à chaque ligne. Au survol, Radix attend déjà.
+const FOCUS_TOOLTIP_DELAY = 500;
+
 // Nom navigable au clavier. Clic ou Entrée -> champ d'édition :
 // Entrée enregistre, Échap annule, dans les deux cas le focus revient au nom.
 export function EditableName({ value, navKey, onSave, className, truncate = false, display = value }: EditableNameProps) {
@@ -21,6 +25,8 @@ export function EditableName({ value, navKey, onSave, className, truncate = fals
   const [editing, setEditing] = useState(false);
   const refocus = useRef(false);
   const span = useRef<HTMLSpanElement>(null);
+  const tooltipTimer = useRef<number | undefined>(undefined);
+  useEffect(() => () => clearTimeout(tooltipTimer.current), []);
 
   useEffect(() => {
     if (!editing && refocus.current) {
@@ -67,6 +73,9 @@ export function EditableName({ value, navKey, onSave, className, truncate = fals
       data-nav=""
       data-nav-key={navKey}
       onClick={() => setEditing(true)}
+      // Parti avant le délai : l'info-bulle ne s'ouvre pas (Radix, encore
+      // fermée, ne signale rien).
+      onBlur={() => clearTimeout(tooltipTimer.current)}
       onKeyDown={(e) => {
         // Maj+Entrée est laissée à la ligne (ouverture de la fiche d'une tâche).
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -83,7 +92,15 @@ export function EditableName({ value, navKey, onSave, className, truncate = fals
   // Info-bulle au survol ou au focus clavier, seulement si le titre est coupé.
   const isTruncated = () => Boolean(span.current && span.current.scrollWidth > span.current.clientWidth);
   return (
-    <Tooltip open={tooltip} onOpenChange={(open) => setTooltip(open && isTruncated())}>
+    <Tooltip
+      open={tooltip}
+      onOpenChange={(open) => {
+        clearTimeout(tooltipTimer.current);
+        if (!open || !isTruncated()) return setTooltip(false);
+        if (span.current?.matches(':hover')) return setTooltip(true);
+        tooltipTimer.current = window.setTimeout(() => setTooltip(true), FOCUS_TOOLTIP_DELAY);
+      }}
+    >
       <TooltipTrigger asChild>{name}</TooltipTrigger>
       <TooltipContent side="bottom" align="start" className="full-title">
         {value}
