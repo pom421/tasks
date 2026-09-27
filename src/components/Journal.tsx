@@ -5,6 +5,7 @@ import { formatDay, isComplete } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { TaskRow } from './TaskRow';
+import { TagInput } from './TagInput';
 
 // Le Log montre une fenêtre de 5 jours ayant des entrées (une semaine de travail).
 export const LOG_DAYS = 5;
@@ -14,9 +15,10 @@ export interface Filter {
   day: string; // dernier jour de la fenêtre ; '' = période courante (les plus récents)
   project: string; // id du projet, '' = tous
   q: string; // recherche : titre, contenu, ticket
+  tags: string[]; // tâches portant tous ces tags
 }
 
-export const NO_FILTER: Filter = { day: '', project: '', q: '' };
+export const NO_FILTER: Filter = { day: '', project: '', q: '', tags: [] };
 
 // Les 5 derniers jours ayant des entrées qui correspondent aux filtres, jusqu'à `day`.
 export function journalQuery(f: Filter): JournalFilter {
@@ -24,6 +26,7 @@ export function journalQuery(f: Filter): JournalFilter {
     to: f.day || undefined,
     projectId: Number(f.project) || undefined,
     q: f.q || undefined,
+    tags: f.tags,
     limit: LOG_DAYS,
   };
 }
@@ -62,12 +65,13 @@ function Day({ day, highlight }: { day: JournalDay; highlight: string }) {
 interface JournalProps {
   days: JournalDay[];
   dates: string[];
+  tags: string[]; // tags des tâches faites (propositions)
   projects: Project[];
   filter: Filter;
   onFilter: (filter: Filter) => void;
 }
 
-export function Journal({ days, dates, projects, filter, onFilter }: JournalProps) {
+export function Journal({ days, dates, tags, projects, filter, onFilter }: JournalProps) {
   // Champ de date non contrôlé : une valeur incomplète (année en cours de
   // frappe) ne doit pas être écrasée par React. Vide = période courante.
   const dateRef = useRef<HTMLInputElement>(null);
@@ -77,7 +81,7 @@ export function Journal({ days, dates, projects, filter, onFilter }: JournalProp
   }, [shownDate]);
   const changeDay = (day: string) => isComplete(day) && onFilter({ ...filter, day });
 
-  const filtered = Boolean(filter.day || filter.project || filter.q);
+  const filtered = Boolean(filter.day || filter.project || filter.q || filter.tags.length);
 
   // Recherche : lancée 250 ms après la dernière frappe ; le champ suit la
   // réinitialisation des filtres.
@@ -131,6 +135,19 @@ export function Journal({ days, dates, projects, filter, onFilter }: JournalProp
             }
           }}
         />
+        {/* Tags (#) : n'apparaît que si une tâche faite en porte. */}
+        {(tags.length > 0 || filter.tags.length > 0) && (
+          <TagInput
+            id="log-tags"
+            tags={filter.tags}
+            suggestions={tags}
+            onChange={(t) => onFilter({ ...filter, tags: t })}
+            label="Filtrer le Log par tags"
+            title="Seulement les tâches portant tous ces tags (#)"
+            placeholder="Tags… (#)"
+            removeLabel={(tag) => `Retirer #${tag} du filtre`}
+          />
+        )}
         <input
           ref={dateRef}
           type="date"

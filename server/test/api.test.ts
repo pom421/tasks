@@ -719,6 +719,9 @@ test('échéance et tags : écriture, validation, filtre du Log, restauration', 
   assert.deepEqual(await titles('client'), ['B', 'A']);
   assert.deepEqual(await titles('client,site-web'), ['A']);
   assert.deepEqual(await titles('autre'), []);
+  // Tags des tâches faites, proposés par le filtre du Log.
+  const { tags } = (await call('GET', '/api/journal?limit=5')).body;
+  assert.ok(['client', 'site-web'].every((t) => tags.includes(t)), String(tags));
 
   // Suppression puis restauration : échéance et tags conservés.
   const { body: deleted } = await call('DELETE', `/api/tasks/${a.id}`);

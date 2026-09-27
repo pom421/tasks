@@ -78,7 +78,7 @@ export const TEXT_FIELD = 'input:not([type="checkbox"]):not([readonly]), textare
 
 // Éléments où ↑/↓ ont déjà un sens (listes, dates, édition) : on n'y touche pas.
 function ownsArrows(el: Element) {
-  return el.matches('input.edit, select, textarea, input[type="date"]');
+  return el.matches('input.edit, select, textarea, input[type="date"], input[role="combobox"]');
 }
 
 // Instant du dernier g seul : un 2e g rapproché (gg) va au premier élément.

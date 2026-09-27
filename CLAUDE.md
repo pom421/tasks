@@ -11,6 +11,8 @@ données : `README.md` ; tâches et décisions attendues : `docs/plan.md`.
   (boutons, raccourcis, messages). Comparer avec l'existant avant de livrer.
 - **Sobre** : pas de fond coloré pour un état ; bouton à contour, actif = icône
   pleine et texte normal.
+  Exception voulue : étiquettes de date d'une tâche (prévue : fond gris,
+  échéance : fond ambré, rouge si passée).
 - **Afficher seulement ce qui sert** : un filtre n'apparaît que s'il a un effet
   sur **toutes** les données ; actif, il reste visible.
 - **Zones indépendantes** : filtres de l'onglet Projets (report, priorité,

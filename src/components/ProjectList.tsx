@@ -179,13 +179,18 @@ interface ProjectListProps {
   bugtrackerFilter: BugtrackerState; // filtre report : 'none' = aucun, sinon tâches à reporter / reportées
   priorityFilter: Priority | null; // filtre priorité : null = aucun
   favoritesOnly: boolean;
+  tagFilter: string[]; // tâches portant tous ces tags ; [] = aucun filtre
 }
 
-export function ProjectList({ projects, archivedOnly, bugtrackerFilter, priorityFilter, favoritesOnly }: ProjectListProps) {
+export function ProjectList({ projects, archivedOnly, bugtrackerFilter, priorityFilter, favoritesOnly, tagFilter }: ProjectListProps) {
   const bugtrackerOnly = bugtrackerFilter !== 'none';
-  // Filtres portant sur les tâches (report, priorité), combinés en ET.
-  const taskFilter = bugtrackerOnly || priorityFilter !== null;
-  const keep = (t: Task) => (!bugtrackerOnly || bugtrackerState(t) === bugtrackerFilter) && (!priorityFilter || t.priority === priorityFilter);
+  // Filtres portant sur les tâches (report, priorité, tags), combinés en ET.
+  const tagOnly = tagFilter.length > 0;
+  const taskFilter = bugtrackerOnly || priorityFilter !== null || tagOnly;
+  const keep = (t: Task) =>
+    (!bugtrackerOnly || bugtrackerState(t) === bugtrackerFilter) &&
+    (!priorityFilter || t.priority === priorityFilter) &&
+    tagFilter.every((tag) => t.tags.includes(tag));
   const { undoable } = useActions();
   const visible = projects
     .filter((p) => Boolean(p.archived_at) === archivedOnly) // Archivés : seulement eux
@@ -196,9 +201,10 @@ export function ProjectList({ projects, archivedOnly, bugtrackerFilter, priority
   // Liste vide : message propre au filtre actif ; plusieurs filtres combinés :
   // message générique (tâches si un filtre de tâches en fait partie, sinon projets).
   const emptyMessage = () => {
-    const active = [bugtrackerOnly, priorityFilter, archivedOnly, favoritesOnly].filter(Boolean).length;
+    const active = [bugtrackerOnly, priorityFilter, archivedOnly, favoritesOnly, tagOnly].filter(Boolean).length;
     if (active > 1) return taskFilter ? 'Aucune tâche avec les filtres demandés.' : 'Aucun projet avec les filtres demandés.';
     if (bugtrackerOnly) return bugtrackerFilter === 'wanted' ? 'Aucune tâche à faire à reporter.' : 'Aucune tâche à faire reportée.';
+    if (tagOnly) return `Aucune tâche à faire avec ${tagFilter.map((t) => `#${t}`).join(' et ')}.`;
     if (priorityFilter) return `Aucune tâche à faire de priorité ${priorityFilter}.`;
     if (archivedOnly) return 'Aucun projet archivé.';
     if (favoritesOnly) return 'Aucun projet favori : cliquez sur le cœur d’un projet.';

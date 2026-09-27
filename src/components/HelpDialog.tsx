@@ -14,14 +14,14 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
       [[['Entrée']], 'Modifier le nom ; sur « + Ajouter », écrire'],
       [[['Échap']], 'Quitter l’édition sans enregistrer ; « + Ajouter » : vider, repasser en lecture'],
       [[['P', 'T', 'L']], 'Onglet Projets, Aujourd’hui, Log'],
-      [[['Alt+←', 'Alt+→']], 'Onglet précédent / suivant'],
+      [[['Alt+←', 'Alt+→']], 'Onglet précédent / suivant (dont Prochainement)'],
     ],
   ],
   [
     'Fiche',
     [
       [[['Maj+Entrée'], ['o']], 'Ouvrir en lecture'],
-      [[['e']], 'Ouvrir en édition (titre, Tab : ticket, contenu)'],
+      [[['e']], 'Ouvrir en édition (titre, Tab : ticket, dates, tags, contenu)'],
       [[['Ctrl+Entrée']], 'Enregistrer et lire ; en lecture, fermer'],
       [[['c', 'C', 't', '1', '2', '3']], 'Comme sur la tâche'],
     ],
@@ -57,6 +57,7 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
       [[['!']], 'Priorité 1 → 2 → 3 → toutes'],
       [[['F']], 'Projets favoris seulement'],
       [[['A']], 'Projets archivés seulement'],
+      [[['#']], 'Tags (↑ ↓ Entrée : choisir ; Retour arrière : retirer)'],
     ],
   ],
   [
@@ -64,6 +65,7 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
     [
       [[['/']], 'Rechercher, depuis tout onglet (Tab : date, projet)'],
       [[['d']], 'Période jusqu’à une date, depuis tout onglet'],
+      [[['#']], 'Tags, dans l’onglet Log'],
       [[['←', '→']], '5 jours précédents / suivants'],
       [[['Échap']], 'Vider la recherche, retirer les filtres du Log'],
     ],
@@ -71,7 +73,7 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
   [
     'Général',
     [
-      [[['Échap Échap']], 'Retirer tous les filtres (projets et Log)'],
+      [[['Échap Échap']], 'Retirer tous les filtres (projets et Log, tags compris)'],
       [[['u']], 'Annuler la dernière action, puis la précédente…'],
       [[['U']], 'Rétablir l’action annulée'],
       [[['?']], 'Ouvrir / fermer cette aide'],

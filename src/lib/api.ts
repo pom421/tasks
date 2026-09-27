@@ -30,7 +30,9 @@ export interface TaskPatch {
   timer?: TimerAction;
   time_spent?: number; // annulation du chrono
   timer_started_at?: string | null;
-  day_at?: string | null; // Aujourd’hui : date du jour, null = retirée
+  day_at?: string | null; // date prévue (Aujourd’hui si c'est ce jour), null = aucune
+  due_at?: string | null; // échéance, null = aucune
+  tags?: string[]; // liste complète
   priority?: Priority | null;
 }
 
@@ -38,13 +40,14 @@ export const api = {
   state: (day: string) => request<State>('GET', `/api/state?day=${day}`),
   settings: () => request<Settings>('GET', '/api/settings'),
   updateSettings: (patch: Partial<Settings>) => request<Settings>('PUT', '/api/settings', patch),
-  journal: ({ from, to, projectId, bugtrackerPending, q, limit }: JournalFilter) => {
+  journal: ({ from, to, projectId, bugtrackerPending, q, tags, limit }: JournalFilter) => {
     const params = new URLSearchParams();
     if (from) params.set('from', from);
     if (to) params.set('to', to);
     if (projectId) params.set('project', String(projectId));
     if (bugtrackerPending) params.set('bugtracker', 'pending');
     if (q) params.set('q', q);
+    if (tags?.length) params.set('tags', tags.join(','));
     if (limit) params.set('limit', String(limit));
     return request<Journal>('GET', `/api/journal?${params}`);
   },

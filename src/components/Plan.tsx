@@ -8,7 +8,8 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
 // Aujourd’hui (plan du jour) d'une tâche à faire, partagé par la ligne et la fiche : t (ou ☀)
-// l'ajoute au plan du jour (date du navigateur) ou l'en retire. Annulable (u).
+// l'ajoute au plan du jour (date du navigateur, remplace la date prévue) ou
+// l'en retire. Annulable (u).
 // stay : dans l'onglet Aujourd’hui, la ligne retirée disparaît, le curseur reste en place.
 export function usePlan(task: Task) {
   const { undoable } = useActions();
@@ -27,7 +28,8 @@ export function usePlan(task: Task) {
     toggle();
     return true;
   };
-  return { inPlan, toggle, onKey };
+  // Déjà prévue un autre jour (en retard ou plus tard) : ☀ la ramène à aujourd'hui.
+  return { inPlan, planned: Boolean(task.day_at), toggle, onKey };
 }
 
 // Icône ☀ : pleine et ambrée si au plan (toujours visible), sinon atténuée,
@@ -45,7 +47,7 @@ export function PlanButton({ plan, hidden }: { plan: ReturnType<typeof usePlan>;
       )}
       aria-label="Pour aujourd’hui"
       aria-pressed={plan.inPlan}
-      title={plan.inPlan ? 'Retirer d’Aujourd’hui (t)' : 'Ajouter à Aujourd’hui (t)'}
+      title={plan.inPlan ? 'Retirer d’Aujourd’hui (t)' : plan.planned ? 'Prévoir pour aujourd’hui plutôt (t)' : 'Ajouter à Aujourd’hui (t)'}
       onClick={plan.toggle}
     >
       <Sun aria-hidden fill={plan.inPlan ? 'currentColor' : 'none'} />

@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import type { Store } from '../server/db.ts';
 import { test as base, expect } from './fixtures.ts';
 
@@ -730,7 +730,7 @@ test('fiche : identifiant invalide annoncé, la fiche reste ouverte', async ({ p
   expect(store.state().projects[0].tasks[0]).toMatchObject({ bugtracker_key: null, bugtracker_url: null });
 });
 
-test('fiche Markdown : e édite (titre → Tab → ticket → Tab → contenu), Ctrl+Entrée lecture puis fermeture', async ({ page, store, data }) => {
+test('fiche Markdown : e édite (titre → Tab → ticket → dates → tags → contenu), Ctrl+Entrée lecture puis fermeture', async ({ page, store, data }) => {
   await pressDown(page, 3); // « Deux »
   await page.keyboard.press('Shift+Enter');
   const dialog = page.getByRole('dialog', { name: 'Deux' });
@@ -744,6 +744,15 @@ test('fiche Markdown : e édite (titre → Tab → ticket → Tab → contenu), 
   await expect(dialog.getByLabel('Titre')).toHaveValue('Deux');
   await page.keyboard.press('Tab');
   await expect(dialog.getByLabel('Ticket', { exact: true })).toBeFocused();
+  // Champ date : Tab passe d'abord par ses parties (jour, mois, année ; natif,
+  // leur nombre dépend du navigateur) : Tab jusqu'au champ suivant, dans l'ordre.
+  const tabTo = async (field: Locator) => {
+    for (let i = 0; i < 5 && !(await field.evaluate((el) => el === document.activeElement)); i++) await page.keyboard.press('Tab');
+    await expect(field).toBeFocused();
+  };
+  await tabTo(dialog.getByLabel('Date prévue'));
+  await tabTo(dialog.getByLabel('Échéance'));
+  await tabTo(dialog.getByRole('combobox', { name: 'Tags' }));
   await page.keyboard.press('Tab');
   const editor = dialog.getByLabel('Contenu');
   await expect(editor).toBeFocused();
@@ -1032,7 +1041,7 @@ test('titre long au clavier : info-bulle après un court délai, rien si on pass
   await expect(page.locator('.full-title')).toHaveText(long);
 });
 
-test('ligne épurée et fiche ordonnée : titre, ticket, contenu', async ({ page, data }) => {
+test('ligne épurée et fiche ordonnée : titre, ticket, dates, tags, contenu', async ({ page, data }) => {
   await expect(page.locator(`[data-nav-key="add:${data.alpha.id}"]`)).toHaveAttribute('placeholder', '+ Ajouter une tâche (n)');
   const une = row(page, data.tasks.une.id);
   await une.hover();
@@ -1045,7 +1054,7 @@ test('ligne épurée et fiche ordonnée : titre, ticket, contenu', async ({ page
   // Titre en haut (champ nommé « Titre », sans libellé visible), puis ticket et contenu.
   await expect(dialog.getByLabel('Titre')).toBeFocused();
   const labels = await dialog.locator('label').allTextContents();
-  expect(labels).toEqual(['Ticket', 'Contenu']);
+  expect(labels).toEqual(['Ticket', 'Date prévue', 'Échéance', 'Tags', 'Contenu']);
 });
 
 test('fiche : e modifie aussi le titre et le ticket ; Entrée dans un champ = enregistrer', async ({ page, store, data }) => {
@@ -1087,8 +1096,7 @@ test('e sur une tâche : fiche ouverte directement en édition, titre sélection
   const dialog = page.getByRole('dialog', { name: 'Deux' });
   await expect(dialog.getByLabel('Titre')).toBeFocused();
   await dialog.getByLabel('Titre').fill('Deux (modifiée)');
-  await page.keyboard.press('Tab');
-  await page.keyboard.press('Tab');
+  await dialog.getByLabel('Contenu').focus();
   await page.keyboard.type('Notes rapides');
   await page.keyboard.press('ControlOrMeta+Enter'); // lecture
   await expect(page.getByRole('dialog').locator('.notes-preview')).toHaveText('Notes rapides');
@@ -1102,7 +1110,7 @@ test('une colonne : le Log, dans son onglet, prend la place des projets (écran 
   for (const width of [1280, 800]) {
     await page.setViewportSize({ width, height: 600 });
     await reload(page);
-    await expect(page.getByRole('tab')).toHaveText(['Projets', 'Aujourd’hui', 'Log']);
+    await expect(page.getByRole('tab')).toHaveText(['Projets', 'Aujourd’hui', 'Prochainement', 'Log']);
     await expect(page.locator('#journal')).toHaveCount(0);
     const projects = (await page.locator('#projects').boundingBox())!;
     await page.keyboard.press('L');

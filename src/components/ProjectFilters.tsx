@@ -1,6 +1,7 @@
 import { Archive, Flag, Heart } from 'lucide-react';
-import { bugtrackerState, type BugtrackerState, type Priority, type Project } from '../../shared/types.ts';
+import { allTags, bugtrackerState, type BugtrackerState, type Priority, type Project } from '../../shared/types.ts';
 import { PRIORITY_COLOR, PriorityIcon } from './Priority';
+import { TagInput } from './TagInput';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -14,6 +15,8 @@ interface ProjectFiltersProps {
   onFavoritesOnly: () => void;
   archivedOnly: boolean;
   onArchivedOnly: () => void;
+  tagFilter: string[];
+  onTagFilter: (tags: string[]) => void;
 }
 
 // Actif : texte à pleine intensité ; inactif : atténué. Hauteur des champs du Log.
@@ -26,21 +29,37 @@ const filterClass = (active: boolean) => cn('h-[26px]', active ? 'text-foregroun
 // tous les projets, indépendamment des autres filtres actifs.
 // Boutons bascule sobres : toujours à contour ; icône vide, pleine quand le
 // filtre est actif ; état annoncé par aria-pressed.
-export function ProjectFilters({ projects, bugtrackerFilter, onBugtrackerFilter, priorityFilter, onPriorityFilter, favoritesOnly, onFavoritesOnly, archivedOnly, onArchivedOnly }: ProjectFiltersProps) {
+export function ProjectFilters({ projects, bugtrackerFilter, onBugtrackerFilter, priorityFilter, onPriorityFilter, favoritesOnly, onFavoritesOnly, archivedOnly, onArchivedOnly, tagFilter, onTagFilter }: ProjectFiltersProps) {
   const tasks = projects.flatMap((p) => p.tasks);
   const bugtrackerWanted = tasks.filter((t) => bugtrackerState(t) === 'wanted').length; // tâches à faire à reporter
   const bugtrackerDone = tasks.filter((t) => bugtrackerState(t) === 'done').length; // tâches à faire reportées
   const priorities = tasks.filter((t) => t.priority).length;
   const favorites = projects.filter((p) => p.favorite_at).length;
   const archived = projects.filter((p) => p.archived_at).length;
+  const tags = allTags(tasks); // tags des tâches à faire
   const show = {
     bugtracker: bugtrackerWanted > 0 || bugtrackerDone > 0 || bugtrackerFilter !== 'none',
     priority: priorities > 0 || Boolean(priorityFilter),
     archived: archived > 0 || archivedOnly,
     favorites: favorites > 0 || favoritesOnly,
+    tags: tags.length > 0 || tagFilter.length > 0,
   };
   return (
     <div role="group" aria-label="Filtres des projets" className="mt-3 flex min-h-[26px] flex-wrap items-center justify-end gap-1.5">
+      {/* Tags (#) : autocomplétion parmi les tags des tâches à faire, ✕ pour en retirer un. */}
+      {show.tags && (
+        <TagInput
+          id="project-tags"
+          tags={tagFilter}
+          suggestions={tags}
+          onChange={onTagFilter}
+          label="Filtrer par tags"
+          title="Seulement les tâches portant tous ces tags (#)"
+          placeholder="Tags… (#)"
+          removeLabel={(tag) => `Retirer #${tag} du filtre`}
+          className="mr-auto"
+        />
+      )}
       {/* Report : un clic (ou R) passe à la suite : à reporter → reportées → tous. */}
       {show.bugtracker && (
         <Button

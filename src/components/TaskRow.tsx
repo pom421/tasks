@@ -14,6 +14,7 @@ import { moveDirection } from '@/lib/nav';
 import { TimerButtons, useTimer } from './Timer';
 import { PlanButton, usePlan } from './Plan';
 import { PriorityButton, usePriority } from './Priority';
+import { TaskDates, TaskTags } from './TaskDates';
 
 // Ligne de tâche, à faire (liste des projets) ou faite (journal).
 // Clavier, où que soit le focus dans la ligne (hors champ de saisie) :
@@ -157,6 +158,8 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
           truncate
           onSave={rename}
         />
+        <TaskTags tags={task.tags} />
+        {!done && <TaskDates task={task} />}
         <ReportBadge task={task} />
         {hasDetails(task) && (
           <Button

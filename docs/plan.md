@@ -7,7 +7,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-Rien.
+- [~] Date prévue (fusionnée avec ☀ / `day_at`), échéance et tags (migration 13) : fiche (`e`), étiquettes sur la ligne, « Aujourd’hui » avec les tâches en retard, onglet « Prochainement » (agenda), filtre `#` avec autocomplétion dans Projets et dans le Log
 
 ## Décisions attendues
 
@@ -19,7 +19,9 @@ Rien.
 - [?] Filtre « Archivés » actif : icône archive pleine = bloc noir (le trait
   intérieur disparaît). Remplissage gris clair à la place ?
 - [?] Chrono : un seul en marche à la fois (en lancer un met l'autre en pause). À garder ?
-- [?] Plan journée : une tâche du plan mais pas faite disparaît le lendemain. La reporter automatiquement au jour suivant ?
+- [?] Onglet « Prochainement » : quelle touche ? (`P` `T` `L` pris ; pour l'instant `Alt+←` / `Alt+→` seulement)
+- [?] Aujourd’hui : les tâches en retard comptent dans « 3/5 tâches ». À garder ?
+- [?] Fiche : dans un champ date, `Tab` parcourt jour / mois / année (natif du navigateur) avant le champ suivant. Acceptable ?
 - [?] Plan journée : compteur rouge seulement **au-delà** du maximum (6/5), pas à 5/5. Orange à 5/5 ?
 - [?] Priorité : trier les tâches par priorité (en plus du filtre `P`) ?
 

@@ -46,13 +46,21 @@ for (const [projectId, title, day, notes, bugtrackerKey] of done) {
   store.updateTask(t.id, { doneAt: workdays[day], notes, ...(bugtrackerKey && { bugtracker: 'done' as const, bugtrackerKey }) });
 }
 
+// Tags sur quelques tâches faites (filtre du Log).
+store.updateTask(1, { tags: ['specs'] });
+store.updateTask(3, { tags: ['api', 'client'] });
+
 const today = iso(new Date());
-const todo: [number, string, { priority?: 1 | 2 | 3; dayAt?: string; bugtracker?: 'wanted' }?][] = [
-  [api.id, 'Gérer les avoirs partiels', { priority: 1, dayAt: today }],
-  [api.id, 'Limiter le débit de l’API', { priority: 2 }],
-  [site.id, 'Page « Mentions légales »', { bugtracker: 'wanted' }],
-  [site.id, 'Mode sombre', { priority: 3 }],
+const inDays = (n: number) => iso(new Date(Date.now() + n * 86_400_000));
+type Todo = { priority?: 1 | 2 | 3; dayAt?: string; dueAt?: string; tags?: string[]; bugtracker?: 'wanted' };
+const todo: [number, string, Todo?][] = [
+  [api.id, 'Gérer les avoirs partiels', { priority: 1, dayAt: today, dueAt: inDays(3), tags: ['client'] }],
+  [api.id, 'Limiter le débit de l’API', { priority: 2, dayAt: inDays(2), tags: ['api', 'perf'] }],
+  [api.id, 'Relancer le client sur le format des avoirs', { dayAt: workdays.at(-1), tags: ['client'] }],
+  [site.id, 'Page « Mentions légales »', { bugtracker: 'wanted', dueAt: inDays(10) }],
+  [site.id, 'Mode sombre', { priority: 3, tags: ['ui'] }],
   [ops.id, 'Préparer le déploiement de la v2.4', { dayAt: today }],
+  [ops.id, 'Renouveler le certificat TLS', { dueAt: workdays.at(-2) }],
 ];
 for (const [projectId, title, patch] of todo) store.updateTask(store.createTask(projectId, title).id, patch ?? {});
 

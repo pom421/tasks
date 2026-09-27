@@ -1,6 +1,6 @@
 import { flushSync } from 'react-dom';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { DEFAULT_DAY_CAPACITY, type BugtrackerState, type JournalDay, type Priority, type Project, type Settings, type Task } from '../shared/types.ts';
+import { DEFAULT_DAY_CAPACITY, allTags, type BugtrackerState, type JournalDay, type Priority, type Project, type Settings, type Task } from '../shared/types.ts';
 import { api } from '@/lib/api';
 import { ActionsContext, type Actions, type TaskField } from '@/lib/actions';
 import { record, useHistory } from '@/lib/history';
@@ -12,6 +12,7 @@ import { Journal, NO_FILTER, journalQuery, type Filter } from '@/components/Jour
 import { TaskDialog } from '@/components/TaskDialog';
 import { SettingsPage } from '@/components/SettingsPage';
 import { DayView } from '@/components/DayView';
+import { UpcomingView } from '@/components/UpcomingView';
 import { localToday } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -21,6 +22,7 @@ interface Data {
   days: JournalDay[];
   settings: Settings;
   dates: string[]; // jours du Log ayant des entrées
+  logTags: string[]; // tags des tâches faites
   dayDone: number; // Aujourd’hui : tâches du plan déjà faites
 }
 
@@ -40,18 +42,21 @@ export function App() {
     days: [],
     settings: { bugtracker_base_url: null, day_capacity: DEFAULT_DAY_CAPACITY },
     dates: [],
+    logTags: [],
     dayDone: 0,
   });
-  // Pages, sans routeur : trois onglets, Projets (/), Aujourd’hui (/plan) et
-  // Log (/log), et les réglages (/admin).
+  // Pages, sans routeur : quatre onglets, Projets (/), Aujourd’hui (/plan),
+  // Prochainement (/prochainement) et Log (/log), et les réglages (/admin).
   const [path, setPath] = useState(window.location.pathname);
   const dayView = path === '/plan';
   const logView = path === '/log';
-  const projectsView = !dayView && !logView;
+  const upcomingView = path === '/prochainement';
+  const projectsView = !dayView && !logView && !upcomingView;
   // Onglets, dans l'ordre (Alt+← / Alt+→) ; P, T, L vont directement à l'un d'eux.
-  const TABS = [
+  const TABS: { label: string; to: string; key?: string; selected: boolean }[] = [
     { label: 'Projets', to: '/', key: 'P', selected: projectsView },
     { label: 'Aujourd’hui', to: '/plan', key: 'T', selected: dayView },
+    { label: 'Prochainement', to: '/prochainement', selected: upcomingView },
     { label: 'Log', to: '/log', key: 'L', selected: logView },
   ];
   // Fiche d'une tâche : id, champ focalisé, open à false pendant l'animation de
@@ -67,6 +72,8 @@ export function App() {
   const [priorityFilter, setPriorityFilter] = useState<Priority | null>(null);
   const cyclePriorityFilter = () => setPriorityFilter((p) => (p === 3 ? null : (((p ?? 0) + 1) as Priority)));
   const [favoritesOnly, setFavoritesOnly] = useState(false);
+  // Filtre par tags (#) : tâches portant tous ces tags.
+  const [tagFilter, setTagFilter] = useState<string[]>([]);
   const [helpOpen, setHelpOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const filterRef = useRef(filter);
@@ -98,6 +105,7 @@ export function App() {
       days: journal.days,
       settings: state.settings,
       dates: journal.dates,
+      logTags: journal.tags,
       dayDone: state.dayDone,
     });
   }, []);
@@ -253,7 +261,12 @@ export function App() {
         F: () => projectsView && setFavoritesOnly((v) => !v),
         A: () => projectsView && setArchivedOnly((v) => !v),
         '!': () => projectsView && cyclePriorityFilter(),
-        ...Object.fromEntries(TABS.map((t) => [t.key, () => navigate(t.to)])),
+        ...Object.fromEntries(TABS.filter((t) => t.key).map((t) => [t.key, () => navigate(t.to)])),
+        // Filtre par tags de l'onglet courant (Log ou Projets ; ailleurs : Projets).
+        '#': () => {
+          if (!logView && !projectsView) flushSync(() => navigate('/'));
+          document.getElementById(logView ? 'log-tags' : 'project-tags')?.focus();
+        },
         // Log : 5 jours précédents / suivants (bouton désactivé : sans effet).
         ArrowLeft: () => logView && document.getElementById('day-prev')?.click(),
         ArrowRight: () => logView && document.getElementById('day-next')?.click(),
@@ -270,6 +283,7 @@ export function App() {
             setPriorityFilter(null);
             setArchivedOnly(false);
             setFavoritesOnly(false);
+            setTagFilter([]);
             changeFilter(NO_FILTER);
             return;
           }
@@ -325,6 +339,7 @@ export function App() {
           task={current}
           projectName={projectName(current)}
           field={openTask.field}
+          tagSuggestions={[...new Set([...allTags(data.projects.flatMap((p) => p.tasks)), ...data.logTags])].sort((a, b) => a.localeCompare(b, 'fr'))}
           open={openTask.open}
           onClose={(changed) => {
             setOpenTask({ ...openTask, open: false });
@@ -344,7 +359,7 @@ export function App() {
                   type="button"
                   role="tab"
                   aria-selected={tab.selected}
-                  title={`${tab.label} (${tab.key})`}
+                  title={tab.key ? `${tab.label} (${tab.key})` : `${tab.label} (Alt+← / Alt+→)`}
                   className={cn(
                     'border-b-2 font-semibold',
                     tab.selected ? 'border-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
@@ -367,12 +382,15 @@ export function App() {
                 onFavoritesOnly={() => setFavoritesOnly((v) => !v)}
                 archivedOnly={archivedOnly}
                 onArchivedOnly={() => setArchivedOnly((v) => !v)}
+                tagFilter={tagFilter}
+                onTagFilter={setTagFilter}
               />
             )}
             {dayView && <DayView projects={data.projects} dayDone={data.dayDone} capacity={data.settings.day_capacity} />}
-            {logView && <Journal days={data.days} dates={data.dates} projects={data.projects} filter={filter} onFilter={changeFilter} />}
+            {upcomingView && <UpcomingView projects={data.projects} />}
+            {logView && <Journal days={data.days} dates={data.dates} tags={data.logTags} projects={data.projects} filter={filter} onFilter={changeFilter} />}
             {projectsView && (
-              <ProjectList projects={data.projects} archivedOnly={archivedOnly} bugtrackerFilter={bugtrackerFilter} priorityFilter={priorityFilter} favoritesOnly={favoritesOnly} />
+              <ProjectList projects={data.projects} archivedOnly={archivedOnly} bugtrackerFilter={bugtrackerFilter} priorityFilter={priorityFilter} favoritesOnly={favoritesOnly} tagFilter={tagFilter} />
             )}
           </div>
         </main>

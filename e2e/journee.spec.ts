@@ -50,7 +50,7 @@ test('☀ au survol : ajoute au plan (soleil plein, toujours visible), puis reti
 test('onglet Aujourd’hui : seulement les tâches choisies, par projet ; compteur 3/5 tâches', async ({ page, store, data }) => {
   store.updateTask(data.une.id, { dayAt: TODAY });
   store.updateTask(data.trois.id, { dayAt: TODAY });
-  store.updateTask(data.deux.id, { dayAt: '2026-09-24' }); // choisie hier : plus au plan
+  store.updateTask(data.deux.id, { dayAt: '2026-09-24' }); // prévue hier, pas faite : en retard
   await open(page);
   await expect(tab(page, 'Projets')).toHaveAttribute('aria-selected', 'true');
   await tab(page, 'Aujourd’hui').click();
@@ -58,17 +58,19 @@ test('onglet Aujourd’hui : seulement les tâches choisies, par projet ; compte
   await expect(page).toHaveURL(/\/plan$/);
 
   const day = page.locator('#day');
-  await expect(day.locator('.project-label')).toHaveText(['Alpha', 'Beta']);
-  await expect(day.locator('li.task .name')).toHaveText(['Une', 'Trois']);
-  await expect(day.locator('.day-count')).toHaveText('2/5 tâches');
+  // En retard d'abord (sous son titre), puis celles du jour.
+  await expect(day.locator('.late-tasks li.task .name')).toHaveText(['Deux']);
+  await expect(day.locator('.project-label')).toHaveText(['Alpha', 'Alpha', 'Beta']);
+  await expect(day.locator('li.task .name')).toHaveText(['Deux', 'Une', 'Trois']);
+  await expect(day.locator('.day-count')).toHaveText('3/5 tâches');
   await expect(day.locator('.day-count')).not.toHaveClass(/text-destructive/);
   // Filtres de la zone des projets : sans effet ici, masqués.
   await expect(page.locator('#projects')).toHaveCount(0);
 
   // Cochée : part dans le Log, reste comptée.
   await row(page, 'Une').getByRole('checkbox').click();
-  await expect(day.locator('li.task .name')).toHaveText(['Trois']);
-  await expect(day.locator('.day-count')).toHaveText('2/5 tâches');
+  await expect(day.locator('li.task .name')).toHaveText(['Deux', 'Trois']);
+  await expect(day.locator('.day-count')).toHaveText('3/5 tâches');
 
   // Rechargement : l'onglet est dans l'adresse.
   await page.reload();

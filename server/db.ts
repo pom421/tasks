@@ -198,14 +198,14 @@ export class Store {
       .map((r) => r.d!);
     if (limit) {
       const window = dates.filter((d) => (!from || d >= from) && (!to || d <= to)).slice(-limit);
-      if (!window.length) return { days: [], dates };
+      if (!window.length) return { days: [], dates, tags: this.doneTags() };
       [from, to] = [window[0], window.at(-1)];
     }
     if (from) where.push(gte(task.done_at, from));
     if (to) where.push(lte(task.done_at, to));
     if (!from && !to && !projectId && !bugtrackerPending && !q && !tags.length) {
       const last = dates.at(-1);
-      if (!last) return { days: [], dates };
+      if (!last) return { days: [], dates, tags: this.doneTags() };
       where.push(eq(task.done_at, last));
     }
     // done_at jamais NULL ici (filtré plus haut).
@@ -222,7 +222,14 @@ export class Store {
       if (day?.date !== r.done_at) days.push((day = { date: r.done_at, tasks: [] }));
       day.tasks.push(r);
     }
-    return { days, dates };
+    return { days, dates, tags: this.doneTags() };
+  }
+
+  // Tags des tâches faites, triés : propositions du filtre du Log.
+  private doneTags(): string[] {
+    return this.orm
+      .all<{ tag: string }>(sql`SELECT DISTINCT j.value AS tag FROM ${task}, json_each(${task.tags}) AS j WHERE ${task.done_at} IS NOT NULL ORDER BY 1`)
+      .map((r) => r.tag);
   }
 
   // --- Projets -------------------------------------------------------------

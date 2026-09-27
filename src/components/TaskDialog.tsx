@@ -1,10 +1,11 @@
-import { useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { BUGTRACKER_KEY_RE, formatDuration, type DoneTask, type Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
 import type { TaskField } from '@/lib/actions';
 import { record } from '@/lib/history';
 import { focusByKey } from '@/lib/nav';
 import { renderMarkdown } from '@/lib/markdown';
+import { formatDay, isComplete } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
@@ -14,23 +15,25 @@ import { Textarea } from '@/components/ui/textarea';
 import { TimerButtons, useTimer } from './Timer';
 import { PlanButton, usePlan } from './Plan';
 import { PriorityButton, usePriority } from './Priority';
+import { TagInput } from './TagInput';
 
 interface TaskDialogProps {
   task: Task | DoneTask;
   projectName: string;
   field: TaskField;
+  tagSuggestions: string[]; // tags existants (autocomplétion)
   open: boolean;
   // changed : quelque chose a été enregistré (les données sont à recharger).
   onClose: (changed: boolean) => void;
 }
 
-type Field = 'title' | 'ticket' | 'notes';
+type Field = 'title' | 'ticket' | 'day' | 'due' | 'notes';
 
 const ticketOf = (t: Task) => t.bugtracker_key ?? t.bugtracker_url ?? '';
 const isValidTicket = (s: string) => !s || BUGTRACKER_KEY_RE.test(s.toUpperCase()) || /^https?:\/\/\S+$/i.test(s);
 
 // Fiche d'une tâche, façon GitLab : lecture seule par défaut ; e passe tout en
-// édition (titre, puis Tab : ticket, puis contenu Markdown) ; Ctrl+Entrée
+// édition (titre, puis Tab : ticket, date prévue, échéance, tags, contenu Markdown) ; Ctrl+Entrée
 // enregistre et repasse en lecture ; un second Ctrl+Entrée (ou Échap) ferme.
 // Chrono comme sur la ligne : c lance / met en pause, C remet à zéro.
 // Aujourd’hui comme sur la ligne : t ou ☀.
@@ -38,13 +41,20 @@ const isValidTicket = (s: string) => !s || BUGTRACKER_KEY_RE.test(s.toUpperCase(
 // Tout est enregistré automatiquement, rien n'est perdu.
 // Accessibilité : focus piégé, titre et description annoncés (Radix),
 // libellés reliés aux champs, erreurs annoncées.
-export function TaskDialog({ task, projectName, field, open, onClose }: TaskDialogProps) {
+export function TaskDialog({ task, projectName, field, tagSuggestions, open, onClose }: TaskDialogProps) {
   const id = useId();
   const done = 'done_at' in task;
   const timer = useTimer(task);
   const plan = usePlan(task);
   const priority = usePriority(task);
-  const [values, setValues] = useState({ title: task.title, ticket: ticketOf(task), notes: task.notes ?? '' });
+  const [values, setValues] = useState({
+    title: task.title,
+    ticket: ticketOf(task),
+    day: task.day_at ?? '',
+    due: task.due_at ?? '',
+    tags: task.tags,
+    notes: task.notes ?? '',
+  });
   // Ouverte par e (édition complète) ou sur le ticket (L, r → reporté) : directement en édition.
   const [editing, setEditing] = useState(field !== 'notes');
   const [error, setError] = useState<{ field: Field; message: string } | null>(null);
@@ -52,6 +62,8 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
   const refs = {
     title: useRef<HTMLInputElement>(null),
     ticket: useRef<HTMLInputElement>(null),
+    day: useRef<HTMLInputElement>(null),
+    due: useRef<HTMLInputElement>(null),
     notes: useRef<HTMLTextAreaElement>(null),
   };
   const reader = useRef<HTMLDivElement>(null);
@@ -63,6 +75,21 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
     latest.current = { ...latest.current, [key]: e.target.value };
     setValues(latest.current);
   };
+  const setTags = (tags: string[]) => {
+    latest.current = { ...latest.current, tags };
+    setValues(latest.current);
+  };
+  // ☀ (t) change la date prévue hors du formulaire : le champ suit, sauf s'il
+  // a été modifié entre-temps (la saisie l'emporte).
+  useEffect(() => {
+    const day = task.day_at ?? '';
+    if (day === saved.current.day) return;
+    if (latest.current.day === saved.current.day) {
+      latest.current = { ...latest.current, day };
+      setValues(latest.current);
+    }
+    saved.current = { ...saved.current, day };
+  }, [task.day_at]);
 
   // Focus à placer dès le prochain affichage (le champ visé n'existe pas encore
   // quand on change de mode). Appliqué juste après le rendu, avant la touche
@@ -101,19 +128,30 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
       title: values.title.trim(),
       // Identifiant normalisé comme côté serveur (proj-5 → PROJ-5).
       ticket: BUGTRACKER_KEY_RE.test(ticket.toUpperCase()) ? ticket.toUpperCase() : ticket,
+      day: values.day,
+      due: values.due,
+      tags: values.tags,
       notes: values.notes.trim(),
     };
     if (!next.title) return fail('title', 'Le titre est obligatoire');
     if (!isValidTicket(next.ticket)) return fail('ticket', 'Identifiant attendu, ex. PROJ-123');
+    if (!isComplete(next.day)) return fail('day', 'Date invalide');
+    if (!isComplete(next.due)) return fail('due', 'Date invalide');
     const patch: Parameters<typeof api.updateTask>[1] = {};
     if (next.title !== saved.current.title) patch.title = next.title;
     if (next.ticket !== saved.current.ticket) patch.bugtracker_ticket = next.ticket || null;
+    if (next.day !== saved.current.day) patch.day_at = next.day || null;
+    if (next.due !== saved.current.due) patch.due_at = next.due || null;
+    if (next.tags.join() !== saved.current.tags.join()) patch.tags = next.tags;
     if (next.notes !== saved.current.notes.trim()) patch.notes = next.notes || null;
     if (!Object.keys(patch).length) return true;
     // Valeurs d'avant, pour annuler (u) une fois la fiche fermée.
     const before: typeof patch = {};
     if ('title' in patch) before.title = saved.current.title;
     if ('bugtracker_ticket' in patch) before.bugtracker_ticket = saved.current.ticket || null;
+    if ('day_at' in patch) before.day_at = saved.current.day || null;
+    if ('due_at' in patch) before.due_at = saved.current.due || null;
+    if ('tags' in patch) before.tags = saved.current.tags;
     if ('notes' in patch) before.notes = saved.current.notes.trim() || null;
     try {
       await api.updateTask(task.id, patch);
@@ -129,7 +167,8 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
       setError(null);
       return true;
     } catch (err) {
-      return fail(patch.bugtracker_ticket !== undefined ? 'ticket' : 'title', (err as Error).message);
+      const f: Field = patch.bugtracker_ticket !== undefined ? 'ticket' : patch.day_at !== undefined ? 'day' : patch.due_at !== undefined ? 'due' : 'title';
+      return fail(f, (err as Error).message);
     }
   };
 
@@ -252,26 +291,59 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
 
         {editing ? (
           <>
-            <div className="grid gap-1.5 sm:max-w-xs">
-              <Label htmlFor={`${id}-ticket`}>Ticket</Label>
-              <Input
-                ref={refs.ticket}
-                id={`${id}-ticket`}
-                placeholder="PROJ-123"
-                autoComplete="off"
-                value={values.ticket}
-                onChange={set('ticket')}
-                onKeyDown={onInputEnter}
-                {...invalid('ticket')}
+            {/* Ticket, date prévue et échéance sur une ligne (écran large). */}
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid content-start gap-1.5">
+                <Label htmlFor={`${id}-ticket`}>Ticket</Label>
+                <Input
+                  ref={refs.ticket}
+                  id={`${id}-ticket`}
+                  placeholder="PROJ-123"
+                  autoComplete="off"
+                  value={values.ticket}
+                  onChange={set('ticket')}
+                  onKeyDown={onInputEnter}
+                  {...invalid('ticket')}
+                />
+                {errorFor('ticket')}
+              </div>
+              {(['day', 'due'] as const).map((f) => (
+                <div key={f} className="grid content-start gap-1.5">
+                  <Label htmlFor={`${id}-${f}`}>{f === 'day' ? 'Date prévue' : 'Échéance'}</Label>
+                  <Input
+                    ref={refs[f]}
+                    id={`${id}-${f}`}
+                    type="date"
+                    title={f === 'day' ? 'Quand je compte la faire (aujourd’hui : dans Aujourd’hui)' : 'Date limite, imposée de l’extérieur'}
+                    value={values[f]}
+                    onChange={set(f)}
+                    onKeyDown={onInputEnter}
+                    {...invalid(f)}
+                  />
+                  {errorFor(f)}
+                </div>
+              ))}
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor={`${id}-tags`}>Tags</Label>
+              <TagInput
+                id={`${id}-tags`}
+                tags={values.tags}
+                suggestions={tagSuggestions}
+                onChange={setTags}
+                label="Tags"
+                placeholder="Ajouter un tag…"
+                create
+                removeLabel={(tag) => `Retirer le tag ${tag}`}
+                className="min-h-9 px-3 py-1"
               />
-              {errorFor('ticket')}
             </div>
             <div className="grid min-h-0 flex-1 gap-1.5">
               <Label htmlFor={`${id}-notes`}>Contenu</Label>
               <Textarea
                 ref={refs.notes}
                 id={`${id}-notes`}
-                className="min-h-[45vh] font-mono text-sm"
+                className="min-h-[35vh] font-mono text-sm"
                 value={values.notes}
                 onChange={set('notes')}
                 aria-describedby={`${id}-hint`}
@@ -285,13 +357,19 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
             className="reader grid min-h-0 flex-1 gap-4 outline-none"
             aria-describedby={`${id}-hint`}
           >
-            <p className="text-sm">
-              <span className="text-muted-foreground">Ticket : </span>
-              <span className="ticket-value font-mono">{values.ticket || 'aucun'}</span>
-            </p>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-sm">
+              <dt className="text-muted-foreground">Ticket :</dt>
+              <dd className="ticket-value font-mono">{values.ticket || 'aucun'}</dd>
+              <dt className="text-muted-foreground">Date prévue :</dt>
+              <dd className="day-value first-letter:uppercase">{values.day ? formatDay(values.day) : 'aucune'}</dd>
+              <dt className="text-muted-foreground">Échéance :</dt>
+              <dd className="due-value first-letter:uppercase">{values.due ? formatDay(values.due) : 'aucune'}</dd>
+              <dt className="text-muted-foreground">Tags :</dt>
+              <dd className="tags-value">{values.tags.length ? values.tags.map((t) => `#${t}`).join(' ') : 'aucun'}</dd>
+            </dl>
             <div
               className={cn(
-                'notes-preview markdown min-h-[45vh] overflow-y-auto rounded-md border px-3 py-2 text-sm',
+                'notes-preview markdown min-h-[35vh] overflow-y-auto rounded-md border px-3 py-2 text-sm',
                 !values.notes.trim() && 'text-muted-foreground italic',
               )}
               onDoubleClick={() => startEditing('notes')}
