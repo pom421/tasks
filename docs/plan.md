@@ -7,7 +7,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-- [~] « Jira » renommé « bugtracker » partout (base, API, types, interface, tests, docs) : colonnes `bugtracker_*` et réglage `bugtracker_base_url` par la migration 12
+Rien.
 
 ## Décisions attendues
 
@@ -36,6 +36,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
+- [x] « Jira » renommé « bugtracker » partout (base, API, types, interface, tests, docs) : colonnes `bugtracker_*` et réglage `bugtracker_base_url` par la migration 12 (`e6648ce`)
 - [x] Persistance avec Drizzle ORM (1.0 RC, pilote `node:sqlite`) : schéma visible dans `server/schema.ts`, types déduits, test de cohérence schéma / migrations, skill `drizzle` ; migrations SQL gardées, `drizzle-kit` écarté (`3e8ca97`)
 - [x] Log en onglet (« Projets » / « Aujourd’hui » / « Log », une colonne) : `P` / `T` / `L` vont à leur onglet, `Alt+←` / `Alt+→` onglet voisin, curseur gardé par onglet ; filtre priorité sur `!` ; `L` n'ouvre plus la fiche sur le ticket (`03e404a`)
 - [x] Log sur les 5 derniers jours ayant des entrées : pagination `<` / `>` (ou `←` / `→`), bouton « Courant », filtres = jours qui correspondent, date = fin de la période, recherche soulignée en jaune, projet toujours affiché ; `pnpm demo` (`03e404a`)
