@@ -116,6 +116,13 @@ export const MIGRATIONS: Migration[] = [
       ALTER TABLE task RENAME COLUMN jira_url TO bugtracker_url;
       UPDATE setting SET key = 'bugtracker_base_url' WHERE key = 'jira_base_url';`,
   },
+  {
+    version: 13,
+    name: 'échéance et tags des tâches',
+    sql: `
+      ALTER TABLE task ADD COLUMN due_at TEXT;
+      ALTER TABLE task ADD COLUMN tags TEXT NOT NULL DEFAULT '[]';`,
+  },
 ];
 
 export const LATEST_VERSION = MIGRATIONS.at(-1)!.version;

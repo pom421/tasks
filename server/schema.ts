@@ -37,7 +37,11 @@ export const task = sqliteTable(
     position: integer().notNull().default(0), // ordre (priorité) dans le projet
     notes: text(), // contenu, en Markdown
     priority: integer().$type<Priority>(), // 1 (P1, la plus haute) à 3, NULL = aucune
-    day_at: text(), // 'YYYY-MM-DD' : au plan de cette journée (Aujourd'hui)
+    // Date prévue (intention) : 'YYYY-MM-DD'. Aujourd'hui montre celles du jour
+    // et celles passées de tâches pas faites (en retard).
+    day_at: text(),
+    due_at: text(), // échéance (contrainte extérieure) : 'YYYY-MM-DD'
+    tags: text({ mode: 'json' }).$type<string[]>().notNull().default(sql`'[]'`), // tags, JSON : ["client", "urgent"]
     // Report : à reporter = bugtracker_wanted_at sans bugtracker_at, reportée = bugtracker_at.
     bugtracker_wanted_at: text(),
     bugtracker_at: text(),

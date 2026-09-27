@@ -28,6 +28,16 @@ export function formatDuration(seconds: number): string {
   return `${Math.floor(minutes / 60)}h${String(minutes % 60).padStart(2, '0')}`;
 }
 
+// Tag saisi (« #Client Web ») ramené à sa forme enregistrée (« client-web ») ;
+// null s'il est vide ou contient autre chose que lettres, chiffres, - et _.
+export function normalizeTag(input: string): string | null {
+  const tag = input.trim().replace(/^#+/, '').trim().toLowerCase().replace(/\s+/g, '-');
+  return /^[\p{L}\p{N}_-]{1,30}$/u.test(tag) ? tag : null;
+}
+
+// Tous les tags des tâches, triés (autocomplétion).
+export const allTags = (tasks: Pick<Task, 'tags'>[]) => [...new Set(tasks.flatMap((t) => t.tags))].sort((a, b) => a.localeCompare(b, 'fr'));
+
 export const PRIORITIES = [1, 2, 3] as const;
 export type Priority = (typeof PRIORITIES)[number];
 
@@ -86,6 +96,7 @@ export interface JournalFilter {
   projectId?: number;
   bugtrackerPending?: boolean; // seulement les tâches à reporter dans le bugtracker
   q?: string; // recherche : titre, contenu, ticket
+  tags?: string[]; // tâches portant tous ces tags
   limit?: number; // les N derniers jours ayant des entrées jusqu'à `to`
 }
 

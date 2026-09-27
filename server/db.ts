@@ -33,6 +33,8 @@ export interface TaskPatch {
   timeSpent?: number; // annulation : valeurs du chrono remises telles quelles
   timerStartedAt?: string | null;
   dayAt?: string | null;
+  dueAt?: string | null;
+  tags?: string[];
   priority?: Priority | null;
 }
 
@@ -157,7 +159,8 @@ export class Store {
     const tasks = this.orm.select(TASK).from(task).where(isNull(task.done_at)).orderBy(task.position, task.id).all();
     const byProject = new Map<number, Project>(projects.map((p) => [p.id, { ...p, tasks: [] }]));
     for (const t of tasks) byProject.get(t.project_id)?.tasks.push(t);
-    const dayDone = day ? this.count(and(eq(task.day_at, day), isNotNull(task.done_at))) : 0;
+    // Tâches du plan faites ce jour-là, prévues pour ce jour ou avant (en retard).
+    const dayDone = day ? this.count(and(eq(task.done_at, day), lte(task.day_at, day))) : 0;
     return { projects: [...byProject.values()], bugtrackerPending: this.count(BUGTRACKER_PENDING), dayDone, settings: this.settings() };
   }
 
@@ -172,11 +175,14 @@ export class Store {
   // dates : tous les jours ayant des entrées qui correspondent aux filtres
   // (projet, report, recherche), quelle que soit la période : pour passer d'une
   // fenêtre à l'autre.
+  // tags : seulement les tâches qui portent tous ces tags.
   // q : recherche dans le titre, le contenu et le ticket (casse et accents ignorés).
-  journal({ from, to, projectId, bugtrackerPending, q, limit }: JournalFilter = {}): Journal {
+  journal({ from, to, projectId, bugtrackerPending, q, tags = [], limit }: JournalFilter = {}): Journal {
     const where: (SQL | undefined)[] = [isNotNull(task.done_at)];
     if (projectId) where.push(eq(task.project_id, projectId));
     if (bugtrackerPending) where.push(BUGTRACKER_PENDING);
+    // tags : la tâche les porte tous (ET).
+    for (const tag of tags) where.push(sql`EXISTS (SELECT 1 FROM json_each(${task.tags}) WHERE value = ${tag})`);
     if (q) {
       // % et _ saisis sont cherchés tels quels, pas comme jokers SQL.
       const pattern = '%' + fold(q).replace(/[\\%_]/g, (c) => '\\' + c) + '%';
@@ -197,7 +203,7 @@ export class Store {
     }
     if (from) where.push(gte(task.done_at, from));
     if (to) where.push(lte(task.done_at, to));
-    if (!from && !to && !projectId && !bugtrackerPending && !q) {
+    if (!from && !to && !projectId && !bugtrackerPending && !q && !tags.length) {
       const last = dates.at(-1);
       if (!last) return { days: [], dates };
       where.push(eq(task.done_at, last));
@@ -279,10 +285,11 @@ export class Store {
   // bugtracker : état du suivi du bugtracker ('none' efface aussi le ticket) ;
   // bugtrackerKey / bugtrackerUrl : ticket (clé ou lien complet) ; notes : détails (Markdown).
   // timer : chrono (un seul en marche à la fois ; une tâche faite l'arrête) ;
-  // dayAt : au plan de cette journée (Plan journée), null = retirée ;
+  // dayAt : date prévue (Aujourd'hui si c'est ce jour), null = aucune ;
+  // dueAt : échéance, null = aucune ; tags : liste complète (remplace l'ancienne) ;
   // priority : 1 à 3, null = aucune.
   updateTask(id: number, patch: TaskPatch) {
-    const { title, doneAt, bugtracker, bugtrackerKey, bugtrackerUrl, notes, timer, timeSpent, timerStartedAt, dayAt, priority } = patch;
+    const { title, doneAt, bugtracker, bugtrackerKey, bugtrackerUrl, notes, timer, timeSpent, timerStartedAt, dayAt, dueAt, tags, priority } = patch;
     const update = (set: SQLiteUpdateSetSource<typeof task>, where: SQL | undefined = undefined) =>
       this.orm.update(task).set(set).where(and(eq(task.id, id), where)).run();
     if (doneAt) update(PAUSE, RUNNING);
@@ -307,6 +314,8 @@ export class Store {
     if (bugtrackerUrl !== undefined) set.bugtracker_url = bugtrackerUrl;
     if (notes !== undefined) set.notes = notes;
     if (dayAt !== undefined) set.day_at = dayAt;
+    if (dueAt !== undefined) set.due_at = dueAt;
+    if (tags !== undefined) set.tags = tags;
     if (priority !== undefined) set.priority = priority;
     if (Object.keys(set).length) update(set);
     return this.task(id);

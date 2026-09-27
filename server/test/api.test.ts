@@ -229,7 +229,7 @@ test('migration : une base v1 (sans colonne de report) est mise à niveau à l�
            PRAGMA user_version = 1;`);
   v1.close();
   const old = new Store(file);
-  assert.deepEqual(old.state().projects[0].tasks[0], { id: 1, project_id: 1, title: 'Tâche v1', bugtracker_wanted_at: null, bugtracker_at: null, bugtracker_key: null, bugtracker_url: null, notes: null, time_spent: 0, timer_started_at: null, day_at: null, priority: null });
+  assert.deepEqual(old.state().projects[0].tasks[0], { id: 1, project_id: 1, title: 'Tâche v1', bugtracker_wanted_at: null, bugtracker_at: null, bugtracker_key: null, bugtracker_url: null, notes: null, time_spent: 0, timer_started_at: null, day_at: null, due_at: null, tags: [], priority: null });
   assert.ok(old.updateTask(1, { bugtracker: 'done' })?.bugtracker_at);
   old.close();
 });
@@ -391,12 +391,14 @@ test('migration 12 : colonnes et réglage du ticket renommés (bugtracker), donn
             PRAGMA user_version = 11;`);
   v11.close();
   const store11 = new Store(file);
-  assert.deepEqual(store11.migration.applied.map((m) => m.version), [12]);
+  assert.deepEqual(store11.migration.applied.map((m) => m.version), [12, 13]);
   const [done] = store11.journal({ limit: 5 }).days[0].tasks;
   assert.deepEqual(
     [done.bugtracker_wanted_at, done.bugtracker_at, done.bugtracker_key, done.bugtracker_url],
     ['2026-09-01 10:00:00', '2026-09-02 11:00:00', 'PROJ-7', 'https://t.fr/7'],
   );
+  // Migration 13 : ni échéance ni tag sur les tâches existantes.
+  assert.deepEqual([done.due_at, done.tags], [null, []]);
   assert.deepEqual(store11.settings(), { bugtracker_base_url: 'https://t.fr', day_capacity: 4 });
   store11.close();
 });
@@ -535,7 +537,7 @@ test('versions du schéma : base v2 → dernière version (3, 4, 5, 6…), sauve
   // Données conservées et transformées par les migrations.
   assert.deepEqual(store2.state().projects[0].tasks[0], {
     id: 1, project_id: 1, title: 'Reportée en v2', bugtracker_wanted_at: '2026-01-01 09:00:00',
-    bugtracker_at: '2026-01-01 09:00:00', bugtracker_key: null, bugtracker_url: null, notes: null, time_spent: 0, timer_started_at: null, day_at: null, priority: null,
+    bugtracker_at: '2026-01-01 09:00:00', bugtracker_key: null, bugtracker_url: null, notes: null, time_spent: 0, timer_started_at: null, day_at: null, due_at: null, tags: [], priority: null,
   });
   store2.close();
 
@@ -685,6 +687,43 @@ test('Plan journée : choisir une tâche pour un jour, compte des faites, maximu
   for (const bad of [0, 51, '7', 2.5]) assert.equal((await call('PUT', '/api/settings', { day_capacity: bad })).status, 400);
   assert.equal((await call('GET', '/api/settings')).body.day_capacity, 7);
   await call('PUT', '/api/settings', { day_capacity: 5 });
+});
+
+test('Plan journée : une tâche prévue avant et faite ce jour compte dans ce jour', async () => {
+  const { body: p } = await call('POST', '/api/projects', { name: 'En retard' });
+  const { body: a } = await call('POST', '/api/tasks', { project_id: p.id, title: 'Prévue hier' });
+  await call('PATCH', `/api/tasks/${a.id}`, { day_at: '2026-05-01' });
+  await call('PATCH', `/api/tasks/${a.id}`, { done: true, done_at: '2026-05-02' });
+  assert.equal((await call('GET', '/api/state?day=2026-05-02')).body.dayDone, 1);
+  assert.equal((await call('GET', '/api/state?day=2026-05-01')).body.dayDone, 0);
+});
+
+test('échéance et tags : écriture, validation, filtre du Log, restauration', async () => {
+  const { body: p } = await call('POST', '/api/projects', { name: 'Échéances' });
+  const { body: a } = await call('POST', '/api/tasks', { project_id: p.id, title: 'A' });
+  const { body: b } = await call('POST', '/api/tasks', { project_id: p.id, title: 'B' });
+  assert.deepEqual([a.due_at, a.tags], [null, []]);
+  assert.equal((await call('PATCH', `/api/tasks/${a.id}`, { due_at: '2026-10-15' })).body.due_at, '2026-10-15');
+  assert.equal((await call('PATCH', `/api/tasks/${a.id}`, { due_at: '15/10' })).status, 400);
+  // Tags normalisés (# retiré, minuscules, espaces → -), sans doublon.
+  const { body: t } = await call('PATCH', `/api/tasks/${a.id}`, { tags: ['#Client', 'client', 'Site Web'] });
+  assert.deepEqual(t.tags, ['client', 'site-web']);
+  for (const bad of ['client', [''], ['a,b'], [1]]) assert.equal((await call('PATCH', `/api/tasks/${a.id}`, { tags: bad })).status, 400);
+  await call('PATCH', `/api/tasks/${b.id}`, { tags: ['client'] });
+
+  // Log : tâches portant tous les tags demandés.
+  await call('PATCH', `/api/tasks/${a.id}`, { done: true, done_at: '2026-04-01' });
+  await call('PATCH', `/api/tasks/${b.id}`, { done: true, done_at: '2026-04-02' });
+  const titles = async (tags: string) =>
+    (await call('GET', `/api/journal?project=${p.id}&tags=${encodeURIComponent(tags)}`)).body.days.flatMap((d: any) => d.tasks.map((x: any) => x.title));
+  assert.deepEqual(await titles('client'), ['B', 'A']);
+  assert.deepEqual(await titles('client,site-web'), ['A']);
+  assert.deepEqual(await titles('autre'), []);
+
+  // Suppression puis restauration : échéance et tags conservés.
+  const { body: deleted } = await call('DELETE', `/api/tasks/${a.id}`);
+  const { body: restored } = await call('POST', '/api/tasks/restore', deleted);
+  assert.deepEqual([restored.due_at, restored.tags], ['2026-10-15', ['client', 'site-web']]);
 });
 
 test('priorité : P1 à P3, aucune, validation, conservée à la restauration', async () => {

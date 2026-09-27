@@ -5,7 +5,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { type DeletedProject, type ProjectPatch, type Store, type TaskPatch, isDate, today } from './db.ts';
 import type { ProjectRow, TaskRow } from './schema.ts';
-import { BUGTRACKER_KEY_RE, PRIORITIES, type BugtrackerState, type Priority, type Settings, type TimerAction } from '../shared/types.ts';
+import { BUGTRACKER_KEY_RE, PRIORITIES, normalizeTag, type BugtrackerState, type Priority, type Settings, type TimerAction } from '../shared/types.ts';
 import { parseMarkdown } from './markdown.ts';
 
 type Req = IncomingMessage;
@@ -120,11 +120,20 @@ function priority(v: unknown): Priority | null {
   return v as Priority;
 }
 
-// Journée choisie (Plan journée) : date 'YYYY-MM-DD' ou null.
+// Date prévue, échéance : 'YYYY-MM-DD' ou null.
 function dayAt(v: unknown): string | null {
   if (v === null || v === undefined) return null;
   if (!isDate(v)) throw new HttpError(400, 'Date invalide');
   return v;
+}
+
+// Tags : liste de textes, normalisés (#Client → client), sans doublon.
+function tags(v: unknown): string[] {
+  if (v === null || v === undefined) return [];
+  if (!Array.isArray(v) || v.length > 50) throw new HttpError(400, 'Tags invalides');
+  const list = v.map((t) => (typeof t === 'string' ? normalizeTag(t) : null));
+  if (list.includes(null)) throw new HttpError(400, 'Tag invalide : lettres, chiffres, - et _ (30 au plus)');
+  return [...new Set(list as string[])];
 }
 
 function timestamp(v: unknown, label: string): string | null {
@@ -154,6 +163,8 @@ function restoredTask(body: Body): TaskRow {
     time_spent: int(body.time_spent ?? 0, 'Temps passé'),
     timer_started_at: timestamp(body.timer_started_at, 'Début du chrono'),
     day_at: dayAt(body.day_at),
+    due_at: dayAt(body.due_at),
+    tags: tags(body.tags),
     priority: priority(body.priority),
   };
 }
@@ -253,11 +264,13 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
       const projectId = Number(url.searchParams.get('project')) || undefined;
       const bugtrackerPending = url.searchParams.get('bugtracker') === 'pending';
       const q = url.searchParams.get('q')?.trim().slice(0, 200) || undefined;
+      // tags=client,urgent : tâches portant tous ces tags.
+      const tagList = tags(url.searchParams.get('tags')?.split(',').filter(Boolean) ?? []);
       const n = Math.trunc(Number(url.searchParams.get('limit')));
       const limit = n > 0 ? Math.min(n, 100) : undefined;
       if ((from && !isDate(from)) || (to && !isDate(to))) throw new HttpError(400, 'Date invalide');
       if (from && to && from > to) throw new HttpError(400, 'La date de début est après la date de fin');
-      send(res, 200, store.journal({ from, to, projectId, bugtrackerPending, q, limit }));
+      send(res, 200, store.journal({ from, to, projectId, bugtrackerPending, q, tags: tagList, limit }));
     }],
 
     ['GET', /^\/api\/settings$/, (_req, res) => send(res, 200, store.settings())],
@@ -354,6 +367,8 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
       if ('time_spent' in body) patch.timeSpent = int(body.time_spent, 'Temps passé');
       if ('timer_started_at' in body) patch.timerStartedAt = timestamp(body.timer_started_at, 'Début du chrono');
       if ('day_at' in body) patch.dayAt = dayAt(body.day_at);
+      if ('due_at' in body) patch.dueAt = dayAt(body.due_at);
+      if ('tags' in body) patch.tags = tags(body.tags);
       if ('priority' in body) patch.priority = priority(body.priority);
       const task = store.updateTask(Number(id), patch);
       if (!task) throw new HttpError(404, 'Tâche introuvable');
