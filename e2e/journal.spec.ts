@@ -168,7 +168,8 @@ test('projet : seulement les jours où ce projet a des entrées, pagination comp
   await page.reload();
   await page.locator('#filter-project').selectOption({ label: 'Beta' });
   await expect(page.locator('#journal .name')).toHaveText(['Beta 24', 'Beta 22', 'Beta 19', 'Beta 17', 'Beta 12']);
-  await expect(page.locator('#journal .project-label')).toHaveCount(0); // projet unique : pas répété
+  // Nom du projet gardé au-dessus des tâches : on voit ce que montre le filtre.
+  await expect(page.locator('#journal .project-label')).toHaveText(['Beta', 'Beta', 'Beta', 'Beta', 'Beta']);
   await page.getByRole('button', { name: 'Jours précédents' }).click();
   await expect(page.locator('#journal .name')).toHaveText(['Beta 10']);
   await expect(page.getByRole('button', { name: 'Jours précédents' })).toBeDisabled();

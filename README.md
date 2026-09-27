@@ -59,7 +59,7 @@ Chaque session démarre dans un conteneur neuf : les dépendances doivent y êtr
 - Log (un cadre par jour) : fonctionne seul, les boutons de la zone des projets n'y touchent pas. Il montre les 5 derniers jours ayant des entrées (une semaine de travail ; jours vides sautés). Sous les onglets, alignés à droite, trois filtres, combinés : seuls restent les jours qui ont une tâche correspondante :
   - recherche (`/`) : tâches dont le titre, le contenu ou le ticket contient le texte (sans tenir compte des majuscules ni des accents), le texte trouvé souligné dans les titres. `Échap` vide le champ ;
   - date « jusqu’au » (`d`) : les 5 jours jusqu’à cette date ; vide = période courante ;
-  - projet.
+  - projet (le nom du projet reste affiché au-dessus de ses tâches).
   - Au clavier : `/` place le curseur dans la recherche, `Tab` passe à la date puis au projet.
   - `<` / `>` (ou `←` / `→`) passent aux 5 jours précédents / suivants (désactivés en bout de liste) ; « Courant », tout à droite, ramène aux 5 derniers jours. Le nombre de résultats s'affiche au centre : « 6 tâches trouvées dans 5 journées ».
 - Nouveau projet → curseur directement sur la saisie de sa première tâche.

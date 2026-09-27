@@ -30,7 +30,9 @@ export function journalQuery(f: Filter): JournalFilter {
 
 const fieldClass = 'rounded-md border bg-background px-1.5 py-0.5 text-sm';
 
-function Day({ day, showProjects, highlight }: { day: JournalDay; showProjects: boolean; highlight: string }) {
+// Nom du projet toujours au-dessus de ses tâches, même filtré sur un projet :
+// on voit ce que montre le filtre.
+function Day({ day, highlight }: { day: JournalDay; highlight: string }) {
   // Regroupe les tâches consécutives d'un même projet.
   const groups: { id: number; name: string; tasks: DoneTask[] }[] = [];
   for (const t of day.tasks) {
@@ -45,7 +47,7 @@ function Day({ day, showProjects, highlight }: { day: JournalDay; showProjects: 
       </h3>
       {groups.map((g, i) => (
         <div key={`${g.id}-${i}`}>
-          {showProjects && <div className="project-label mt-1.5 ml-1 text-sm font-semibold">{g.name}</div>}
+          <div className="project-label mt-1.5 ml-1 text-sm font-semibold">{g.name}</div>
           <ul>
             {g.tasks.map((t) => (
               <TaskRow key={t.id} task={t} highlight={highlight} />
@@ -199,7 +201,7 @@ export function Journal({ days, dates, projects, filter, onFilter }: JournalProp
       </div>
       <div id="journal-days">
         {days.map((d) => (
-          <Day key={d.date} day={d} showProjects={!filter.project} highlight={filter.q} />
+          <Day key={d.date} day={d} highlight={filter.q} />
         ))}
         {!days.length && (
           <p className="empty mt-3 italic text-muted-foreground">{filtered ? 'Aucune tâche trouvée.' : 'Aucune tâche faite.'}</p>
