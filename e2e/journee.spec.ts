@@ -73,7 +73,7 @@ test('onglet Aujourd’hui : seulement les tâches choisies, par projet ; compte
   // Rechargement : l'onglet est dans l'adresse.
   await page.reload();
   await expect(tab(page, 'Aujourd’hui')).toHaveAttribute('aria-selected', 'true');
-  await page.keyboard.press('l'); // onglet Log
+  await page.keyboard.press('L'); // onglet Log
   await expect(page.locator('#journal li.task', { hasText: 'Une' })).toBeVisible();
 });
 
@@ -162,12 +162,12 @@ test('non-régression : Log sans ☀, filtres des projets inchangés dans l’on
   store.updateTask(data.deux.id, { doneAt: TODAY });
   await open(page);
   await expect(page.locator('#favorites-only')).toBeVisible();
-  await page.keyboard.press('l'); // onglet Log
+  await page.keyboard.press('L'); // onglet Log
   const logged = page.locator('#journal li.task', { hasText: 'Deux' });
   await logged.hover();
   await expect(logged.getByRole('button', { name: 'Pour aujourd’hui' })).toHaveCount(0);
   await expect(page.locator('#favorites-only')).toHaveCount(0);
-  await page.keyboard.press('l');
+  await page.keyboard.press('L');
   await expect(page.locator('#favorites-only')).toBeVisible();
   await page.keyboard.press('T');
   await expect(page.locator('#favorites-only')).toHaveCount(0);

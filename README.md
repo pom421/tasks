@@ -52,7 +52,7 @@ Chaque session démarre dans un conteneur neuf : les dépendances doivent y êtr
 
 ## Utilisation
 
-- Disposition : une colonne, trois onglets : « Projets » (`/`), « Aujourd’hui » (`T`, `/plan`) et « Log » (`l`, `/log`). `T` ou `l` une 2e fois revient sur « Projets ».
+- Disposition : une colonne, trois onglets : « Projets » (`/`), « Aujourd’hui » (`T`, `/plan`) et « Log » (`L`, `/log`). `T` ou `L` une 2e fois revient sur « Projets ». Chaque onglet garde la position du curseur : en y revenant, il est sur le même élément.
 - Cocher une tâche → elle passe dans le Log, datée du jour, barrée. La décocher → elle revient dans son projet.
 - Log (un cadre par jour) : fonctionne seul, les boutons de la zone des projets n'y touchent pas. Par défaut, aujourd'hui (même vide). Sous les onglets, alignés à droite, trois filtres :
   - recherche (`/`) : toutes les journées contenant une tâche dont le titre, le contenu ou le ticket contient le texte (sans tenir compte des majuscules ni des accents). `Échap` vide le champ ;
@@ -67,7 +67,7 @@ Chaque session démarre dans un conteneur neuf : les dépendances doivent y êtr
 - Fiche d'une tâche (`Maj+Entrée`, `o` ou icône 🗒) : titre complet, identifiant du ticket (`PROJ-123`), puis contenu en Markdown. L'icône 🗒 signale une tâche qui a du contenu.
   - Lecture seule par défaut. `e` (comme GitLab) passe tout en édition : titre, puis `Tab` → ticket, puis `Tab` → contenu. Double-clic sur le contenu : édition directement dedans.
   - `Ctrl+Entrée` (ou `Entrée` dans le titre / le ticket) enregistre et repasse en lecture seule ; un second `Ctrl+Entrée` (ou `Échap`) ferme. Enregistrement automatique.
-  - Ouverte par `L` (ou `r` → reporté), la fiche démarre en édition sur le ticket et `Entrée` la ferme.
+  - Ouverte par `r` → reporté, la fiche démarre en édition sur le ticket et `Entrée` la ferme.
 - Chrono d'une tâche à faire : au survol de la ligne (et dans la fiche), ▷ lance le chrono (`c`) ; en marche, l'icône devient une pause pleine, toujours visible. Temps passé dans l'info-bulle de l'icône (« 12 min », puis « 2h34 ») ; dans la fiche, affiché à gauche des icônes (texte normal chrono en marche, atténué sinon ; aussi pour une tâche faite). ↻ remet à zéro (`C`, sans confirmation, annulable par `u`). Un seul chrono en marche à la fois. Cocher la tâche arrête son chrono.
 - Aujourd’hui (plan du jour) : au survol d'une tâche à faire (et dans la fiche), ☀ l'ajoute à Aujourd’hui (`t`) ; une fois ajoutée, le soleil est plein et reste visible. L'onglet « Aujourd’hui » (`T`, adresse `/plan`) ne montre que ces tâches, par projet, sous un compteur « 3/5 tâches » (tâches du plan, faites comprises, sur le maximum par jour), en rouge au-delà du maximum. Une tâche cochée part dans le Log et reste comptée. Le plan vaut pour le jour même. Maximum réglable dans les Réglages (5 par défaut). Filtres de la zone des projets masqués dans cet onglet. Annulable (`u`).
 - Priorité d'une tâche : icône chiffre à droite, pleine et colorée (1 rouge, 2 orange, 3 bleu), sinon « 1 » dans un carré à contour, au survol (ce que donne un clic). `1` `2` `3` sur la tâche donnent la priorité, le même chiffre la retire ; clic sur l'icône : aucune → 1 → 2 → 3 → aucune. Même icône et mêmes touches dans la fiche. Annulable (`u`).
@@ -90,12 +90,11 @@ Clavier (`?` affiche l'aide, un 2e `?` ou `Échap` la ferme ; groupée par thèm
 | `Maj+Entrée` ou `o` | Ouvrir la fiche de la tâche (contenu Markdown, ticket) |
 | `e` | Ouvrir la fiche directement en édition (titre, `Tab` → ticket, `Tab` → contenu) |
 | `r` | Report : à reporter → reporté (fiche proposée pour le ticket) → rien |
-| `L` (majuscule) | Ouvrir la fiche sur le champ « Ticket » |
 | `c` | Chrono de la tâche : lancer / mettre en pause (aussi dans la fiche) |
 | `C` (majuscule) | Remettre le chrono à zéro (annulable par `u`) |
 | `t` | Ajouter la tâche à Aujourd’hui / l'en retirer (aussi dans la fiche) |
 | `T` (majuscule) | Onglet « Projets » / « Aujourd’hui » |
-| `l` (minuscule) | Onglet « Projets » / « Log » |
+| `L` (majuscule) | Onglet « Projets » / « Log » |
 | `1` `2` `3` | Priorité 1, 2 ou 3 ; le même chiffre la retire (aussi dans la fiche) |
 | `R` (majuscule) | Projets : seulement les tâches à reporter → reportées → toutes (ou clic sur le bouton du report) |
 | `P` (majuscule) | Projets : seulement les tâches de priorité 1 → 2 → 3 → toutes (ou clic sur « Priorités ») |

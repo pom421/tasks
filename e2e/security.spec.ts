@@ -10,7 +10,7 @@ test('aucune erreur console ni violation CSP', async ({ page, store }) => {
   store.createTask(p.id, 'À faire');
 
   await page.goto('/');
-  await page.keyboard.press('l');
+  await page.keyboard.press('L');
   await expect(page.locator('#journal .name')).toHaveText(['Faite']);
   await page.keyboard.press('?');
   await expect(page.getByRole('dialog')).toBeVisible();

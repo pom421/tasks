@@ -96,6 +96,22 @@ export function App() {
     });
   }, []);
 
+  // Curseur de chaque onglet (clé de navigation du dernier élément focalisé) :
+  // retrouvé en revenant sur l'onglet.
+  const tabFocus = useRef<Record<string, string>>({});
+  useEffect(() => {
+    const onFocus = (e: FocusEvent) => {
+      const key = (e.target as HTMLElement).dataset?.navKey;
+      if (key) tabFocus.current[window.location.pathname] = key;
+    };
+    document.addEventListener('focusin', onFocus);
+    return () => document.removeEventListener('focusin', onFocus);
+  }, []);
+  useLayoutEffect(() => {
+    const key = tabFocus.current[path];
+    if (key) focusByKey(key);
+  }, [path]);
+
   // Rechargé à chaque retour sur la liste (les réglages ont pu changer).
   useEffect(() => {
     if (path === '/admin') return;
@@ -226,7 +242,7 @@ export function App() {
         A: () => projectsView && setArchivedOnly((v) => !v),
         P: () => projectsView && cyclePriorityFilter(),
         T: () => navigate(dayView ? '/' : '/plan'),
-        l: () => navigate(logView ? '/' : '/log'),
+        L: () => navigate(logView ? '/' : '/log'),
         u: () => replay('undo'),
         U: () => replay('redo'),
         '?': () => setHelpOpen(true),
@@ -309,9 +325,9 @@ export function App() {
           <div className="min-w-0">
             <div role="tablist" aria-label="Vue" className="mt-3 flex h-[26px] items-center gap-4 lg:mt-5">
               {[
-                { label: 'Projets', to: '/', selected: projectsView, title: 'Projets (T depuis Aujourd’hui, l depuis le Log)' },
+                { label: 'Projets', to: '/', selected: projectsView, title: 'Projets (T depuis Aujourd’hui, L depuis le Log)' },
                 { label: 'Aujourd’hui', to: '/plan', selected: dayView, title: 'Aujourd’hui (T)' },
-                { label: 'Log', to: '/log', selected: logView, title: 'Log (l)' },
+                { label: 'Log', to: '/log', selected: logView, title: 'Log (L)' },
               ].map((tab) => (
                 <button
                   key={tab.to}

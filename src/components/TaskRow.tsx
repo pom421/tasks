@@ -116,9 +116,9 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
       e.preventDefault();
       cycleJira();
     }
-    if (e.key === 'L' || e.key === 'o' || e.key === 'e' || (e.key === 'Enter' && e.shiftKey)) {
+    if (e.key === 'o' || e.key === 'e' || (e.key === 'Enter' && e.shiftKey)) {
       e.preventDefault();
-      openTask(task, e.key === 'L' ? 'jira' : e.key === 'e' ? 'edit' : 'notes');
+      openTask(task, e.key === 'e' ? 'edit' : 'notes');
     }
   };
 

@@ -95,7 +95,7 @@ test('non-régression : priorité gardée dans le Log ; n n sur une tâche = nou
   store.updateTask(une.id, { priority: 1, doneAt: '2026-09-25' });
   await page.goto('/log');
   await expect(page.locator('.day li.task', { hasText: 'Une' }).locator('button.priority')).toHaveAttribute('aria-label', 'Priorité 1');
-  await page.keyboard.press('l'); // onglet Projets
+  await page.keyboard.press('L'); // onglet Projets
   await row(page, 'Deux').locator('.name').focus();
   await page.keyboard.press('n');
   await page.keyboard.press('n');
@@ -126,9 +126,9 @@ test('P : filtre priorité 1 → 2 → 3 → toutes (zone des projets seulement)
   await expect(button).toHaveText('Priorité 1');
   await expect(button).toHaveAttribute('aria-pressed', 'true');
   await expect(names).toHaveText(['Alpha', 'Urgent']);
-  await page.keyboard.press('l');
+  await page.keyboard.press('L');
   await expect(page.locator('#journal .name')).toHaveText(['Faite']); // Log inchangé
-  await page.keyboard.press('l'); // retour aux projets : filtre gardé
+  await page.keyboard.press('L'); // retour aux projets : filtre gardé
   await expect(button).toHaveText('Priorité 1');
   await page.keyboard.press('P');
   await expect(names).toHaveText(['Alpha', 'Important']);

@@ -60,23 +60,23 @@ test('onglet Log : filtres (recherche, date, projet) sur une ligne sous les ongl
   expect(Math.abs((await middle('#filter-reset')) - line)).toBeLessThan(4);
 });
 
-test('l : onglet Log, un 2e l revient sur Projets ; / et d y passent aussi', async ({ page }) => {
+test('L : onglet Log, un 2e L revient sur Projets ; / et d y passent aussi', async ({ page }) => {
   const tab = (name: string) => page.getByRole('tab', { name, exact: true });
   await expect(tab('Log')).toHaveAttribute('aria-selected', 'true');
-  await expect(tab('Log')).toHaveAttribute('title', 'Log (l)');
-  await page.keyboard.press('l');
+  await expect(tab('Log')).toHaveAttribute('title', 'Log (L)');
+  await page.keyboard.press('L');
   await expect(tab('Projets')).toHaveAttribute('aria-selected', 'true');
   await expect(page).toHaveURL(/\/$/);
   await expect(page.locator('#journal')).toHaveCount(0);
   await expect(page.locator('#projects .project')).toHaveCount(1);
-  await page.keyboard.press('l');
+  await page.keyboard.press('L');
   await expect(tab('Log')).toHaveAttribute('aria-selected', 'true');
   await expect(page).toHaveURL(/\/log$/);
   await expect(page.locator('#projects')).toHaveCount(0);
-  // Depuis Aujourd’hui : l va au Log ; T depuis le Log va à Aujourd’hui.
+  // Depuis Aujourd’hui : L va au Log ; T depuis le Log va à Aujourd’hui.
   await page.keyboard.press('T');
   await expect(tab('Aujourd’hui')).toHaveAttribute('aria-selected', 'true');
-  await page.keyboard.press('l');
+  await page.keyboard.press('L');
   await expect(tab('Log')).toHaveAttribute('aria-selected', 'true');
   // Clic sur l'onglet.
   await tab('Projets').click();
@@ -84,13 +84,13 @@ test('l : onglet Log, un 2e l revient sur Projets ; / et d y passent aussi', asy
   await tab('Log').click();
   await expect(tab('Log')).toHaveAttribute('aria-selected', 'true');
   // / et d depuis Projets : passent dans l'onglet Log, sur le champ.
-  await page.keyboard.press('l');
+  await page.keyboard.press('L');
   await page.keyboard.press('/');
   await expect(tab('Log')).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('#log-search')).toBeFocused();
   await page.locator('#log-search').press('Escape');
   await page.locator('#journal').click({ position: { x: 5, y: 5 } });
-  await page.keyboard.press('l');
+  await page.keyboard.press('L');
   await page.keyboard.press('d');
   await expect(date(page)).toBeFocused();
 });

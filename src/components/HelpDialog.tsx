@@ -14,7 +14,7 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
       [[['Entrée']], 'Modifier le nom ; sur « + Ajouter », écrire'],
       [[['Échap']], 'Quitter l’édition sans enregistrer ; « + Ajouter » : vider, repasser en lecture'],
       [[['T']], 'Onglet Projets / Aujourd’hui'],
-      [[['l']], 'Onglet Projets / Log'],
+      [[['L']], 'Onglet Projets / Log'],
     ],
   ],
   [
@@ -22,7 +22,6 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
     [
       [[['Maj+Entrée'], ['o']], 'Ouvrir en lecture'],
       [[['e']], 'Ouvrir en édition (titre, Tab : ticket, contenu)'],
-      [[['L']], 'Ouvrir sur le ticket'],
       [[['Ctrl+Entrée']], 'Enregistrer et lire ; en lecture, fermer'],
       [[['c', 'C', 't', '1', '2', '3']], 'Comme sur la tâche'],
     ],
