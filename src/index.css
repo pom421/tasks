@@ -21,6 +21,8 @@
   --border: oklch(0.923 0.003 48.7);
   --input: oklch(0.83 0.006 56);
   --ring: oklch(0.708 0.12 262);
+  /* Soulignement des occurrences de la recherche du Log : jaune franc sur fond clair. */
+  --search-mark: oklch(0.8 0.17 88);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -39,6 +41,8 @@
     --border: oklch(0.32 0.008 40);
     --input: oklch(0.32 0.008 40);
     --ring: oklch(0.55 0.1 254);
+    /* Jaune fluo sur fond sombre. */
+    --search-mark: oklch(0.93 0.21 110);
   }
 }
 
@@ -60,6 +64,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-search-mark: var(--search-mark);
 }
 
 @layer base {

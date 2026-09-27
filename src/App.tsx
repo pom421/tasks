@@ -243,6 +243,9 @@ export function App() {
         P: () => projectsView && cyclePriorityFilter(),
         T: () => navigate(dayView ? '/' : '/plan'),
         L: () => navigate(logView ? '/' : '/log'),
+        // Log : 5 jours précédents / suivants (bouton désactivé : sans effet).
+        ArrowLeft: () => logView && document.getElementById('day-prev')?.click(),
+        ArrowRight: () => logView && document.getElementById('day-next')?.click(),
         u: () => replay('undo'),
         U: () => replay('redo'),
         '?': () => setHelpOpen(true),

@@ -26,6 +26,8 @@ Développement : `pnpm dev` → http://localhost:5173 (rechargement à chaud, AP
 
 Arrêter : `Ctrl+C`. Les données sont dans `data/tasks.db`, qui est créé au premier lancement.
 
+Démo : `pnpm demo` recrée `data/demo.db` (3 projets, 8 jours ouvrés de Log jusqu'à hier) et lance l'app dessus, sans toucher à `data/tasks.db`.
+
 Options : `PORT=8080 pnpm start` pour changer de port, `TASKS_DB=~/taches.db pnpm start` pour un autre fichier de base.
 
 Vérifications :
@@ -59,7 +61,7 @@ Chaque session démarre dans un conteneur neuf : les dépendances doivent y êtr
   - date « jusqu’au » (`d`) : les 5 jours jusqu’à cette date ; vide = période courante ;
   - projet.
   - Au clavier : `/` place le curseur dans la recherche, `Tab` passe à la date puis au projet.
-  - `<` / `>` passent aux 5 jours précédents / suivants (désactivés en bout de liste) ; « Courant », tout à droite, ramène aux 5 derniers jours. Le nombre de résultats s'affiche au centre : « 6 tâches trouvées dans 5 journées ».
+  - `<` / `>` (ou `←` / `→`) passent aux 5 jours précédents / suivants (désactivés en bout de liste) ; « Courant », tout à droite, ramène aux 5 derniers jours. Le nombre de résultats s'affiche au centre : « 6 tâches trouvées dans 5 journées ».
 - Nouveau projet → curseur directement sur la saisie de sa première tâche.
 - Projet : cœur ♡ = favori (plein et rouge quand actif, `f`). Au survol d'un projet : icônes archive (archiver / désarchiver, `a`) et corbeille (supprimer, `x` `x`), avec leur nom en info-bulle. Suppression toujours en deux temps, sans fenêtre de confirmation : 1er appui (`x` ou corbeille) = message de ce qui va être supprimé, 2e appui = suppression, `Échap` annule. Une tâche se supprime au clavier (`x` `x`). Tout est annulable (`u`), y compris la suppression : le projet revient avec toutes ses tâches, Log compris.
 - Dans l'onglet « Projets », sous les onglets et alignés à droite, quatre filtres de la **zone des projets** (sans effet sur le Log), combinables : report (`R` ou clic : « N tâches à reporter » → « N tâches reportées » → toutes), priorité (`P` ou clic : « Priorité 1 » → 2 → 3 → toutes), « Archivés » (seulement les projets archivés, `A`), « Favoris » (seulement les favoris, `F`). Chacun n'apparaît que s'il sert (au moins une tâche à faire à reporter ou reportée, une tâche à faire avec une priorité, un projet archivé, un favori) ; actif, son icône se remplit (pas de fond coloré).
@@ -108,6 +110,7 @@ Clavier (`?` affiche l'aide, un 2e `?` ou `Échap` la ferme ; groupée par thèm
 | `n` | Nouvelle tâche (dans le projet où est le curseur, sinon le dernier utilisé) |
 | `n` puis `n` | Nouveau projet (deux appuis rapprochés, comme `g` `g`) |
 | `d` | Date de fin de la période du Log (passe dans l'onglet Log) |
+| `←` / `→` | Log : 5 jours précédents / suivants |
 | `/` | Rechercher dans le Log (passe dans l'onglet Log) |
 
 L'historique d'annulation est gardé en mémoire vive, dans l'onglet : on peut annuler autant d'actions que cette mémoire le permet, sans autre limite. Il se vide au rechargement de la page ; chaque `u` / `U`, lui, est enregistré en base comme toute modification.

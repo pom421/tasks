@@ -1,6 +1,23 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "tasks", "runtimeExecutable": "pnpm", "runtimeArgs": ["dev"], "port": 5173, "autoPort": true }
+    {
+      "name": "tasks",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "dev"
+      ],
+      "port": 5173,
+      "autoPort": true
+    },
+    {
+      "name": "tasks-demo",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "demo"
+      ],
+      "port": 5173,
+      "autoPort": true
+    }
   ]
 }

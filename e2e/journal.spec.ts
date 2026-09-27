@@ -44,6 +44,20 @@ test('Log : les 5 derniers jours ayant des entrées ; < et > de 5 en 5 ; Courant
   await current.click();
   await expect(days(page)).toHaveText(RECENT);
   await expect(current).toBeDisabled();
+  // Au clavier : ← / → (hors champ), sans effet en bout de liste.
+  await page.locator('#journal').click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press('ArrowLeft');
+  await expect(days(page)).toHaveText(OLDER);
+  await page.keyboard.press('ArrowLeft');
+  await expect(days(page)).toHaveText(OLDER);
+  await page.keyboard.press('ArrowRight');
+  await expect(days(page)).toHaveText(RECENT);
+  // Dans la recherche, ← / → déplacent le curseur du texte.
+  await page.locator('#log-search').fill('Vingt');
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.locator('#log-search')).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Jours précédents' })).toHaveAttribute('title', /\(←\)$/);
+  await page.locator('#log-search').fill('');
   // « Courant » tout à droite de la ligne de navigation.
   const right = (b: { x: number; width: number }) => b.x + b.width;
   const log = (await page.locator('#journal').boundingBox())!;
@@ -168,6 +182,7 @@ test('recherche : jours dont une tâche correspond (titre, contenu, ticket), com
   await expect(marks).toHaveText(['Vingt', 'Vingt', 'Vingt', 'Vingt', 'Vingt']);
   await expect(marks.first()).toHaveCSS('text-decoration-line', /underline/);
   await expect(marks.first()).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(marks.first()).toHaveCSS('text-decoration-thickness', '3px');
   await expect(page.locator('#journal .name', { hasText: 'Déploiement' }).locator('mark')).toHaveCount(0);
   // Rien d'autre avant le 20 : pas de jours précédents.
   await expect(page.getByRole('button', { name: 'Jours précédents' })).toBeDisabled();

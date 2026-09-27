@@ -166,7 +166,7 @@ export function Journal({ days, dates, projects, filter, onFilter }: JournalProp
           size="icon"
           className="size-7"
           aria-label="Jours précédents"
-          title={prev ? `${LOG_DAYS} jours précédents, jusqu’au ${formatDay(prev)}` : 'Pas de jours précédents'}
+          title={prev ? `${LOG_DAYS} jours précédents, jusqu’au ${formatDay(prev)} (←)` : 'Pas de jours précédents'}
           disabled={!prev}
           onClick={() => prev && goTo(prev)}
         >
@@ -177,7 +177,7 @@ export function Journal({ days, dates, projects, filter, onFilter }: JournalProp
           size="icon"
           className="size-7"
           aria-label="Jours suivants"
-          title={next === undefined ? 'Pas de jours suivants' : `${LOG_DAYS} jours suivants`}
+          title={next === undefined ? 'Pas de jours suivants' : `${LOG_DAYS} jours suivants (→)`}
           disabled={next === undefined}
           onClick={() => next !== undefined && goTo(next)}
         >

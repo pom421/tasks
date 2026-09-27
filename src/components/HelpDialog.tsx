@@ -64,6 +64,7 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
     [
       [[['/']], 'Rechercher, depuis tout onglet (Tab : date, projet)'],
       [[['d']], 'Période jusqu’à une date, depuis tout onglet'],
+      [[['←', '→']], '5 jours précédents / suivants'],
       [[['Échap']], 'Vider la recherche, retirer les filtres du Log'],
     ],
   ],

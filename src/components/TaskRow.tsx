@@ -143,7 +143,7 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
           value={task.title}
           display={splitMatches(task.title, highlight).map((part, i) =>
             part.match ? (
-              <mark key={i} className="search-match bg-transparent text-foreground underline decoration-2 underline-offset-2">
+              <mark key={i} className="search-match bg-transparent text-foreground underline decoration-search-mark decoration-[3px] underline-offset-2 [text-decoration-skip-ink:none]">
                 {part.text}
               </mark>
             ) : (
