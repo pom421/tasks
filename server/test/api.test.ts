@@ -448,6 +448,27 @@ test('journal : liste des jours ayant des entrées, filtrée par projet', async 
   assert.deepEqual(onlyA.dates, ['2019-03-01', '2019-03-03']);
 });
 
+test('journal : fenêtre des N derniers jours ayant des entrées (limit), filtres compris', async () => {
+  const { body: p } = await call('POST', '/api/projects', { name: 'Fenêtre' });
+  const days = ['2018-01-01', '2018-01-02', '2018-01-04', '2018-01-05', '2018-01-08', '2018-01-09', '2018-01-10'];
+  for (const d of days) {
+    const { body: t } = await call('POST', '/api/tasks', { project_id: p.id, title: d === '2018-01-04' ? 'Revue fenêtre' : `f ${d}` });
+    await call('PATCH', `/api/tasks/${t.id}`, { done: true, done_at: d });
+  }
+  const shown = async (query: string) =>
+    (await call('GET', `/api/journal?project=${p.id}&limit=5${query}`)).body.days.map((d: any) => d.date);
+  // Les 5 derniers jours ayant des entrées (jours vides sautés), du plus récent au plus ancien.
+  assert.deepEqual(await shown(''), ['2018-01-10', '2018-01-09', '2018-01-08', '2018-01-05', '2018-01-04']);
+  // Fenêtre qui finit le 5 (ou un jour vide juste après) : les 5 jours jusque-là.
+  assert.deepEqual(await shown('&to=2018-01-07'), ['2018-01-05', '2018-01-04', '2018-01-02', '2018-01-01']);
+  // Recherche : seulement les jours qui ont une tâche correspondante ; dates suivent la recherche.
+  const { body: q } = await call('GET', `/api/journal?project=${p.id}&limit=5&q=fenetre`);
+  assert.deepEqual(q.dates, ['2018-01-04']);
+  assert.deepEqual(q.days.map((d: any) => d.tasks.map((t: any) => t.title)), [['Revue fenêtre']]);
+  // Limite invalide : ignorée.
+  assert.equal((await call('GET', `/api/journal?project=${p.id}&limit=-2`)).status, 200);
+});
+
 test('versions du schéma : base neuve suivie dans schema_migration', async () => {
   const { MIGRATIONS, LATEST_VERSION } = await import('../migrations.ts');
   const fresh = new Store(path.join(dir, 'neuve.sqlite'));

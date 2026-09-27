@@ -54,12 +54,12 @@ Chaque session démarre dans un conteneur neuf : les dépendances doivent y êtr
 
 - Disposition : une colonne, trois onglets : « Projets » (`/`), « Aujourd’hui » (`T`, `/plan`) et « Log » (`L`, `/log`). `T` ou `L` une 2e fois revient sur « Projets ». Chaque onglet garde la position du curseur : en y revenant, il est sur le même élément.
 - Cocher une tâche → elle passe dans le Log, datée du jour, barrée. La décocher → elle revient dans son projet.
-- Log (un cadre par jour) : fonctionne seul, les boutons de la zone des projets n'y touchent pas. Par défaut, aujourd'hui (même vide). Sous les onglets, alignés à droite, trois filtres :
-  - recherche (`/`) : toutes les journées contenant une tâche dont le titre, le contenu ou le ticket contient le texte (sans tenir compte des majuscules ni des accents). `Échap` vide le champ ;
-  - journée (`d`) : le Log de ce jour. Pendant une recherche, elle la limite à ce jour ; vide = toutes les journées ;
+- Log (un cadre par jour) : fonctionne seul, les boutons de la zone des projets n'y touchent pas. Il montre les 5 derniers jours ayant des entrées (une semaine de travail ; jours vides sautés). Sous les onglets, alignés à droite, trois filtres, combinés : seuls restent les jours qui ont une tâche correspondante :
+  - recherche (`/`) : tâches dont le titre, le contenu ou le ticket contient le texte (sans tenir compte des majuscules ni des accents), le texte trouvé souligné dans les titres. `Échap` vide le champ ;
+  - date « jusqu’au » (`d`) : les 5 jours jusqu’à cette date ; vide = période courante ;
   - projet.
-  - Au clavier : `/` place le curseur dans la recherche, `Tab` passe à la journée puis au projet.
-  - `<` / `>` passent au jour précédent / suivant qui a des entrées (désactivés en bout de liste et pendant une recherche) ; « Aujourd’hui », tout à droite, y ramène. Le nombre de résultats s'affiche au centre : « 5 tâches trouvées dans 2 journées ».
+  - Au clavier : `/` place le curseur dans la recherche, `Tab` passe à la date puis au projet.
+  - `<` / `>` passent aux 5 jours précédents / suivants (désactivés en bout de liste) ; « Courant », tout à droite, ramène aux 5 derniers jours. Le nombre de résultats s'affiche au centre : « 6 tâches trouvées dans 5 journées ».
 - Nouveau projet → curseur directement sur la saisie de sa première tâche.
 - Projet : cœur ♡ = favori (plein et rouge quand actif, `f`). Au survol d'un projet : icônes archive (archiver / désarchiver, `a`) et corbeille (supprimer, `x` `x`), avec leur nom en info-bulle. Suppression toujours en deux temps, sans fenêtre de confirmation : 1er appui (`x` ou corbeille) = message de ce qui va être supprimé, 2e appui = suppression, `Échap` annule. Une tâche se supprime au clavier (`x` `x`). Tout est annulable (`u`), y compris la suppression : le projet revient avec toutes ses tâches, Log compris.
 - Dans l'onglet « Projets », sous les onglets et alignés à droite, quatre filtres de la **zone des projets** (sans effet sur le Log), combinables : report (`R` ou clic : « N tâches à reporter » → « N tâches reportées » → toutes), priorité (`P` ou clic : « Priorité 1 » → 2 → 3 → toutes), « Archivés » (seulement les projets archivés, `A`), « Favoris » (seulement les favoris, `F`). Chacun n'apparaît que s'il sert (au moins une tâche à faire à reporter ou reportée, une tâche à faire avec une priorité, un projet archivé, un favori) ; actif, son icône se remplit (pas de fond coloré).
@@ -107,7 +107,7 @@ Clavier (`?` affiche l'aide, un 2e `?` ou `Échap` la ferme ; groupée par thèm
 | `U` (majuscule) | Rétablir (rejouer) l'action annulée, dans l'ordre. Une nouvelle action efface ce qui restait à rétablir |
 | `n` | Nouvelle tâche (dans le projet où est le curseur, sinon le dernier utilisé) |
 | `n` puis `n` | Nouveau projet (deux appuis rapprochés, comme `g` `g`) |
-| `d` | Filtre du Log par journée (passe dans l'onglet Log) |
+| `d` | Date de fin de la période du Log (passe dans l'onglet Log) |
 | `/` | Rechercher dans le Log (passe dans l'onglet Log) |
 
 L'historique d'annulation est gardé en mémoire vive, dans l'onglet : on peut annuler autant d'actions que cette mémoire le permet, sans autre limite. Il se vide au rechargement de la page ; chaque `u` / `U`, lui, est enregistré en base comme toute modification.

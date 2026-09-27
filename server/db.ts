@@ -167,28 +167,15 @@ export class Store {
 
   // Période [from, to] incluse, bornes facultatives ('YYYY-MM-DD').
   // done_at n'a pas d'heure : from = to couvre toute la journée.
+  // limit : les `limit` derniers jours ayant des entrées jusqu'à `to` (fenêtre du Log).
   // Sans aucun filtre : la dernière journée travaillée.
-  // dates : tous les jours ayant des tâches faites (du projet filtré s'il y en
-  // a un), pour naviguer d'un jour à l'autre.
+  // dates : tous les jours ayant des entrées qui correspondent aux filtres
+  // (projet, report, recherche), quelle que soit la période : pour passer d'une
+  // fenêtre à l'autre.
   // q : recherche dans le titre, le contenu et le ticket (casse et accents ignorés).
-  journal({ from, to, projectId, jiraPending, q }: JournalFilter = {}): Journal {
-    const dates = (
-      this.db
-        .prepare(
-          `SELECT DISTINCT done_at AS d FROM task WHERE done_at IS NOT NULL ${projectId ? 'AND project_id = ?' : ''} ORDER BY d`,
-        )
-        .all(...(projectId ? [projectId] : [])) as { d: string }[]
-    ).map((r) => r.d);
+  journal({ from, to, projectId, jiraPending, q, limit }: JournalFilter = {}): Journal {
     const where = ['t.done_at IS NOT NULL'];
     const params: (string | number)[] = [];
-    if (from) {
-      where.push('t.done_at >= ?');
-      params.push(from);
-    }
-    if (to) {
-      where.push('t.done_at <= ?');
-      params.push(to);
-    }
     if (projectId) {
       where.push('t.project_id = ?');
       params.push(projectId);
@@ -201,8 +188,24 @@ export class Store {
       where.push('(' + cols.map((c) => `fold(${c}) LIKE ? ESCAPE '\\'`).join(' OR ') + ')');
       params.push(...cols.map(() => pattern));
     }
+    const dates = (
+      this.db.prepare(`SELECT DISTINCT t.done_at AS d FROM task t WHERE ${where.join(' AND ')} ORDER BY d`).all(...params) as { d: string }[]
+    ).map((r) => r.d);
+    if (limit) {
+      const window = dates.filter((d) => (!from || d >= from) && (!to || d <= to)).slice(-limit);
+      if (!window.length) return { days: [], dates };
+      [from, to] = [window[0], window.at(-1)];
+    }
+    if (from) {
+      where.push('t.done_at >= ?');
+      params.push(from);
+    }
+    if (to) {
+      where.push('t.done_at <= ?');
+      params.push(to);
+    }
     if (!from && !to && !projectId && !jiraPending && !q) {
-      const last = (this.db.prepare('SELECT MAX(done_at) AS d FROM task').get() as { d: string | null }).d;
+      const last = dates.at(-1);
       if (!last) return { days: [], dates };
       where.push('t.done_at = ?');
       params.push(last);

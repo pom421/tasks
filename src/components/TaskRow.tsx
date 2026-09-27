@@ -5,6 +5,7 @@ import { api, type TaskPatch } from '@/lib/api';
 import { useActions } from '@/lib/actions';
 import { localToday } from '@/lib/dates';
 import { cn } from '@/lib/utils';
+import { splitMatches } from '@/lib/highlight';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { EditableName } from './Editable';
@@ -19,13 +20,13 @@ import { PriorityButton, usePriority } from './Priority';
 // Espace coche / décoche, r fait tourner le suivi du report
 // (rien -> à reporter -> reporté -> rien), o ou Maj+Entrée ouvre la fiche,
 // e l'ouvre directement en édition,
-// L l'ouvre sur l'identifiant du ticket,
 // c lance / met en pause le chrono, C l'arrête et le remet à zéro (tâches à faire),
 // t l'ajoute à Aujourd’hui ou l'en retire (tâches à faire),
 // 1, 2, 3 donnent la priorité (le même chiffre la retire),
 // x ou Suppr demande la suppression, un second appui la confirme,
 // Alt+↑ / Alt+↓ (ou Alt+k / Alt+j) déplacent la tâche (onMove, tâches à faire).
-export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (direction: -1 | 1) => void }) {
+// highlight : recherche du Log, soulignée dans le titre.
+export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTask; onMove?: (direction: -1 | 1) => void; highlight?: string }) {
   const { openTask, undoable } = useActions();
   const done = 'done_at' in task;
   const [editingDate, setEditingDate] = useState(false);
@@ -140,6 +141,15 @@ export function TaskRow({ task, onMove }: { task: Task | DoneTask; onMove?: (dir
       <span className="title flex min-w-0 flex-1 items-center gap-1.5">
         <EditableName
           value={task.title}
+          display={splitMatches(task.title, highlight).map((part, i) =>
+            part.match ? (
+              <mark key={i} className="search-match bg-transparent text-foreground underline decoration-2 underline-offset-2">
+                {part.text}
+              </mark>
+            ) : (
+              part.text
+            ),
+          )}
           navKey={navKey}
           // Toute la largeur jusqu'aux icônes : un clic n'importe où sur la ligne
           // passe le titre en édition (et donne le curseur clavier à la tâche).

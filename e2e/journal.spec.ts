@@ -1,42 +1,71 @@
 import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures.ts';
 
-// Tâches faites le 20, le 21 (×2) et le 23 septembre.
+// Tâches faites sur 8 jours (21 : deux tâches), dans Alpha ; jours vides entre.
+const DONE = [
+  ['Quatorze', '2026-09-14'], ['Quinze', '2026-09-15'], ['Seize', '2026-09-16'], ['Dix-huit', '2026-09-18'],
+  ['Vingt', '2026-09-20'], ['Vingt et un A', '2026-09-21'], ['Vingt et un B', '2026-09-21'],
+  ['Vingt-trois', '2026-09-23'], ['Vingt-quatre', '2026-09-24'],
+];
 test.beforeEach(async ({ page, store }) => {
   const p = store.createProject('Alpha');
-  const done = [['Vingt', '2026-09-20'], ['Vingt et un A', '2026-09-21'], ['Vingt et un B', '2026-09-21'], ['Vingt-trois', '2026-09-23']];
-  for (const [title, doneAt] of done) store.updateTask(store.createTask(p.id, title).id, { doneAt });
+  for (const [title, doneAt] of DONE) store.updateTask(store.createTask(p.id, title).id, { doneAt });
   await page.goto('/log');
-  // Sans filtre : aujourd'hui (date figée au vendredi 25), même vide.
-  await expect(page.locator('#journal .day h3')).toHaveText(['vendredi 25 septembre 2026']);
-  await expect(page.locator('#journal .day .empty')).toHaveText('Rien de fait ce jour-là.');
+  await expect(page.locator('#journal .day').first()).toBeVisible();
 });
 
 // textContent : la majuscule initiale est ajoutée en CSS.
 const days = (page: Page) => page.locator('#journal .day h3');
-
 const date = (page: Page) => page.locator('#filter-date');
+const RECENT = [
+  'jeudi 24 septembre 2026', 'mercredi 23 septembre 2026', 'lundi 21 septembre 2026',
+  'dimanche 20 septembre 2026', 'vendredi 18 septembre 2026',
+];
+const OLDER = ['mercredi 16 septembre 2026', 'mardi 15 septembre 2026', 'lundi 14 septembre 2026'];
 
-test('journée : un seul champ date, le Log montre cette journée', async ({ page }) => {
-  await expect(date(page)).toHaveValue('2026-09-25'); // aujourd'hui par défaut
-  await expect(page.locator('#filter-from, #filter-to')).toHaveCount(0);
-  await date(page).fill('2026-09-21');
-  await expect(days(page)).toHaveText(['lundi 21 septembre 2026']);
-  await expect(page.locator('#journal .name')).toHaveText(['Vingt et un A', 'Vingt et un B']);
-  await date(page).fill('2026-09-22'); // rien ce jour-là
-  await expect(days(page)).toHaveText(['mardi 22 septembre 2026']);
-  await expect(page.locator('#journal .day .empty')).toHaveText('Rien de fait ce jour-là.');
+test('Log : les 5 derniers jours ayant des entrées ; < et > de 5 en 5 ; Courant y revient', async ({ page }) => {
+  const prev = page.getByRole('button', { name: 'Jours précédents' });
+  const next = page.getByRole('button', { name: 'Jours suivants' });
+  const current = page.getByRole('button', { name: 'Courant', exact: true });
+  // Jours vides (22, 19, 17) sautés ; aujourd'hui (25), vide, absent.
+  await expect(days(page)).toHaveText(RECENT);
+  await expect(page.locator('#log-count')).toHaveText('6 tâches trouvées dans 5 journées');
+  await expect(next).toBeDisabled();
+  await expect(current).toBeDisabled();
+  await expect(date(page)).toHaveValue(''); // vide = période courante
+
+  await prev.click();
+  await expect(days(page)).toHaveText(OLDER);
+  await expect(prev).toBeDisabled(); // plus rien avant
+  await expect(current).toBeEnabled();
+  await next.click();
+  await expect(days(page)).toHaveText(RECENT);
+  await prev.click();
+  await current.click();
+  await expect(days(page)).toHaveText(RECENT);
+  await expect(current).toBeDisabled();
+  // « Courant » tout à droite de la ligne de navigation.
+  const right = (b: { x: number; width: number }) => b.x + b.width;
+  const log = (await page.locator('#journal').boundingBox())!;
+  expect(Math.abs(right((await current.boundingBox())!) - right(log))).toBeLessThan(2);
+});
+
+test('date : les 5 jours ayant des entrées jusqu’à ce jour', async ({ page }) => {
+  await date(page).fill('2026-09-19'); // jour vide : fenêtre jusqu'au 18
+  await expect(days(page)).toHaveText(['vendredi 18 septembre 2026', ...OLDER]);
+  // > : les jours suivants, jusqu'à la période courante.
+  await page.getByRole('button', { name: 'Jours suivants' }).click();
+  await expect(days(page)).toHaveText(RECENT);
 });
 
 test('d : focus sur la date ; saisie au clavier, année appliquée seulement complète', async ({ page }) => {
   await page.locator('#journal').click({ position: { x: 5, y: 5 } }); // hors champ
   await page.keyboard.press('d');
   await expect(date(page)).toBeFocused(); // premier segment (mois)
-  await page.keyboard.type('0920'); // format mm/jj/aaaa du navigateur de test ; année 2026 gardée
-  await expect(days(page)).toHaveText(['dimanche 20 septembre 2026']);
-  // Année retapée : 0002, 0020, 0202 ignorées, 2026 appliquée.
-  await page.keyboard.type('2026');
-  await expect(days(page)).toHaveText(['dimanche 20 septembre 2026']);
+  await page.keyboard.type('092020'); // format mm/jj/aaaa du navigateur de test ; année 0020 ignorée
+  await expect(days(page)).toHaveText(RECENT);
+  await page.keyboard.type('26'); // 2026 : appliquée
+  await expect(days(page)).toHaveText(['dimanche 20 septembre 2026', 'vendredi 18 septembre 2026', ...OLDER]);
   await expect(date(page)).toBeFocused();
 });
 
@@ -95,103 +124,76 @@ test('L : onglet Log, un 2e L revient sur Projets ; / et d y passent aussi', asy
   await expect(date(page)).toBeFocused();
 });
 
-test('Réinitialiser : retour à aujourd’hui', async ({ page }) => {
-  await date(page).fill('2026-09-20');
-  await expect(days(page)).toHaveText(['dimanche 20 septembre 2026']);
+test('Réinitialiser : retour à la période courante', async ({ page }) => {
+  await date(page).fill('2026-09-16');
+  await expect(days(page)).toHaveText(OLDER);
   await page.getByRole('button', { name: 'Réinitialiser les filtres du Log' }).click();
-  await expect(days(page)).toHaveText(['vendredi 25 septembre 2026']);
-  await expect(date(page)).toHaveValue('2026-09-25');
+  await expect(days(page)).toHaveText(RECENT);
+  await expect(date(page)).toHaveValue('');
 });
 
-test('< et > : jour précédent / suivant ayant des entrées, désactivés en bout de liste', async ({ page }) => {
-  const prev = page.getByRole('button', { name: 'Jour précédent' });
-  const next = page.getByRole('button', { name: 'Jour suivant' });
-  // Aujourd'hui : rien après.
-  await expect(next).toBeDisabled();
-  await expect(prev).toBeEnabled();
-
-  await prev.click(); // 23 (le 24 n'a rien : sauté)
-  await expect(days(page)).toHaveText(['mercredi 23 septembre 2026']);
-  await expect(page.locator('#journal .name')).toHaveText(['Vingt-trois']);
-  await prev.click();
-  await expect(days(page)).toHaveText(['lundi 21 septembre 2026']);
-  await expect(page.locator('#journal .name')).toHaveText(['Vingt et un A', 'Vingt et un B']);
-  await prev.click();
-  await expect(days(page)).toHaveText(['dimanche 20 septembre 2026']);
-  await expect(prev).toBeDisabled(); // plus rien avant
-  await expect(next).toBeEnabled();
-
-  await next.click();
-  await expect(days(page)).toHaveText(['lundi 21 septembre 2026']);
-  // Retour direct à aujourd'hui.
-  const todayButton = page.getByRole('button', { name: 'Aujourd’hui', exact: true });
-  await expect(date(page)).toHaveValue('2026-09-21'); // le champ date suit
-  await todayButton.click();
-  await expect(days(page)).toHaveText(['vendredi 25 septembre 2026']);
-  await expect(date(page)).toHaveValue('2026-09-25');
-  await expect(todayButton).toBeDisabled(); // déjà sur aujourd'hui, mais toujours visible
-  // Tout à droite de la ligne de navigation.
-  const right = async (loc: typeof todayButton) => (await loc.boundingBox())!.x + (await loc.boundingBox())!.width;
-  const logRight = (await page.locator('#journal').boundingBox())!;
-  expect(Math.abs((await right(todayButton)) - (logRight.x + logRight.width))).toBeLessThan(2);
-});
-
-test('navigation par jour : limitée au projet filtré, désactivée pendant une recherche', async ({ page, store }) => {
+test('projet : seulement les jours où ce projet a des entrées, pagination comprise', async ({ page, store }) => {
   const beta = store.createProject('Beta');
-  store.updateTask(store.createTask(beta.id, 'Beta le 22').id, { doneAt: '2026-09-22' });
+  for (const d of ['2026-09-10', '2026-09-12', '2026-09-17', '2026-09-19', '2026-09-22', '2026-09-24'])
+    store.updateTask(store.createTask(beta.id, `Beta ${d.slice(-2)}`).id, { doneAt: d });
   await page.reload();
   await page.locator('#filter-project').selectOption({ label: 'Beta' });
-  const prev = page.getByRole('button', { name: 'Jour précédent' });
-  await prev.click();
-  await expect(days(page)).toHaveText(['mardi 22 septembre 2026']);
-  await expect(prev).toBeDisabled(); // Beta n'a rien avant le 22
-
-  await page.locator('#log-search').fill('Beta');
-  await expect(prev).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Jour suivant' })).toBeDisabled();
+  await expect(page.locator('#journal .name')).toHaveText(['Beta 24', 'Beta 22', 'Beta 19', 'Beta 17', 'Beta 12']);
+  await expect(page.locator('#journal .project-label')).toHaveCount(0); // projet unique : pas répété
+  await page.getByRole('button', { name: 'Jours précédents' }).click();
+  await expect(page.locator('#journal .name')).toHaveText(['Beta 10']);
+  await expect(page.getByRole('button', { name: 'Jours précédents' })).toBeDisabled();
 });
 
-test('recherche : toutes les journées dont une tâche correspond (titre, contenu, ticket), avec compteur', async ({ page, store }) => {
+test('recherche : jours dont une tâche correspond (titre, contenu, ticket), compteur, mot souligné', async ({ page, store }) => {
   const p = store.createProject('Beta');
   store.updateTask(store.createTask(p.id, 'Déploiement').id, { doneAt: '2026-09-22', notes: 'Suite de la réunion **Vingt**' });
-  store.updateTask(store.createTask(p.id, 'Ticket seul').id, { doneAt: '2026-09-24', jira: 'done', jiraKey: 'VING-1' });
+  store.updateTask(store.createTask(p.id, 'Ticket seul').id, { doneAt: '2026-09-19', jira: 'done', jiraKey: 'VING-1' });
   await page.reload();
   const count = page.locator('#log-count');
-  await expect(count).toHaveText('Aucune tâche trouvée'); // aujourd'hui : rien
 
   await page.keyboard.press('/');
   await expect(page.locator('#log-search')).toBeFocused();
   await page.keyboard.type('VINGT'); // casse ignorée ; titre, contenu et ticket (VING-1 ne correspond pas)
   await expect(days(page)).toHaveText([
+    'jeudi 24 septembre 2026',
     'mercredi 23 septembre 2026',
     'mardi 22 septembre 2026', // trouvé par le contenu
     'lundi 21 septembre 2026',
     'dimanche 20 septembre 2026',
   ]);
-  await expect(count).toHaveText('5 tâches trouvées dans 4 journées');
-  await expect(page.getByRole('button', { name: 'Jour précédent' })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Aujourd’hui', exact: true })).toBeDisabled();
+  await expect(count).toHaveText('6 tâches trouvées dans 5 journées');
+  // Occurrences soulignées dans les titres des cartes (pas de fond coloré).
+  const marks = page.locator('#journal mark.search-match');
+  await expect(marks).toHaveText(['Vingt', 'Vingt', 'Vingt', 'Vingt', 'Vingt']);
+  await expect(marks.first()).toHaveCSS('text-decoration-line', /underline/);
+  await expect(marks.first()).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(page.locator('#journal .name', { hasText: 'Déploiement' }).locator('mark')).toHaveCount(0);
+  // Rien d'autre avant le 20 : pas de jours précédents.
+  await expect(page.getByRole('button', { name: 'Jours précédents' })).toBeDisabled();
 
   await page.locator('#log-search').fill('ving-1');
-  await expect(days(page)).toHaveText(['jeudi 24 septembre 2026']);
+  await expect(days(page)).toHaveText(['samedi 19 septembre 2026']);
   await expect(count).toHaveText('1 tâche trouvée dans 1 journée');
 
-  // Accents ignorés : « deploiement » trouve « Déploiement ».
-  await page.locator('#log-search').fill('deploiement');
+  // Accents ignorés : « deploi » trouve et souligne « Déploi ».
+  await page.locator('#log-search').fill('deploi');
   await expect(page.locator('#journal .name')).toHaveText(['Déploiement']);
+  await expect(page.locator('#journal mark')).toHaveText(['Déploi']);
 
-  // Recherche + journée : limitée à cette journée ; date vidée : toutes les journées.
+  // Recherche + date : fenêtre jusqu'à ce jour.
   await page.locator('#log-search').fill('vingt');
-  await expect(count).toHaveText('5 tâches trouvées dans 4 journées');
-  await expect(date(page)).toHaveValue(''); // pendant une recherche, vide = toutes
   await date(page).fill('2026-09-21');
-  await expect(days(page)).toHaveText(['lundi 21 septembre 2026']);
-  await expect(count).toHaveText('2 tâches trouvées dans 1 journée');
-  await date(page).fill('');
-  await expect(count).toHaveText('5 tâches trouvées dans 4 journées');
+  await expect(days(page)).toHaveText(['lundi 21 septembre 2026', 'dimanche 20 septembre 2026']);
+  await expect(count).toHaveText('3 tâches trouvées dans 2 journées');
 
-  // Échap vide la recherche : retour à aujourd'hui.
+  // Rien ne correspond : message exact.
+  await page.locator('#log-search').fill('introuvable');
+  await expect(page.locator('#journal-days .empty')).toHaveText('Aucune tâche trouvée.');
+  await expect(count).toHaveText('Aucune tâche trouvée');
+
+  // Échap vide la recherche.
   await page.locator('#log-search').press('Escape');
   await expect(page.locator('#log-search')).toHaveValue('');
-  await expect(days(page)).toHaveText(['vendredi 25 septembre 2026']);
+  await expect(page.locator('#journal mark')).toHaveCount(0);
 });

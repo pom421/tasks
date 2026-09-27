@@ -1300,7 +1300,6 @@ test('u après une suppression : la tâche revient avec son contenu, sélectionn
 test('u dans le Log : décocher puis annuler remet la tâche au même jour', async ({ page, store, data }) => {
   store.updateTask(data.tasks.trois.id, { doneAt: '2026-09-20' });
   await page.goto('/log');
-  await page.getByRole('button', { name: 'Jour précédent' }).click(); // Log sur le 20
   await expect(page.locator('#journal .name', { hasText: 'Trois' })).toBeVisible();
   await page.keyboard.press('End');
   await page.keyboard.press(' ');
@@ -1411,6 +1410,7 @@ test('Échap Échap : retire tous les filtres (projets et Log) ; un seul Échap 
   store.updateTask(data.tasks.une.id, { jira: 'wanted', priority: 1 });
   store.updateProject(store.createProject('Gamma').id, { archived: true });
   store.updateTask(store.createTask(data.beta.id, 'Une ancienne').id, { doneAt: '2026-09-01' });
+  store.updateTask(store.createTask(data.beta.id, 'Autre faite').id, { doneAt: '2026-09-02' });
   await page.goto('/log');
   await page.locator('#log-search').fill('Une');
   await expect(page.locator('#journal .name')).toHaveText(['Une ancienne']); // recherche appliquée
@@ -1434,7 +1434,7 @@ test('Échap Échap : retire tous les filtres (projets et Log) ; un seul Échap 
   await expect(page.locator('#projects .project-head .name')).toHaveText(['Alpha', 'Beta']);
   await page.keyboard.press('L');
   await expect(page.locator('#log-search')).toHaveValue('');
-  await expect(page.locator('#journal .name')).toHaveCount(0); // Log revenu à aujourd'hui
+  await expect(page.locator('#journal .name')).toHaveText(['Autre faite', 'Une ancienne']); // plus de recherche
 });
 
 // Chromium des tests masque les barres de défilement (pas de décalage visible) :

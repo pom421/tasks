@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { focusedByNav } from '@/lib/nav';
@@ -10,11 +10,13 @@ interface EditableNameProps {
   className?: string;
   // Sur une ligne, avec « … » si trop long ; titre complet en info-bulle.
   truncate?: boolean;
+  // Affichage en lecture, si différent de value (ex. recherche soulignée).
+  display?: ReactNode;
 }
 
 // Nom navigable au clavier. Clic ou Entrée -> champ d'édition :
 // Entrée enregistre, Échap annule, dans les deux cas le focus revient au nom.
-export function EditableName({ value, navKey, onSave, className, truncate = false }: EditableNameProps) {
+export function EditableName({ value, navKey, onSave, className, truncate = false, display = value }: EditableNameProps) {
   const [tooltip, setTooltip] = useState(false);
   const [editing, setEditing] = useState(false);
   const refocus = useRef(false);
@@ -73,7 +75,7 @@ export function EditableName({ value, navKey, onSave, className, truncate = fals
         }
       }}
     >
-      {value}
+      {display}
     </span>
   );
   if (!truncate) return name;

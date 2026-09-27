@@ -38,13 +38,14 @@ export const api = {
   state: (day: string) => request<State>('GET', `/api/state?day=${day}`),
   settings: () => request<Settings>('GET', '/api/settings'),
   updateSettings: (patch: Partial<Settings>) => request<Settings>('PUT', '/api/settings', patch),
-  journal: ({ from, to, projectId, jiraPending, q }: JournalFilter) => {
+  journal: ({ from, to, projectId, jiraPending, q, limit }: JournalFilter) => {
     const params = new URLSearchParams();
     if (from) params.set('from', from);
     if (to) params.set('to', to);
     if (projectId) params.set('project', String(projectId));
     if (jiraPending) params.set('jira', 'pending');
     if (q) params.set('q', q);
+    if (limit) params.set('limit', String(limit));
     return request<Journal>('GET', `/api/journal?${params}`);
   },
   createProject: (name: string) => request<{ id: number }>('POST', '/api/projects', { name }),

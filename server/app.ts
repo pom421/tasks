@@ -252,9 +252,11 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
       const projectId = Number(url.searchParams.get('project')) || undefined;
       const jiraPending = url.searchParams.get('jira') === 'pending';
       const q = url.searchParams.get('q')?.trim().slice(0, 200) || undefined;
+      const n = Math.trunc(Number(url.searchParams.get('limit')));
+      const limit = n > 0 ? Math.min(n, 100) : undefined;
       if ((from && !isDate(from)) || (to && !isDate(to))) throw new HttpError(400, 'Date invalide');
       if (from && to && from > to) throw new HttpError(400, 'La date de début est après la date de fin');
-      send(res, 200, store.journal({ from, to, projectId, jiraPending, q }));
+      send(res, 200, store.journal({ from, to, projectId, jiraPending, q, limit }));
     }],
 
     ['GET', /^\/api\/settings$/, (_req, res) => send(res, 200, store.settings())],

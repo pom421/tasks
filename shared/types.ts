@@ -88,7 +88,7 @@ export interface State {
 
 export interface Journal {
   days: JournalDay[];
-  dates: string[]; // jours ayant des tâches faites (du projet filtré), triés
+  dates: string[]; // jours ayant des entrées qui correspondent aux filtres, triés
 }
 
 export interface JournalFilter {
@@ -97,6 +97,7 @@ export interface JournalFilter {
   projectId?: number;
   jiraPending?: boolean; // seulement les tâches à reporter dans Jira
   q?: string; // recherche : titre, contenu, ticket
+  limit?: number; // les N derniers jours ayant des entrées jusqu'à `to`
 }
 
 export interface ImportResult {

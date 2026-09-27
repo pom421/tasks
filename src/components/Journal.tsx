@@ -1,37 +1,36 @@
 import { useEffect, useRef, useState } from 'react';
 import type { DoneTask, JournalDay, JournalFilter, Project } from '../../shared/types.ts';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { formatDay, isComplete, localToday } from '@/lib/dates';
+import { formatDay, isComplete } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { TaskRow } from './TaskRow';
 
+// Le Log montre une fenêtre de 5 jours ayant des entrées (une semaine de travail).
+export const LOG_DAYS = 5;
+
 // Filtres du Log, indépendants de ceux de la zone des projets.
 export interface Filter {
-  day: string; // journée choisie ; '' = aujourd'hui (sans recherche) ou toutes (avec recherche)
+  day: string; // dernier jour de la fenêtre ; '' = période courante (les plus récents)
   project: string; // id du projet, '' = tous
   q: string; // recherche : titre, contenu, ticket
 }
 
 export const NO_FILTER: Filter = { day: '', project: '', q: '' };
 
-// Sans recherche, le Log montre un seul jour (aujourd'hui par défaut).
-export const isDayMode = (f: Filter) => !f.q;
-
-// La journée choisie filtre toujours ; sans recherche, c'est aujourd'hui par défaut.
+// Les 5 derniers jours ayant des entrées qui correspondent aux filtres, jusqu'à `day`.
 export function journalQuery(f: Filter): JournalFilter {
-  const day = f.day || (isDayMode(f) ? localToday() : '');
   return {
-    from: day || undefined,
-    to: day || undefined,
+    to: f.day || undefined,
     projectId: Number(f.project) || undefined,
     q: f.q || undefined,
+    limit: LOG_DAYS,
   };
 }
 
 const fieldClass = 'rounded-md border bg-background px-1.5 py-0.5 text-sm';
 
-function Day({ day, showProjects }: { day: JournalDay; showProjects: boolean }) {
+function Day({ day, showProjects, highlight }: { day: JournalDay; showProjects: boolean; highlight: string }) {
   // Regroupe les tâches consécutives d'un même projet.
   const groups: { id: number; name: string; tasks: DoneTask[] }[] = [];
   for (const t of day.tasks) {
@@ -44,13 +43,12 @@ function Day({ day, showProjects }: { day: JournalDay; showProjects: boolean }) 
       <h3 className="mb-1 border-b pb-1 text-sm font-semibold text-muted-foreground first-letter:uppercase">
         {formatDay(day.date)}
       </h3>
-      {!day.tasks.length && <p className="empty py-1 text-sm italic text-muted-foreground">Rien de fait ce jour-là.</p>}
       {groups.map((g, i) => (
         <div key={`${g.id}-${i}`}>
           {showProjects && <div className="project-label mt-1.5 ml-1 text-sm font-semibold">{g.name}</div>}
           <ul>
             {g.tasks.map((t) => (
-              <TaskRow key={t.id} task={t} />
+              <TaskRow key={t.id} task={t} highlight={highlight} />
             ))}
           </ul>
         </div>
@@ -68,15 +66,10 @@ interface JournalProps {
 }
 
 export function Journal({ days, dates, projects, filter, onFilter }: JournalProps) {
-  const today = localToday();
-  const dayMode = isDayMode(filter);
-  const current = filter.day || today;
-
   // Champ de date non contrôlé : une valeur incomplète (année en cours de
-  // frappe) ne doit pas être écrasée par React. Il montre le jour affiché ;
-  // pendant une recherche, vide = toutes les journées.
+  // frappe) ne doit pas être écrasée par React. Vide = période courante.
   const dateRef = useRef<HTMLInputElement>(null);
-  const shownDate = dayMode ? current : filter.day;
+  const shownDate = filter.day;
   useEffect(() => {
     if (dateRef.current && dateRef.current.value !== shownDate) dateRef.current.value = shownDate;
   }, [shownDate]);
@@ -105,12 +98,16 @@ export function Journal({ days, dates, projects, filter, onFilter }: JournalProp
     ? `${taskCount} tâche${s(taskCount)} trouvée${s(taskCount)} dans ${dayCount} journée${s(dayCount)}`
     : 'Aucune tâche trouvée';
 
-  // Navigation jour par jour : parmi les jours ayant des entrées, plus aujourd'hui
-  // (pour pouvoir y revenir). Hors mode « un jour », les boutons sont désactivés.
-  const stops = [...new Set([...dates, today])].sort();
-  const prev = dayMode ? stops.filter((d) => d < current).at(-1) : undefined;
-  const next = dayMode ? stops.find((d) => d > current) : undefined;
-  const goTo = (day: string) => onFilter({ ...filter, day: day === today ? '' : day });
+  // Pagination de 5 en 5 parmi les jours qui correspondent aux filtres (dates).
+  // Fenêtre précédente : finit au jour qui précède la plus ancienne affichée ;
+  // suivante : les 5 jours après la plus récente ('' si elle rejoint la période courante).
+  const newest = days[0]?.date ?? filter.day;
+  const oldest = days.at(-1)?.date ?? filter.day;
+  const before = dates.filter((d) => d < oldest);
+  const after = dates.filter((d) => d > newest);
+  const prev = before.at(-1);
+  const next = after.length ? (after.length > LOG_DAYS ? after[LOG_DAYS - 1] : '') : undefined;
+  const goTo = (day: string) => onFilter({ ...filter, day });
 
   return (
     // Onglet Log : filtres sous les onglets, alignés à droite (comme ceux des projets).
@@ -136,8 +133,8 @@ export function Journal({ days, dates, projects, filter, onFilter }: JournalProp
           ref={dateRef}
           type="date"
           id="filter-date"
-          aria-label="Journée"
-          title="Journée (d)"
+          aria-label="Jusqu’au"
+          title={`Jusqu’au (d) : les ${LOG_DAYS} derniers jours ayant des entrées jusqu’à cette date`}
           className={fieldClass}
           onChange={(e) => changeDay(e.target.value)}
         />
@@ -163,13 +160,13 @@ export function Journal({ days, dates, projects, filter, onFilter }: JournalProp
           </Button>
         )}
       </div>
-      <div className="mt-3 flex items-center gap-1" role="group" aria-label="Navigation par jour">
+      <div className="mt-3 flex items-center gap-1" role="group" aria-label="Navigation par période">
         <Button
           id="day-prev"
           size="icon"
           className="size-7"
-          aria-label="Jour précédent"
-          title={prev ? formatDay(prev) : 'Pas de jour précédent'}
+          aria-label="Jours précédents"
+          title={prev ? `${LOG_DAYS} jours précédents, jusqu’au ${formatDay(prev)}` : 'Pas de jours précédents'}
           disabled={!prev}
           onClick={() => prev && goTo(prev)}
         >
@@ -179,10 +176,10 @@ export function Journal({ days, dates, projects, filter, onFilter }: JournalProp
           id="day-next"
           size="icon"
           className="size-7"
-          aria-label="Jour suivant"
-          title={next ? formatDay(next) : 'Pas de jour suivant'}
-          disabled={!next}
-          onClick={() => next && goTo(next)}
+          aria-label="Jours suivants"
+          title={next === undefined ? 'Pas de jours suivants' : `${LOG_DAYS} jours suivants`}
+          disabled={next === undefined}
+          onClick={() => next !== undefined && goTo(next)}
         >
           <ChevronRight aria-hidden />
         </Button>
@@ -193,23 +190,19 @@ export function Journal({ days, dates, projects, filter, onFilter }: JournalProp
         <Button
           id="day-today"
           className="h-7"
-          title="Revenir au jour courant"
-          disabled={!dayMode || current === today}
-          onClick={() => goTo(today)}
+          title={`Revenir aux ${LOG_DAYS} derniers jours ayant des entrées`}
+          disabled={next === undefined}
+          onClick={() => goTo('')}
         >
-          Aujourd’hui
+          Courant
         </Button>
       </div>
       <div id="journal-days">
-        {dayMode ? (
-          <Day day={days[0] ?? { date: current, tasks: [] }} showProjects={!filter.project} />
-        ) : (
-          days.map((d) => <Day key={d.date} day={d} showProjects={!filter.project} />)
-        )}
-        {!dayMode && !days.length && (
-          <p className="empty mt-3 italic text-muted-foreground">
-            Aucune tâche trouvée.
-          </p>
+        {days.map((d) => (
+          <Day key={d.date} day={d} showProjects={!filter.project} highlight={filter.q} />
+        ))}
+        {!days.length && (
+          <p className="empty mt-3 italic text-muted-foreground">{filtered ? 'Aucune tâche trouvée.' : 'Aucune tâche faite.'}</p>
         )}
       </div>
     </section>

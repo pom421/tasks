@@ -7,11 +7,13 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-- [~] Essai : Log en onglet (« Projets » / « Aujourd’hui » / « Log »), `L` bascule Projets ↔ Log (`L` sur une tâche n'ouvre plus la fiche sur le ticket : `e` / `o` suffisent) ; curseur gardé par onglet ; une seule colonne (branche `claude/log-tab-keyboard-shortcut-1b56a8`)
+- [~] Essai : Log en onglet (« Projets » / « Aujourd’hui » / « Log »), `L` bascule Projets ↔ Log (`L` sur une tâche n'ouvre plus la fiche sur le ticket : `e` / `o` suffisent) ; curseur gardé par onglet ; une seule colonne ; Log sur les 5 derniers jours ayant des entrées, pagination de 5 en 5, bouton « Courant », filtres = jours qui correspondent, recherche soulignée (branche `claude/log-tab-keyboard-shortcut-1b56a8`)
 
 ## Décisions attendues
 
 - [?] Log en onglet : garder l'essai (plus de Log visible à côté des projets) ?
+- [?] Log : raccourcis pour `<` / `>` (5 jours précédents / suivants) ? Aujourd'hui seulement à la souris.
+- [?] Log : aujourd'hui sans entrée n'apparaît plus (avant : cadre « Rien de fait ce jour-là »). À réafficher ?
 
 - [?] Compteur « N tâches à reporter » : ne compte plus les tâches **faites** à
   reporter (elles gardent leur badge dans le Log). Ajouter un indicateur dans
