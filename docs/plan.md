@@ -33,6 +33,7 @@ Rien.
 
 ## Fait (récent)
 
+- [x] Titre coupé : info-bulle au focus clavier après un court délai (500 ms), rien si on passe vite dessus avec j / k
 - [x] Filtres des projets sous les onglets, alignés à droite (plus d'espace sur mobile, ligne réservée même vide) ; onglet « Plan journée » renommé « Aujourd’hui » (☀ : « Pour aujourd’hui », adresse `/plan` gardée) ; `?` une 2e fois ferme l'aide
 - [x] Filtres des projets déplacés dans l'onglet « Projets », sur la ligne des onglets à droite (comme le Log), à la hauteur des champs du Log ; l'en-tête ne garde que le titre, l'aide et les réglages
 - [x] Historique d'annulation en mémoire dans le navigateur (zustand, sans limite de nombre) : `u` annule une à une, `U` rejoue ; créations, déplacements, report, date et fiche désormais annulables

@@ -995,6 +995,21 @@ test('titre long : « … » sur une ligne, titre complet au survol ou au focus 
   await expect(page.locator('.full-title')).toHaveCount(0);
 });
 
+test('titre long au clavier : info-bulle après un court délai, rien si on passe vite dessus', async ({ page, store, data }) => {
+  const long = 'Préparer la présentation trimestrielle pour le comité de direction avec les chiffres consolidés de toutes les équipes produit';
+  store.updateTask(data.tasks.une.id, { title: long });
+  await reload(page);
+  await page.mouse.move(0, 0); // pas de survol
+  await pressDown(page, 2); // sur le titre long
+  await page.waitForTimeout(150);
+  await expect(page.locator('.full-title')).toHaveCount(0); // pas encore
+  await page.keyboard.press('j'); // on passe
+  await page.waitForTimeout(700);
+  await expect(page.locator('.full-title')).toHaveCount(0); // jamais affichée
+  await page.keyboard.press('k'); // on revient et on s'arrête
+  await expect(page.locator('.full-title')).toHaveText(long);
+});
+
 test('ligne épurée et fiche ordonnée : titre, ticket, contenu', async ({ page, data }) => {
   await expect(page.locator(`[data-nav-key="add:${data.alpha.id}"]`)).toHaveAttribute('placeholder', '+ Ajouter une tâche (n)');
   const une = row(page, data.tasks.une.id);
