@@ -5,7 +5,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { type DeletedProject, type ProjectPatch, type Store, type TaskPatch, isDate, today } from './db.ts';
 import type { ProjectRow, TaskRow } from './schema.ts';
-import { JIRA_KEY_RE, PRIORITIES, type JiraState, type Priority, type Settings, type TimerAction } from '../shared/types.ts';
+import { BUGTRACKER_KEY_RE, PRIORITIES, type BugtrackerState, type Priority, type Settings, type TimerAction } from '../shared/types.ts';
 import { parseMarkdown } from './markdown.ts';
 
 type Req = IncomingMessage;
@@ -97,12 +97,12 @@ function httpUrl(value: unknown): string | null {
   return url.href;
 }
 
-// Ticket Jira saisi : clé (PROJ-123) ou lien complet ; vide = aucun ticket.
-function jiraTicket(value: unknown): { jiraKey: string | null; jiraUrl: string | null } {
-  if (value === null || value === '') return { jiraKey: null, jiraUrl: null };
+// Ticket saisi : clé (PROJ-123) ou lien complet ; vide = aucun ticket.
+function bugtrackerTicket(value: unknown): { bugtrackerKey: string | null; bugtrackerUrl: string | null } {
+  if (value === null || value === '') return { bugtrackerKey: null, bugtrackerUrl: null };
   const text = typeof value === 'string' ? value.trim() : '';
-  if (JIRA_KEY_RE.test(text.toUpperCase())) return { jiraKey: text.toUpperCase(), jiraUrl: null };
-  if (/^https?:/i.test(text)) return { jiraKey: null, jiraUrl: httpUrl(text) };
+  if (BUGTRACKER_KEY_RE.test(text.toUpperCase())) return { bugtrackerKey: text.toUpperCase(), bugtrackerUrl: null };
+  if (/^https?:/i.test(text)) return { bugtrackerKey: null, bugtrackerUrl: httpUrl(text) };
   throw new HttpError(400, 'Ticket invalide : identifiant attendu, ex. PROJ-123');
 }
 
@@ -137,8 +137,8 @@ function timestamp(v: unknown, label: string): string | null {
 function restoredTask(body: Body): TaskRow {
   const doneAt = body.done_at ?? null;
   if (doneAt !== null && !isDate(doneAt)) throw new HttpError(400, 'Date invalide');
-  const key = body.jira_key ?? null;
-  if (key !== null && (typeof key !== 'string' || !JIRA_KEY_RE.test(key))) throw new HttpError(400, 'Ticket invalide');
+  const key = body.bugtracker_key ?? null;
+  if (key !== null && (typeof key !== 'string' || !BUGTRACKER_KEY_RE.test(key))) throw new HttpError(400, 'Ticket invalide');
   return {
     id: int(body.id, 'Identifiant'),
     project_id: int(body.project_id, 'Projet'),
@@ -147,10 +147,10 @@ function restoredTask(body: Body): TaskRow {
     done_at: doneAt as string | null,
     position: int(body.position ?? 0, 'Position'),
     notes: optionalText(body.notes, 'Notes', 20_000),
-    jira_wanted_at: timestamp(body.jira_wanted_at, 'Date de report'),
-    jira_at: timestamp(body.jira_at, 'Date de report'),
-    jira_key: key as string | null,
-    jira_url: httpUrl(body.jira_url ?? null),
+    bugtracker_wanted_at: timestamp(body.bugtracker_wanted_at, 'Date de report'),
+    bugtracker_at: timestamp(body.bugtracker_at, 'Date de report'),
+    bugtracker_key: key as string | null,
+    bugtracker_url: httpUrl(body.bugtracker_url ?? null),
     time_spent: int(body.time_spent ?? 0, 'Temps passé'),
     timer_started_at: timestamp(body.timer_started_at, 'Début du chrono'),
     day_at: dayAt(body.day_at),
@@ -251,13 +251,13 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
       const from = url.searchParams.get('from') || undefined;
       const to = url.searchParams.get('to') || undefined;
       const projectId = Number(url.searchParams.get('project')) || undefined;
-      const jiraPending = url.searchParams.get('jira') === 'pending';
+      const bugtrackerPending = url.searchParams.get('bugtracker') === 'pending';
       const q = url.searchParams.get('q')?.trim().slice(0, 200) || undefined;
       const n = Math.trunc(Number(url.searchParams.get('limit')));
       const limit = n > 0 ? Math.min(n, 100) : undefined;
       if ((from && !isDate(from)) || (to && !isDate(to))) throw new HttpError(400, 'Date invalide');
       if (from && to && from > to) throw new HttpError(400, 'La date de début est après la date de fin');
-      send(res, 200, store.journal({ from, to, projectId, jiraPending, q, limit }));
+      send(res, 200, store.journal({ from, to, projectId, bugtrackerPending, q, limit }));
     }],
 
     ['GET', /^\/api\/settings$/, (_req, res) => send(res, 200, store.settings())],
@@ -265,8 +265,8 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
     ['PUT', /^\/api\/settings$/, async (req, res) => {
       const body = await readJson(req);
       const patch: Partial<Settings> = {};
-      // URL Jira d'entreprise, sans « / » final (on y ajoute /browse/CLÉ).
-      if ('jira_base_url' in body) patch.jira_base_url = httpUrl(body.jira_base_url)?.replace(/\/+$/, '') ?? null;
+      // URL du bugtracker, sans « / » final (on y ajoute /browse/CLÉ).
+      if ('bugtracker_base_url' in body) patch.bugtracker_base_url = httpUrl(body.bugtracker_base_url)?.replace(/\/+$/, '') ?? null;
       // Plan journée : maximum de tâches, de 1 à 50.
       if ('day_capacity' in body) {
         const n = body.day_capacity;
@@ -336,14 +336,14 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
       }
       if ('done' in body) patch.doneAt = body.done ? (doneAt as string) : null;
       else if ('done_at' in body) patch.doneAt = doneAt as string | null;
-      if ('jira' in body) {
-        if (!['none', 'wanted', 'done'].includes(body.jira as string)) throw new HttpError(400, 'État de report invalide');
-        patch.jira = body.jira as JiraState;
+      if ('bugtracker' in body) {
+        if (!['none', 'wanted', 'done'].includes(body.bugtracker as string)) throw new HttpError(400, 'État de report invalide');
+        patch.bugtracker = body.bugtracker as BugtrackerState;
       }
-      if ('jira_ticket' in body) {
-        Object.assign(patch, jiraTicket(body.jira_ticket));
+      if ('bugtracker_ticket' in body) {
+        Object.assign(patch, bugtrackerTicket(body.bugtracker_ticket));
         // Un ticket renseigné vaut « reportée ».
-        if ((patch.jiraKey || patch.jiraUrl) && !('jira' in body)) patch.jira = 'done';
+        if ((patch.bugtrackerKey || patch.bugtrackerUrl) && !('bugtracker' in body)) patch.bugtracker = 'done';
       }
       if ('notes' in body) patch.notes = optionalText(body.notes, 'Notes', 20_000);
       if ('timer' in body) {

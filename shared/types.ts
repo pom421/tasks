@@ -3,8 +3,8 @@
 // rien de Drizzle n'arrive dans le front).
 import type { ProjectRow, TaskRow } from '../server/schema.ts';
 
-// Suivi Jira : rien -> à reporter (jira_wanted_at) -> reportée (jira_at).
-export type JiraState = 'none' | 'wanted' | 'done';
+// Suivi du bugtracker : rien -> à reporter (bugtracker_wanted_at) -> reportée (bugtracker_at).
+export type BugtrackerState = 'none' | 'wanted' | 'done';
 
 // Tâche à faire telle que l'API la renvoie : colonnes de la table task
 // (sens de chaque colonne : server/schema.ts), sans la date de fin, l'ordre et
@@ -32,26 +32,26 @@ export const PRIORITIES = [1, 2, 3] as const;
 export type Priority = (typeof PRIORITIES)[number];
 
 export interface Settings {
-  jira_base_url: string | null; // ex. https://entreprise.atlassian.net
+  bugtracker_base_url: string | null; // ex. https://entreprise.tickets.fr
   day_capacity: number; // Plan journée : nombre de tâches maximum
 }
 
 export const DEFAULT_DAY_CAPACITY = 5;
 
-// Lien du ticket : URL complète, sinon clé + URL Jira d'entreprise.
-export function jiraLink(t: Pick<Task, 'jira_key' | 'jira_url'>, settings: Settings): string | null {
-  if (t.jira_url) return t.jira_url;
-  if (t.jira_key && settings.jira_base_url) return `${settings.jira_base_url}/browse/${t.jira_key}`;
+// Lien du ticket : URL complète, sinon clé + URL du bugtracker.
+export function bugtrackerLink(t: Pick<Task, 'bugtracker_key' | 'bugtracker_url'>, settings: Settings): string | null {
+  if (t.bugtracker_url) return t.bugtracker_url;
+  if (t.bugtracker_key && settings.bugtracker_base_url) return `${settings.bugtracker_base_url}/browse/${t.bugtracker_key}`;
   return null;
 }
 
-export const JIRA_KEY_RE = /^[A-Z][A-Z0-9_]*-\d+$/;
+export const BUGTRACKER_KEY_RE = /^[A-Z][A-Z0-9_]*-\d+$/;
 
 export const hasDetails = (t: Pick<Task, 'notes'>) => Boolean(t.notes);
 
-export function jiraState(t: Pick<Task, 'jira_wanted_at' | 'jira_at'>): JiraState {
-  if (t.jira_at) return 'done';
-  return t.jira_wanted_at ? 'wanted' : 'none';
+export function bugtrackerState(t: Pick<Task, 'bugtracker_wanted_at' | 'bugtracker_at'>): BugtrackerState {
+  if (t.bugtracker_at) return 'done';
+  return t.bugtracker_wanted_at ? 'wanted' : 'none';
 }
 
 export interface Project extends Pick<ProjectRow, 'id' | 'name' | 'archived_at' | 'favorite_at'> {
@@ -70,7 +70,7 @@ export interface JournalDay {
 
 export interface State {
   projects: Project[];
-  jiraPending: number; // tâches à reporter dans Jira (à faire ou faites)
+  bugtrackerPending: number; // tâches à reporter dans le bugtracker (à faire ou faites)
   dayDone: number; // tâches faites parmi celles choisies pour la journée demandée
   settings: Settings;
 }
@@ -84,7 +84,7 @@ export interface JournalFilter {
   from?: string;
   to?: string;
   projectId?: number;
-  jiraPending?: boolean; // seulement les tâches à reporter dans Jira
+  bugtrackerPending?: boolean; // seulement les tâches à reporter dans le bugtracker
   q?: string; // recherche : titre, contenu, ticket
   limit?: number; // les N derniers jours ayant des entrées jusqu'à `to`
 }

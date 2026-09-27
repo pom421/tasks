@@ -178,7 +178,7 @@ test('projet : seulement les jours où ce projet a des entrées, pagination comp
 test('recherche : jours dont une tâche correspond (titre, contenu, ticket), compteur, mot souligné', async ({ page, store }) => {
   const p = store.createProject('Beta');
   store.updateTask(store.createTask(p.id, 'Déploiement').id, { doneAt: '2026-09-22', notes: 'Suite de la réunion **Vingt**' });
-  store.updateTask(store.createTask(p.id, 'Ticket seul').id, { doneAt: '2026-09-19', jira: 'done', jiraKey: 'VING-1' });
+  store.updateTask(store.createTask(p.id, 'Ticket seul').id, { doneAt: '2026-09-19', bugtracker: 'done', bugtrackerKey: 'VING-1' });
   await page.reload();
   const count = page.locator('#log-count');
 

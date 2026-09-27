@@ -247,7 +247,7 @@ test('tâche : pas de bouton de suppression à la souris, seulement x x (ni fen�
 });
 
 test('ligne de tâche : icônes alignées à droite, clic n’importe où sur la ligne = édition puis flèches', async ({ page, store, data }) => {
-  store.updateTask(data.tasks.une.id, { jira: 'wanted', notes: 'du contenu' });
+  store.updateTask(data.tasks.une.id, { bugtracker: 'wanted', notes: 'du contenu' });
   await reload(page);
   // Première ligne (le titre, porteur de data-nav-key, devient un champ en édition).
   const une = page.locator('#projects li.task').first();
@@ -353,7 +353,7 @@ test('raccourcis actifs même quand le focus est sur la case à cocher', async (
   await page.locator('#projects li.task').first().getByRole('checkbox').focus();
   await page.keyboard.press('r');
   await expect(page.locator('#projects li.task').first().locator('.report-wanted')).toBeVisible();
-  expect(store.state().projects[0].tasks[0].jira_wanted_at).toBeTruthy();
+  expect(store.state().projects[0].tasks[0].bugtracker_wanted_at).toBeTruthy();
 });
 
 test('nouveau projet : le focus va sur la saisie de sa première tâche', async ({ page, store }) => {
@@ -386,12 +386,12 @@ test('J en édition : saisi comme une lettre, pas de bascule', async ({ page, st
   await page.keyboard.type(' JJ');
   await page.keyboard.press('Enter');
   await expect(page.locator('#projects .name', { hasText: 'Une JJ' })).toBeVisible();
-  expect(store.state().projects[0].tasks[0].jira_at).toBeNull();
+  expect(store.state().projects[0].tasks[0].bugtracker_at).toBeNull();
   expect(await current(page)).toBe(`task:${data.tasks.une.id}`);
 });
 
 test('badge « reporté » conservé dans le journal, et J y fonctionne aussi', async ({ page, store, data }) => {
-  store.updateTask(data.tasks.trois.id, { jira: 'done' });
+  store.updateTask(data.tasks.trois.id, { bugtracker: 'done' });
   await reload(page);
   const row = page.locator(`li.task:has([data-nav-key="task:${data.tasks.trois.id}"])`);
   await expect(row.locator('.report')).toBeVisible();
@@ -405,7 +405,7 @@ test('badge « reporté » conservé dans le journal, et J y fonctionne aussi', 
   expect(await current(page)).toBe(`task:${data.tasks.trois.id}`);
   await page.keyboard.press('r');
   await expect(row.locator('.report')).toHaveCount(0);
-  expect(store.journal({ projectId: data.beta.id }).days[0].tasks[0].jira_at).toBeNull();
+  expect(store.journal({ projectId: data.beta.id }).days[0].tasks[0].bugtracker_at).toBeNull();
 });
 
 // Titres des tâches à faire, par projet, tels qu'enregistrés.
@@ -530,19 +530,19 @@ test('archiver et supprimer : boutons icônes nommés, titre au survol', async (
 });
 
 test('boutons de filtre : à reporter, Archivés, Favoris, dans cet ordre, seulement si utiles', async ({ page, store, data }) => {
-  const row = page.locator('#jira-pending, #archived-only, #favorites-only');
+  const row = page.locator('#bugtracker-pending, #archived-only, #favorites-only');
   await expect(row).toHaveCount(0); // rien à reporter, ni archivé, ni favori
-  store.updateTask(data.tasks.une.id, { jira: 'wanted' });
+  store.updateTask(data.tasks.une.id, { bugtracker: 'wanted' });
   const gamma = store.createProject('Gamma');
   store.updateProject(gamma.id, { archived: true });
   store.updateProject(data.beta.id, { favorite: true });
   await reload(page);
-  expect(await row.evaluateAll((els) => els.map((e) => e.id))).toEqual(['jira-pending', 'archived-only', 'favorites-only']);
+  expect(await row.evaluateAll((els) => els.map((e) => e.id))).toEqual(['bugtracker-pending', 'archived-only', 'favorites-only']);
 
   // Archivés : comme « à reporter », un filtre : seulement les projets archivés.
   const archived = page.locator('#archived-only');
   await expect(archived).toHaveAttribute('aria-pressed', 'false');
-  for (const id of ['#jira-pending', '#archived-only', '#favorites-only']) {
+  for (const id of ['#bugtracker-pending', '#archived-only', '#favorites-only']) {
     await expect(page.locator(`${id} svg`), id).toHaveAttribute('fill', 'none'); // icône vide : filtre inactif
   }
   await expect(page.locator('#projects .project-head .name')).toHaveText(['Alpha', 'Beta']);
@@ -559,19 +559,19 @@ test('boutons de filtre : à reporter, Archivés, Favoris, dans cet ordre, seule
 test('filtres combinés (ET) : aucun bouton ne disparaît quand un autre est actif', async ({ page, store, data }) => {
   // Gamma : archivé, favori, avec une tâche à reporter. Delta : archivé seulement.
   const gamma = store.createProject('Gamma');
-  store.updateTask(store.createTask(gamma.id, 'G à reporter').id, { jira: 'wanted' });
+  store.updateTask(store.createTask(gamma.id, 'G à reporter').id, { bugtracker: 'wanted' });
   store.createTask(gamma.id, 'G normale');
   store.updateProject(gamma.id, { archived: true, favorite: true });
   const delta = store.createProject('Delta');
   store.updateProject(delta.id, { archived: true });
   store.updateProject(data.alpha.id, { favorite: true }); // favori, non archivé
-  store.updateTask(data.tasks.trois.id, { jira: 'wanted' }); // Beta : à reporter, non favori
+  store.updateTask(data.tasks.trois.id, { bugtracker: 'wanted' }); // Beta : à reporter, non favori
   await reload(page);
 
-  const buttons = page.locator('#jira-pending, #archived-only, #favorites-only');
+  const buttons = page.locator('#bugtracker-pending, #archived-only, #favorites-only');
   const heads = page.locator('#projects .project-head .name');
   const tasks = page.locator('#projects .task .name');
-  await expect(page.locator('#jira-pending')).toHaveText('2 tâches à reporter'); // tous projets confondus
+  await expect(page.locator('#bugtracker-pending')).toHaveText('2 tâches à reporter'); // tous projets confondus
 
   await page.locator('#archived-only').click();
   await expect(heads).toHaveText(['Gamma', 'Delta']);
@@ -579,7 +579,7 @@ test('filtres combinés (ET) : aucun bouton ne disparaît quand un autre est act
   await page.locator('#favorites-only').click(); // archivés ET favoris
   await expect(heads).toHaveText(['Gamma']);
   await expect(tasks).toHaveText(['G à reporter', 'G normale']);
-  await page.locator('#jira-pending').click(); // ET à reporter
+  await page.locator('#bugtracker-pending').click(); // ET à reporter
   await expect(heads).toHaveText(['Gamma']);
   await expect(tasks).toHaveText(['G à reporter']);
   await expect(buttons).toHaveCount(3);
@@ -592,7 +592,7 @@ test('filtres combinés (ET) : aucun bouton ne disparaît quand un autre est act
   await expect(buttons).toHaveCount(3);
   await page.locator('#favorites-only').click(); // à reporter seulement
   await expect(heads).toHaveText(['Beta']);
-  await page.locator('#jira-pending').click();
+  await page.locator('#bugtracker-pending').click();
 
   // Sans « à reporter » : il s'agit de projets.
   store.updateProject(gamma.id, { favorite: false });
@@ -666,7 +666,7 @@ test('clavier sur un projet : f favori, a archiver, x x supprimer, u annule tout
   expect([trois.title, trois.notes]).toEqual(['Trois', 'historique']);
 });
 
-// --- Suivi Jira ------------------------------------------------------------
+// --- Suivi du bugtracker ---------------------------------------------------------
 
 const row = (page: Page, taskId: number) => page.locator(`li.task:has([data-nav-key="task:${taskId}"])`);
 
@@ -675,7 +675,7 @@ test('J fait tourner : à reporter (contour) → reportée (plein, fiche propos�
   await pressDown(page, 2);
   await page.keyboard.press('r');
   await expect(une.locator('.report-wanted')).toBeVisible();
-  expect(store.state().jiraPending).toBe(1);
+  expect(store.state().bugtrackerPending).toBe(1);
 
   await page.keyboard.press('r');
   await expect(une.locator('.report-done')).toHaveText('reporté'); // sans identifiant : le mot, visible
@@ -688,11 +688,11 @@ test('J fait tourner : à reporter (contour) → reportée (plein, fiche propos�
 
   await page.keyboard.press('r');
   await expect(une.locator('.report')).toHaveCount(0);
-  expect(store.state().projects[0].tasks[0]).toMatchObject({ jira_wanted_at: null, jira_at: null, jira_key: null });
+  expect(store.state().projects[0].tasks[0]).toMatchObject({ bugtracker_wanted_at: null, bugtracker_at: null, bugtracker_key: null });
 });
 
-test('fiche : r r ouvre sur le ticket, clé + URL Jira d’entreprise = lien cliquable', async ({ page, store, data }) => {
-  store.updateSettings({ jira_base_url: 'https://entreprise.atlassian.net' });
+test('fiche : r r ouvre sur le ticket, clé + URL du bugtracker = lien cliquable', async ({ page, store, data }) => {
+  store.updateSettings({ bugtracker_base_url: 'https://entreprise.tickets.fr' });
   await reload(page);
   await pressDown(page, 2);
   await page.keyboard.press('r');
@@ -701,12 +701,12 @@ test('fiche : r r ouvre sur le ticket, clé + URL Jira d’entreprise = lien cli
   await expect(dialog).toHaveAccessibleDescription(/Alpha · à faire/);
   await expect(dialog.getByLabel('Ticket', { exact: true })).toBeFocused();
   await page.keyboard.type('proj-7');
-  await expect(dialog).not.toContainText('https://entreprise.atlassian.net'); // lien non répété dans la fiche
+  await expect(dialog).not.toContainText('https://entreprise.tickets.fr'); // lien non répété dans la fiche
   await page.keyboard.press('Enter');
 
   await expect(dialog).toHaveCount(0);
   const link = row(page, data.tasks.une.id).locator('a.report-link');
-  await expect(link).toHaveAttribute('href', 'https://entreprise.atlassian.net/browse/PROJ-7');
+  await expect(link).toHaveAttribute('href', 'https://entreprise.tickets.fr/browse/PROJ-7');
   await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   await expect(link).toHaveText('reporté · PROJ-7');
   // À l'écran, l'identifiant seul : « reporté » est réservé aux lecteurs d'écran.
@@ -727,7 +727,7 @@ test('fiche : identifiant invalide annoncé, la fiche reste ouverte', async ({ p
   await expect(dialog.getByRole('alert')).toHaveText('Identifiant attendu, ex. PROJ-123');
   await expect(dialog.getByLabel('Ticket', { exact: true })).toHaveAttribute('aria-invalid', 'true');
   await expect(dialog).toBeVisible();
-  expect(store.state().projects[0].tasks[0]).toMatchObject({ jira_key: null, jira_url: null });
+  expect(store.state().projects[0].tasks[0]).toMatchObject({ bugtracker_key: null, bugtracker_url: null });
 });
 
 test('fiche Markdown : e édite (titre → Tab → ticket → Tab → contenu), Ctrl+Entrée lecture puis fermeture', async ({ page, store, data }) => {
@@ -792,8 +792,8 @@ test('fiche Markdown : HTML dangereux neutralisé', async ({ page, store, data }
   expect(await page.evaluate(() => (window as unknown as { pwned?: number }).pwned)).toBeUndefined();
 });
 
-test('réglages (/admin) : URL Jira conservée en base, lien depuis la fiche', async ({ page, store, data }) => {
-  store.updateTask(data.tasks.une.id, { jira: 'done', jiraKey: 'PROJ-1' });
+test('réglages (/admin) : URL du bugtracker conservée en base, lien depuis la fiche', async ({ page, store, data }) => {
+  store.updateTask(data.tasks.une.id, { bugtracker: 'done', bugtrackerKey: 'PROJ-1' });
   await reload(page);
   // Sans URL d'entreprise : la clé s'affiche, sans lien.
   await expect(row(page, data.tasks.une.id).locator('.report-done')).toHaveText('reporté · PROJ-1');
@@ -807,21 +807,21 @@ test('réglages (/admin) : URL Jira conservée en base, lien depuis la fiche', a
   const importMd = page.getByRole('button', { name: 'Importer .md' });
   expect((await save.boundingBox())!.height).toBe((await importMd.boundingBox())!.height);
   await expect(save).toHaveCSS('background-color', await importMd.evaluate((b) => getComputedStyle(b).backgroundColor));
-  await page.getByLabel('URL de base des tickets').fill('https://entreprise.atlassian.net/');
+  await page.getByLabel('URL de base des tickets').fill('https://entreprise.tickets.fr/');
   await page.getByRole('button', { name: 'Enregistrer' }).first().click();
   await expect(page.getByText('Réglages enregistrés.')).toBeVisible();
-  expect(store.settings().jira_base_url).toBe('https://entreprise.atlassian.net');
+  expect(store.settings().bugtracker_base_url).toBe('https://entreprise.tickets.fr');
 
   // Rechargement direct de /admin : valeur relue en base.
   await page.reload();
-  await expect(page.getByLabel('URL de base des tickets')).toHaveValue('https://entreprise.atlassian.net');
+  await expect(page.getByLabel('URL de base des tickets')).toHaveValue('https://entreprise.tickets.fr');
 
   // Échap : retour à la page principale.
   await page.keyboard.press('Escape');
   await expect(page).toHaveURL(/\/$/);
   await expect(row(page, data.tasks.une.id).locator('a.report-link')).toHaveAttribute(
     'href',
-    'https://entreprise.atlassian.net/browse/PROJ-1',
+    'https://entreprise.tickets.fr/browse/PROJ-1',
   );
 });
 
@@ -851,13 +851,13 @@ test('réglages : Importer .sqlite en deux temps, sans fenêtre de confirmation 
 });
 
 test('compteur « à reporter » : filtre la zone des projets seulement (R ou clic)', async ({ page, store, data }) => {
-  store.updateTask(data.tasks.deux.id, { jira: 'wanted' });
+  store.updateTask(data.tasks.deux.id, { bugtracker: 'wanted' });
   const faite = store.createTask(data.beta.id, 'Faite à reporter');
-  store.updateTask(faite.id, { doneAt: '2026-09-25', jira: 'wanted' });
+  store.updateTask(faite.id, { doneAt: '2026-09-25', bugtracker: 'wanted' });
   store.updateTask(data.tasks.trois.id, { doneAt: '2026-09-25' });
   await reload(page);
 
-  const counter = page.locator('#jira-pending');
+  const counter = page.locator('#bugtracker-pending');
   await expect(counter).toHaveText('1 tâche à reporter'); // tâches à faire des projets
   await page.keyboard.press('R');
   await expect(counter).toHaveAttribute('aria-pressed', 'true');
@@ -879,10 +879,10 @@ test('compteur « à reporter » : filtre la zone des projets seulement (R ou cl
 });
 
 test('R : à reporter → reportées → toutes ; bouton visible avec des reportées seulement', async ({ page, store, data }) => {
-  store.updateTask(data.tasks.une.id, { jira: 'wanted' });
-  store.updateTask(data.tasks.trois.id, { jira: 'done' });
+  store.updateTask(data.tasks.une.id, { bugtracker: 'wanted' });
+  store.updateTask(data.tasks.trois.id, { bugtracker: 'done' });
   await reload(page);
-  const counter = page.locator('#jira-pending');
+  const counter = page.locator('#bugtracker-pending');
   await expect(counter).toHaveText('1 tâche à reporter');
   await page.keyboard.press('R');
   await expect(page.locator('#projects .name')).toHaveText(['Alpha', 'Une']);
@@ -894,7 +894,7 @@ test('R : à reporter → reportées → toutes ; bouton visible avec des report
   await expect(page.locator('#projects .name')).toHaveText(['Alpha', 'Une', 'Deux', 'Beta', 'Trois']);
 
   // Plus de tâche à reporter, mais une reportée : le bouton reste, sur les reportées.
-  store.updateTask(data.tasks.une.id, { jira: 'none' });
+  store.updateTask(data.tasks.une.id, { bugtracker: 'none' });
   await reload(page);
   await expect(counter).toHaveText('1 tâche reportée');
   // Anciennes touches sans effet : * et f (hors projet) ; r hors tâche.
@@ -910,7 +910,7 @@ test('boutons à reporter, Archivés, Favoris : le Log ne change pas', async ({ 
   const gamma = store.createProject('Gamma');
   store.updateTask(store.createTask(gamma.id, 'Gamma faite').id, { doneAt: '2026-09-25' });
   store.updateTask(data.tasks.trois.id, { doneAt: '2026-09-25' });
-  store.updateTask(data.tasks.une.id, { jira: 'wanted' });
+  store.updateTask(data.tasks.une.id, { bugtracker: 'wanted' });
   store.updateProject(gamma.id, { archived: true });
   store.updateProject(data.alpha.id, { favorite: true });
   await reload(page);
@@ -935,7 +935,7 @@ test('boutons à reporter, Archivés, Favoris : le Log ne change pas', async ({ 
   expect(before.names).toEqual(['Trois', 'Gamma faite']); // tâche d'un projet archivé comprise
   expect(before.options).toEqual(['Tous les projets', 'Alpha', 'Beta', 'Gamma (archivé)']);
 
-  for (const id of ['#jira-pending', '#archived-only', '#favorites-only']) {
+  for (const id of ['#bugtracker-pending', '#archived-only', '#favorites-only']) {
     const button = page.locator(id);
     const projects = await page.locator('#projects .project').count();
     await button.click();
@@ -943,7 +943,7 @@ test('boutons à reporter, Archivés, Favoris : le Log ne change pas', async ({ 
     await expect.poll(() => page.locator('#projects .project').count(), id).not.toBe(projects); // la zone des projets change
     expect(await snapshot(), id).toEqual(before); // le Log, non
     await button.click();
-    if (id === '#jira-pending') {
+    if (id === '#bugtracker-pending') {
       // Report : à reporter → reportées → tous ; le Log ne change toujours pas.
       await expect(button).toHaveText('0 tâche reportée');
       expect(await snapshot(), id).toEqual(before);
@@ -981,18 +981,18 @@ test('fiche rouverte : contenu relu depuis les données à jour', async ({ page,
 
 test('bouton « tâches à reporter » : place réservée, rien ne bouge quand il apparaît', async ({ page, data }) => {
   const top = () => page.locator('#projects').evaluate((el) => el.getBoundingClientRect().top);
-  await expect(page.locator('#jira-pending')).toHaveCount(0);
+  await expect(page.locator('#bugtracker-pending')).toHaveCount(0);
   const before = await top();
   await pressDown(page, 2);
   await page.keyboard.press('r');
-  await expect(page.locator('#jira-pending')).toHaveText('1 tâche à reporter');
+  await expect(page.locator('#bugtracker-pending')).toHaveText('1 tâche à reporter');
   expect(await top()).toBe(before);
   await expect(row(page, data.tasks.une.id).locator('.report-wanted')).toHaveText('à reporter');
 });
 
 test('titre long : « … » sur une ligne, titre complet au survol ou au focus clavier', async ({ page, store, data }) => {
   const long = 'Préparer la présentation trimestrielle pour le comité de direction avec les chiffres consolidés de toutes les équipes produit';
-  store.updateTask(data.tasks.une.id, { title: long, jira: 'done', jiraKey: 'PROJ-1234' });
+  store.updateTask(data.tasks.une.id, { title: long, bugtracker: 'done', bugtrackerKey: 'PROJ-1234' });
   await reload(page);
   const name = page.locator(`[data-nav-key="task:${data.tasks.une.id}"]`);
   // Une seule ligne, coupée : le badge reste visible.
@@ -1065,7 +1065,7 @@ test('fiche : e modifie aussi le titre et le ticket ; Entrée dans un champ = en
   await page.keyboard.press('Enter'); // enregistre et repasse en lecture
   const renamed = page.getByRole('dialog', { name: 'Une, renommée', exact: true });
   await expect(renamed.locator('.ticket-value')).toHaveText('PROJ-5');
-  expect(store.state().projects[0].tasks[0]).toMatchObject({ title: 'Une, renommée', jira_key: 'PROJ-5' });
+  expect(store.state().projects[0].tasks[0]).toMatchObject({ title: 'Une, renommée', bugtracker_key: 'PROJ-5' });
 
   // Titre vide refusé, erreur annoncée sous le champ (la fiche porte alors un nom vide).
   await page.keyboard.press('e');
@@ -1294,7 +1294,7 @@ test('déplacements annulables : tâche et projet reviennent à leur place', asy
 });
 
 test('u après une suppression : la tâche revient avec son contenu, sélectionnée', async ({ page, store, data }) => {
-  store.updateTask(data.tasks.deux.id, { notes: 'Notes précieuses', jira: 'done', jiraKey: 'PROJ-9' });
+  store.updateTask(data.tasks.deux.id, { notes: 'Notes précieuses', bugtracker: 'done', bugtrackerKey: 'PROJ-9' });
   await reload(page);
   await pressDown(page, 3); // « Deux »
   await page.keyboard.press('x');
@@ -1308,7 +1308,7 @@ test('u après une suppression : la tâche revient avec son contenu, sélectionn
     id: data.tasks.deux.id,
     title: 'Deux',
     notes: 'Notes précieuses',
-    jira_key: 'PROJ-9',
+    bugtracker_key: 'PROJ-9',
   });
 });
 
@@ -1422,7 +1422,7 @@ test('fiche : même disposition en lecture et en édition (titre en haut, icône
 
 test('Échap Échap : retire tous les filtres (projets et Log) ; un seul Échap ne touche pas aux projets', async ({ page, store, data }) => {
   store.updateProject(data.alpha.id, { favorite: true });
-  store.updateTask(data.tasks.une.id, { jira: 'wanted', priority: 1 });
+  store.updateTask(data.tasks.une.id, { bugtracker: 'wanted', priority: 1 });
   store.updateProject(store.createProject('Gamma').id, { archived: true });
   store.updateTask(store.createTask(data.beta.id, 'Une ancienne').id, { doneAt: '2026-09-01' });
   store.updateTask(store.createTask(data.beta.id, 'Autre faite').id, { doneAt: '2026-09-02' });
@@ -1435,7 +1435,7 @@ test('Échap Échap : retire tous les filtres (projets et Log) ; un seul Échap 
   await page.keyboard.press('!');
   await page.keyboard.press('F');
   const pressed = (id: string) => page.locator(id);
-  for (const id of ['#jira-pending', '#priority-filter', '#favorites-only']) await expect(pressed(id)).toHaveAttribute('aria-pressed', 'true');
+  for (const id of ['#bugtracker-pending', '#priority-filter', '#favorites-only']) await expect(pressed(id)).toHaveAttribute('aria-pressed', 'true');
   await page.keyboard.press('A');
   await expect(pressed('#archived-only')).toHaveAttribute('aria-pressed', 'true');
 
@@ -1443,7 +1443,7 @@ test('Échap Échap : retire tous les filtres (projets et Log) ; un seul Échap 
   await page.locator('body').press('Escape');
   await expect(pressed('#favorites-only')).toHaveAttribute('aria-pressed', 'true');
   await page.locator('body').press('Escape');
-  for (const id of ['#jira-pending', '#priority-filter', '#favorites-only', '#archived-only']) {
+  for (const id of ['#bugtracker-pending', '#priority-filter', '#favorites-only', '#archived-only']) {
     await expect(pressed(id), id).toHaveAttribute('aria-pressed', 'false');
   }
   await expect(page.locator('#projects .project-head .name')).toHaveText(['Alpha', 'Beta']);

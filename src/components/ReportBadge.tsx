@@ -1,4 +1,4 @@
-import { jiraLink, jiraState, type Task } from '../../shared/types.ts';
+import { bugtrackerLink, bugtrackerState, type Task } from '../../shared/types.ts';
 import { useActions } from '@/lib/actions';
 import { cn } from '@/lib/utils';
 
@@ -10,7 +10,7 @@ const day = (ts: string) => ts.slice(0, 10).split('-').reverse().join('/');
 // (réglages) ou un lien complet, le badge « reporté » ouvre le ticket.
 export function ReportBadge({ task }: { task: Task }) {
   const { settings } = useActions();
-  const state = jiraState(task);
+  const state = bugtrackerState(task);
   if (state === 'none') return null;
 
   const base = 'report flex-none rounded-full border px-1.5 text-[11px] leading-[18px] whitespace-nowrap';
@@ -22,17 +22,17 @@ export function ReportBadge({ task }: { task: Task }) {
     );
   }
 
-  const href = jiraLink(task, settings);
-  const label = task.jira_key ? (
+  const href = bugtrackerLink(task, settings);
+  const label = task.bugtracker_key ? (
     <>
       <span className="sr-only">reporté · </span>
-      <span className="report-key font-mono">{task.jira_key}</span>
+      <span className="report-key font-mono">{task.bugtracker_key}</span>
     </>
   ) : (
     'reporté'
   );
   const className = cn(base, 'report-done border-primary/30 bg-primary/10 text-primary');
-  const title = `Reporté le ${day(task.jira_at!)}`;
+  const title = `Reporté le ${day(task.bugtracker_at!)}`;
   if (!href) return <span className={className} title={title}>{label}</span>;
   return (
     <a

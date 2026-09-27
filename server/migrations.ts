@@ -106,6 +106,16 @@ export const MIGRATIONS: Migration[] = [
     name: 'priorité des tâches (P1, P2, P3)',
     sql: `ALTER TABLE task ADD COLUMN priority INTEGER;`,
   },
+  {
+    version: 12,
+    name: 'suivi des tickets sans nom d’outil (bugtracker)',
+    sql: `
+      ALTER TABLE task RENAME COLUMN jira_wanted_at TO bugtracker_wanted_at;
+      ALTER TABLE task RENAME COLUMN jira_at TO bugtracker_at;
+      ALTER TABLE task RENAME COLUMN jira_key TO bugtracker_key;
+      ALTER TABLE task RENAME COLUMN jira_url TO bugtracker_url;
+      UPDATE setting SET key = 'bugtracker_base_url' WHERE key = 'jira_base_url';`,
+  },
 ];
 
 export const LATEST_VERSION = MIGRATIONS.at(-1)!.version;

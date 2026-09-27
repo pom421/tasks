@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 // Page d'administration (/admin) : réglages conservés en base.
 export function SettingsPage({ onBack }: { onBack: () => void }) {
   const id = useId();
-  const [jiraBaseUrl, setJiraBaseUrl] = useState('');
+  const [bugtrackerBaseUrl, setBugtrackerBaseUrl] = useState('');
   const [status, setStatus] = useState<{ ok?: string; error?: string }>({});
   // Aujourd’hui : maximum de tâches par jour (texte saisi, vérifié par le serveur).
   const [capacity, setCapacity] = useState('');
@@ -35,7 +35,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
       .settings()
       // Saisie déjà commencée pendant le chargement : on ne l'écrase pas.
       .then((s) => {
-        setJiraBaseUrl((v) => v || (s.jira_base_url ?? ''));
+        setBugtrackerBaseUrl((v) => v || (s.bugtracker_base_url ?? ''));
         setCapacity((v) => v || String(s.day_capacity));
       })
       .catch((err) => setStatus({ error: err.message }));
@@ -74,8 +74,8 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
     e.preventDefault();
     setStatus({});
     try {
-      const saved = await api.updateSettings({ jira_base_url: jiraBaseUrl.trim() || null });
-      setJiraBaseUrl(saved.jira_base_url ?? '');
+      const saved = await api.updateSettings({ bugtracker_base_url: bugtrackerBaseUrl.trim() || null });
+      setBugtrackerBaseUrl(saved.bugtracker_base_url ?? '');
       setStatus({ ok: 'Réglages enregistrés.' });
     } catch (err) {
       setStatus({ error: (err as Error).message });
@@ -108,8 +108,8 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
       </a>
       <h1 className="mt-4 text-2xl font-bold">Réglages</h1>
 
-      <section aria-labelledby={`${id}-jira`} className="mt-6">
-        <h2 id={`${id}-jira`} className="font-semibold">
+      <section aria-labelledby={`${id}-bugtracker`} className="mt-6">
+        <h2 id={`${id}-bugtracker`} className="font-semibold">
           Tickets
         </h2>
         <form className="mt-3 grid max-w-lg gap-2" onSubmit={save} noValidate>
@@ -118,16 +118,16 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
             id={`${id}-url`}
             type="url"
             inputMode="url"
-            placeholder="https://entreprise.atlassian.net"
-            value={jiraBaseUrl}
-            onChange={(e) => setJiraBaseUrl(e.target.value)}
+            placeholder="https://entreprise.tickets.fr"
+            value={bugtrackerBaseUrl}
+            onChange={(e) => setBugtrackerBaseUrl(e.target.value)}
             className="h-8"
             aria-describedby={`${id}-hint`}
             aria-invalid={Boolean(status.error)}
           />
           <p id={`${id}-hint`} className="text-xs text-muted-foreground">
-            Ex. https://entreprise.atlassian.net. Un identifiant saisi sur une tâche (PROJ-123) devient un lien vers{' '}
-            {jiraBaseUrl.trim() || 'cette URL'}/browse/PROJ-123.
+            Ex. https://entreprise.tickets.fr. Un identifiant saisi sur une tâche (PROJ-123) devient un lien vers{' '}
+            {bugtrackerBaseUrl.trim() || 'cette URL'}/browse/PROJ-123.
           </p>
           <div className="mt-2 flex items-center gap-3">
             <Button type="submit">

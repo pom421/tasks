@@ -1,5 +1,5 @@
 import { useRef, useState, type FocusEvent, type KeyboardEvent } from 'react';
-import { hasDetails, jiraState, type DoneTask, type JiraState, type Task } from '../../shared/types.ts';
+import { hasDetails, bugtrackerState, type DoneTask, type BugtrackerState, type Task } from '../../shared/types.ts';
 import { NotebookText } from 'lucide-react';
 import { api, type TaskPatch } from '@/lib/api';
 import { useActions } from '@/lib/actions';
@@ -50,23 +50,23 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
       ? change('tâche décochée', { done: false }, { done_at: task.done_at }, true)
       : change('tâche cochée', { done: true, done_at: localToday() }, { done: false }, true);
   const rename = (title: string) => change('renommage', { title }, { title: task.title });
-  const NEXT: Record<JiraState, JiraState> = { none: 'wanted', wanted: 'done', done: 'none' };
-  const JIRA_LABEL: Record<JiraState, string> = { none: 'retrait du report', wanted: 'à reporter', done: 'reportée' };
+  const NEXT: Record<BugtrackerState, BugtrackerState> = { none: 'wanted', wanted: 'done', done: 'none' };
+  const BUGTRACKER_LABEL: Record<BugtrackerState, string> = { none: 'retrait du report', wanted: 'à reporter', done: 'reportée' };
   // r tapé plusieurs fois vite : chaque appui part du dernier état demandé
   // (pas de celui encore affiché) et les requêtes s'enchaînent dans l'ordre.
-  const jira = useRef({ state: jiraState(task), pending: 0, queue: Promise.resolve() });
-  if (!jira.current.pending) jira.current.state = jiraState(task);
-  const cycleJira = () => {
-    const j = jira.current;
+  const bugtracker = useRef({ state: bugtrackerState(task), pending: 0, queue: Promise.resolve() });
+  if (!bugtracker.current.pending) bugtracker.current.state = bugtrackerState(task);
+  const cycleBugtracker = () => {
+    const j = bugtracker.current;
     const before = j.state;
     const next = NEXT[before];
     j.state = next;
     j.pending++;
     j.queue = j.queue.then(async () => {
-      await change(JIRA_LABEL[next], { jira: next }, { jira: before });
+      await change(BUGTRACKER_LABEL[next], { bugtracker: next }, { bugtracker: before });
       j.pending--;
       // Tout juste reportée (dernier appui) : on propose de renseigner le ticket.
-      if (next === 'done' && !j.pending && !task.jira_key && !task.jira_url) openTask(task, 'jira');
+      if (next === 'done' && !j.pending && !task.bugtracker_key && !task.bugtracker_url) openTask(task, 'bugtracker');
     });
   };
 
@@ -115,7 +115,7 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
     if (!done && plan.onKey(e)) return;
     if (e.key === 'r') {
       e.preventDefault();
-      cycleJira();
+      cycleBugtracker();
     }
     if (e.key === 'o' || e.key === 'e' || (e.key === 'Enter' && e.shiftKey)) {
       e.preventDefault();

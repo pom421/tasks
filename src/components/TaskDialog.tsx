@@ -1,5 +1,5 @@
 import { useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { JIRA_KEY_RE, formatDuration, type DoneTask, type Task } from '../../shared/types.ts';
+import { BUGTRACKER_KEY_RE, formatDuration, type DoneTask, type Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
 import type { TaskField } from '@/lib/actions';
 import { record } from '@/lib/history';
@@ -26,8 +26,8 @@ interface TaskDialogProps {
 
 type Field = 'title' | 'ticket' | 'notes';
 
-const ticketOf = (t: Task) => t.jira_key ?? t.jira_url ?? '';
-const isValidTicket = (s: string) => !s || JIRA_KEY_RE.test(s.toUpperCase()) || /^https?:\/\/\S+$/i.test(s);
+const ticketOf = (t: Task) => t.bugtracker_key ?? t.bugtracker_url ?? '';
+const isValidTicket = (s: string) => !s || BUGTRACKER_KEY_RE.test(s.toUpperCase()) || /^https?:\/\/\S+$/i.test(s);
 
 // Fiche d'une tâche, façon GitLab : lecture seule par défaut ; e passe tout en
 // édition (titre, puis Tab : ticket, puis contenu Markdown) ; Ctrl+Entrée
@@ -100,20 +100,20 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
     const next = {
       title: values.title.trim(),
       // Identifiant normalisé comme côté serveur (proj-5 → PROJ-5).
-      ticket: JIRA_KEY_RE.test(ticket.toUpperCase()) ? ticket.toUpperCase() : ticket,
+      ticket: BUGTRACKER_KEY_RE.test(ticket.toUpperCase()) ? ticket.toUpperCase() : ticket,
       notes: values.notes.trim(),
     };
     if (!next.title) return fail('title', 'Le titre est obligatoire');
     if (!isValidTicket(next.ticket)) return fail('ticket', 'Identifiant attendu, ex. PROJ-123');
     const patch: Parameters<typeof api.updateTask>[1] = {};
     if (next.title !== saved.current.title) patch.title = next.title;
-    if (next.ticket !== saved.current.ticket) patch.jira_ticket = next.ticket || null;
+    if (next.ticket !== saved.current.ticket) patch.bugtracker_ticket = next.ticket || null;
     if (next.notes !== saved.current.notes.trim()) patch.notes = next.notes || null;
     if (!Object.keys(patch).length) return true;
     // Valeurs d'avant, pour annuler (u) une fois la fiche fermée.
     const before: typeof patch = {};
     if ('title' in patch) before.title = saved.current.title;
-    if ('jira_ticket' in patch) before.jira_ticket = saved.current.ticket || null;
+    if ('bugtracker_ticket' in patch) before.bugtracker_ticket = saved.current.ticket || null;
     if ('notes' in patch) before.notes = saved.current.notes.trim() || null;
     try {
       await api.updateTask(task.id, patch);
@@ -129,7 +129,7 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
       setError(null);
       return true;
     } catch (err) {
-      return fail(patch.jira_ticket !== undefined ? 'ticket' : 'title', (err as Error).message);
+      return fail(patch.bugtracker_ticket !== undefined ? 'ticket' : 'title', (err as Error).message);
     }
   };
 
@@ -153,7 +153,7 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
   const onInputEnter = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter' || e.ctrlKey || e.metaKey) return;
     e.preventDefault();
-    if (field === 'jira') close();
+    if (field === 'bugtracker') close();
     else stopEditing();
   };
 
@@ -198,7 +198,7 @@ export function TaskDialog({ task, projectName, field, open, onClose }: TaskDial
         }}
         onOpenAutoFocus={(e) => {
           e.preventDefault();
-          ({ notes: reader, edit: refs.title, jira: refs.ticket }[field].current as HTMLElement | null)?.focus();
+          ({ notes: reader, edit: refs.title, bugtracker: refs.ticket }[field].current as HTMLElement | null)?.focus();
         }}
         // À la fermeture, retour sur la tâche dans la liste pour reprendre la navigation.
         onCloseAutoFocus={(e) => {

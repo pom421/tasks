@@ -1,13 +1,13 @@
 import { Archive, Flag, Heart } from 'lucide-react';
-import { jiraState, type JiraState, type Priority, type Project } from '../../shared/types.ts';
+import { bugtrackerState, type BugtrackerState, type Priority, type Project } from '../../shared/types.ts';
 import { PRIORITY_COLOR, PriorityIcon } from './Priority';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
 interface ProjectFiltersProps {
   projects: Project[];
-  jiraFilter: JiraState;
-  onJiraFilter: () => void;
+  bugtrackerFilter: BugtrackerState;
+  onBugtrackerFilter: () => void;
   priorityFilter: Priority | null;
   onPriorityFilter: () => void;
   favoritesOnly: boolean;
@@ -26,15 +26,15 @@ const filterClass = (active: boolean) => cn('h-[26px]', active ? 'text-foregroun
 // tous les projets, indépendamment des autres filtres actifs.
 // Boutons bascule sobres : toujours à contour ; icône vide, pleine quand le
 // filtre est actif ; état annoncé par aria-pressed.
-export function ProjectFilters({ projects, jiraFilter, onJiraFilter, priorityFilter, onPriorityFilter, favoritesOnly, onFavoritesOnly, archivedOnly, onArchivedOnly }: ProjectFiltersProps) {
+export function ProjectFilters({ projects, bugtrackerFilter, onBugtrackerFilter, priorityFilter, onPriorityFilter, favoritesOnly, onFavoritesOnly, archivedOnly, onArchivedOnly }: ProjectFiltersProps) {
   const tasks = projects.flatMap((p) => p.tasks);
-  const jiraWanted = tasks.filter((t) => jiraState(t) === 'wanted').length; // tâches à faire à reporter
-  const jiraDone = tasks.filter((t) => jiraState(t) === 'done').length; // tâches à faire reportées
+  const bugtrackerWanted = tasks.filter((t) => bugtrackerState(t) === 'wanted').length; // tâches à faire à reporter
+  const bugtrackerDone = tasks.filter((t) => bugtrackerState(t) === 'done').length; // tâches à faire reportées
   const priorities = tasks.filter((t) => t.priority).length;
   const favorites = projects.filter((p) => p.favorite_at).length;
   const archived = projects.filter((p) => p.archived_at).length;
   const show = {
-    jira: jiraWanted > 0 || jiraDone > 0 || jiraFilter !== 'none',
+    bugtracker: bugtrackerWanted > 0 || bugtrackerDone > 0 || bugtrackerFilter !== 'none',
     priority: priorities > 0 || Boolean(priorityFilter),
     archived: archived > 0 || archivedOnly,
     favorites: favorites > 0 || favoritesOnly,
@@ -42,18 +42,18 @@ export function ProjectFilters({ projects, jiraFilter, onJiraFilter, priorityFil
   return (
     <div role="group" aria-label="Filtres des projets" className="mt-3 flex min-h-[26px] flex-wrap items-center justify-end gap-1.5">
       {/* Report : un clic (ou R) passe à la suite : à reporter → reportées → tous. */}
-      {show.jira && (
+      {show.bugtracker && (
         <Button
-          id="jira-pending"
-          className={filterClass(jiraFilter !== 'none')}
-          aria-pressed={jiraFilter !== 'none'}
+          id="bugtracker-pending"
+          className={filterClass(bugtrackerFilter !== 'none')}
+          aria-pressed={bugtrackerFilter !== 'none'}
           title="À reporter → reportées → toutes (R)"
-          onClick={onJiraFilter}
+          onClick={onBugtrackerFilter}
         >
-          <Flag aria-hidden fill={jiraFilter !== 'none' ? 'currentColor' : 'none'} />
-          {jiraFilter === 'done' || (jiraFilter === 'none' && !jiraWanted)
-            ? `${jiraDone} ${jiraDone > 1 ? 'tâches reportées' : 'tâche reportée'}`
-            : `${jiraWanted} ${jiraWanted > 1 ? 'tâches' : 'tâche'} à reporter`}
+          <Flag aria-hidden fill={bugtrackerFilter !== 'none' ? 'currentColor' : 'none'} />
+          {bugtrackerFilter === 'done' || (bugtrackerFilter === 'none' && !bugtrackerWanted)
+            ? `${bugtrackerDone} ${bugtrackerDone > 1 ? 'tâches reportées' : 'tâche reportée'}`
+            : `${bugtrackerWanted} ${bugtrackerWanted > 1 ? 'tâches' : 'tâche'} à reporter`}
         </Button>
       )}
       {/* Priorité : un clic (ou P) passe à la suite : 1 → 2 → 3 → toutes. */}

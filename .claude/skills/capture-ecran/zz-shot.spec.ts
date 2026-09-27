@@ -6,7 +6,7 @@ const OUT = process.env.SHOT_DIR ?? '/tmp';
 test('capture', async ({ page, store }) => {
   // Données.
   const alpha = store.createProject('Alpha');
-  store.updateTask(store.createTask(alpha.id, 'Une').id, { jira: 'wanted' });
+  store.updateTask(store.createTask(alpha.id, 'Une').id, { bugtracker: 'wanted' });
   const beta = store.createProject('Beta');
   store.updateProject(beta.id, { archived: true, favorite: true });
 

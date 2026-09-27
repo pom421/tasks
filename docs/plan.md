@@ -7,10 +7,11 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-Rien.
+- [~] « Jira » renommé « bugtracker » partout (base, API, types, interface, tests, docs) : colonnes `bugtracker_*` et réglage `bugtracker_base_url` par la migration 12
 
 ## Décisions attendues
 
+- [?] Lien d'un ticket par sa clé : `URL/browse/CLÉ` est le format de Jira. Pour un autre outil (GitLab `/-/issues/N`, GitHub `/issues/N`), régler un modèle d'URL (`https://…/browse/{clé}`) ?
 - [?] Log : aujourd'hui sans entrée n'apparaît plus (avant : cadre « Rien de fait ce jour-là »). À réafficher ?
 - [?] Compteur « N tâches à reporter » : ne compte plus les tâches **faites** à
   reporter (elles gardent leur badge dans le Log). Ajouter un indicateur dans

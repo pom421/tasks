@@ -41,16 +41,16 @@ const done: [number, string, number, string?, string?][] = [
   [api.id, 'Documentation OpenAPI des avoirs', 7],
   [site.id, 'Point d’équipe : retour sur le déploiement', 7],
 ];
-for (const [projectId, title, day, notes, jiraKey] of done) {
+for (const [projectId, title, day, notes, bugtrackerKey] of done) {
   const t = store.createTask(projectId, title);
-  store.updateTask(t.id, { doneAt: workdays[day], notes, ...(jiraKey && { jira: 'done' as const, jiraKey }) });
+  store.updateTask(t.id, { doneAt: workdays[day], notes, ...(bugtrackerKey && { bugtracker: 'done' as const, bugtrackerKey }) });
 }
 
 const today = iso(new Date());
-const todo: [number, string, { priority?: 1 | 2 | 3; dayAt?: string; jira?: 'wanted' }?][] = [
+const todo: [number, string, { priority?: 1 | 2 | 3; dayAt?: string; bugtracker?: 'wanted' }?][] = [
   [api.id, 'Gérer les avoirs partiels', { priority: 1, dayAt: today }],
   [api.id, 'Limiter le débit de l’API', { priority: 2 }],
-  [site.id, 'Page « Mentions légales »', { jira: 'wanted' }],
+  [site.id, 'Page « Mentions légales »', { bugtracker: 'wanted' }],
   [site.id, 'Mode sombre', { priority: 3 }],
   [ops.id, 'Préparer le déploiement de la v2.4', { dayAt: today }],
 ];

@@ -1,6 +1,6 @@
 import { flushSync } from 'react-dom';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { DEFAULT_DAY_CAPACITY, type JiraState, type JournalDay, type Priority, type Project, type Settings, type Task } from '../shared/types.ts';
+import { DEFAULT_DAY_CAPACITY, type BugtrackerState, type JournalDay, type Priority, type Project, type Settings, type Task } from '../shared/types.ts';
 import { api } from '@/lib/api';
 import { ActionsContext, type Actions, type TaskField } from '@/lib/actions';
 import { record, useHistory } from '@/lib/history';
@@ -32,13 +32,13 @@ interface PendingFocus {
   applied: () => void; // termine l'action une fois le focus appliqué
 }
 
-const NEXT_JIRA_FILTER: Record<JiraState, JiraState> = { none: 'wanted', wanted: 'done', done: 'none' };
+const NEXT_BUGTRACKER_FILTER: Record<BugtrackerState, BugtrackerState> = { none: 'wanted', wanted: 'done', done: 'none' };
 
 export function App() {
   const [data, setData] = useState<Data>({
     projects: [],
     days: [],
-    settings: { jira_base_url: null, day_capacity: DEFAULT_DAY_CAPACITY },
+    settings: { bugtracker_base_url: null, day_capacity: DEFAULT_DAY_CAPACITY },
     dates: [],
     dayDone: 0,
   });
@@ -60,8 +60,8 @@ export function App() {
   const [filter, setFilter] = useState<Filter>(NO_FILTER);
   // Filtres de la zone des projets (boutons sous la barre d'outils) : sans effet sur le Log.
   // Filtre report (R) : aucun → à reporter → reportées → aucun.
-  const [jiraFilter, setJiraFilter] = useState<JiraState>('none');
-  const cycleJiraFilter = () => setJiraFilter((f) => NEXT_JIRA_FILTER[f]);
+  const [bugtrackerFilter, setBugtrackerFilter] = useState<BugtrackerState>('none');
+  const cycleBugtrackerFilter = () => setBugtrackerFilter((f) => NEXT_BUGTRACKER_FILTER[f]);
   const [archivedOnly, setArchivedOnly] = useState(false);
   // Filtre priorité (!) : aucun → 1 → 2 → 3 → aucun.
   const [priorityFilter, setPriorityFilter] = useState<Priority | null>(null);
@@ -249,7 +249,7 @@ export function App() {
         d: () => focusLog('filter-date'),
         '/': () => focusLog('log-search'),
         // Filtres de la zone des projets : seulement dans l'onglet Projets.
-        R: () => projectsView && cycleJiraFilter(),
+        R: () => projectsView && cycleBugtrackerFilter(),
         F: () => projectsView && setFavoritesOnly((v) => !v),
         A: () => projectsView && setArchivedOnly((v) => !v),
         '!': () => projectsView && cyclePriorityFilter(),
@@ -266,7 +266,7 @@ export function App() {
         Escape: () => {
           if (Date.now() - lastEscape.current < 800) {
             lastEscape.current = 0;
-            setJiraFilter('none');
+            setBugtrackerFilter('none');
             setPriorityFilter(null);
             setArchivedOnly(false);
             setFavoritesOnly(false);
@@ -359,8 +359,8 @@ export function App() {
             {projectsView && (
               <ProjectFilters
                 projects={data.projects}
-                jiraFilter={jiraFilter}
-                onJiraFilter={cycleJiraFilter}
+                bugtrackerFilter={bugtrackerFilter}
+                onBugtrackerFilter={cycleBugtrackerFilter}
                 priorityFilter={priorityFilter}
                 onPriorityFilter={cyclePriorityFilter}
                 favoritesOnly={favoritesOnly}
@@ -372,7 +372,7 @@ export function App() {
             {dayView && <DayView projects={data.projects} dayDone={data.dayDone} capacity={data.settings.day_capacity} />}
             {logView && <Journal days={data.days} dates={data.dates} projects={data.projects} filter={filter} onFilter={changeFilter} />}
             {projectsView && (
-              <ProjectList projects={data.projects} archivedOnly={archivedOnly} jiraFilter={jiraFilter} priorityFilter={priorityFilter} favoritesOnly={favoritesOnly} />
+              <ProjectList projects={data.projects} archivedOnly={archivedOnly} bugtrackerFilter={bugtrackerFilter} priorityFilter={priorityFilter} favoritesOnly={favoritesOnly} />
             )}
           </div>
         </main>

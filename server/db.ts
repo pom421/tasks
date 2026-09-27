@@ -8,7 +8,7 @@ import { project, setting, task, type ProjectRow, type TaskRow } from './schema.
 import type {
   DoneTask,
   ImportResult,
-  JiraState,
+  BugtrackerState,
   Journal,
   JournalDay,
   JournalFilter,
@@ -25,9 +25,9 @@ import { LATEST_VERSION, migrate, schemaVersion, type MigrationReport } from './
 export interface TaskPatch {
   title?: string;
   doneAt?: string | null;
-  jira?: JiraState;
-  jiraKey?: string | null;
-  jiraUrl?: string | null;
+  bugtracker?: BugtrackerState;
+  bugtrackerKey?: string | null;
+  bugtrackerUrl?: string | null;
   notes?: string | null;
   timer?: TimerAction;
   timeSpent?: number; // annulation : valeurs du chrono remises telles quelles
@@ -36,8 +36,8 @@ export interface TaskPatch {
   priority?: Priority | null;
 }
 
-// À reporter dans Jira : marquée mais pas encore reportée.
-const JIRA_PENDING = and(isNotNull(task.jira_wanted_at), isNull(task.jira_at));
+// À reporter dans le bugtracker : marquée mais pas encore reportée.
+const BUGTRACKER_PENDING = and(isNotNull(task.bugtracker_wanted_at), isNull(task.bugtracker_at));
 
 const NOW = sql`datetime('now')`;
 
@@ -158,7 +158,7 @@ export class Store {
     const byProject = new Map<number, Project>(projects.map((p) => [p.id, { ...p, tasks: [] }]));
     for (const t of tasks) byProject.get(t.project_id)?.tasks.push(t);
     const dayDone = day ? this.count(and(eq(task.day_at, day), isNotNull(task.done_at))) : 0;
-    return { projects: [...byProject.values()], jiraPending: this.count(JIRA_PENDING), dayDone, settings: this.settings() };
+    return { projects: [...byProject.values()], bugtrackerPending: this.count(BUGTRACKER_PENDING), dayDone, settings: this.settings() };
   }
 
   private count(where: SQL | undefined): number {
@@ -173,14 +173,14 @@ export class Store {
   // (projet, report, recherche), quelle que soit la période : pour passer d'une
   // fenêtre à l'autre.
   // q : recherche dans le titre, le contenu et le ticket (casse et accents ignorés).
-  journal({ from, to, projectId, jiraPending, q, limit }: JournalFilter = {}): Journal {
+  journal({ from, to, projectId, bugtrackerPending, q, limit }: JournalFilter = {}): Journal {
     const where: (SQL | undefined)[] = [isNotNull(task.done_at)];
     if (projectId) where.push(eq(task.project_id, projectId));
-    if (jiraPending) where.push(JIRA_PENDING);
+    if (bugtrackerPending) where.push(BUGTRACKER_PENDING);
     if (q) {
       // % et _ saisis sont cherchés tels quels, pas comme jokers SQL.
       const pattern = '%' + fold(q).replace(/[\\%_]/g, (c) => '\\' + c) + '%';
-      const cols = [task.title, task.notes, task.jira_key, task.jira_url];
+      const cols = [task.title, task.notes, task.bugtracker_key, task.bugtracker_url];
       where.push(or(...cols.map((c) => sql`fold(${c}) LIKE ${pattern} ESCAPE '\\'`)));
     }
     const dates = this.orm
@@ -197,7 +197,7 @@ export class Store {
     }
     if (from) where.push(gte(task.done_at, from));
     if (to) where.push(lte(task.done_at, to));
-    if (!from && !to && !projectId && !jiraPending && !q) {
+    if (!from && !to && !projectId && !bugtrackerPending && !q) {
       const last = dates.at(-1);
       if (!last) return { days: [], dates };
       where.push(eq(task.done_at, last));
@@ -276,13 +276,13 @@ export class Store {
   }
 
   // doneAt : 'YYYY-MM-DD' pour marquer faite, null pour remettre à faire.
-  // jira : état du suivi Jira ('none' efface aussi le ticket) ;
-  // jiraKey / jiraUrl : ticket (clé ou lien complet) ; notes : détails (Markdown).
+  // bugtracker : état du suivi du bugtracker ('none' efface aussi le ticket) ;
+  // bugtrackerKey / bugtrackerUrl : ticket (clé ou lien complet) ; notes : détails (Markdown).
   // timer : chrono (un seul en marche à la fois ; une tâche faite l'arrête) ;
   // dayAt : au plan de cette journée (Plan journée), null = retirée ;
   // priority : 1 à 3, null = aucune.
   updateTask(id: number, patch: TaskPatch) {
-    const { title, doneAt, jira, jiraKey, jiraUrl, notes, timer, timeSpent, timerStartedAt, dayAt, priority } = patch;
+    const { title, doneAt, bugtracker, bugtrackerKey, bugtrackerUrl, notes, timer, timeSpent, timerStartedAt, dayAt, priority } = patch;
     const update = (set: SQLiteUpdateSetSource<typeof task>, where: SQL | undefined = undefined) =>
       this.orm.update(task).set(set).where(and(eq(task.id, id), where)).run();
     if (doneAt) update(PAUSE, RUNNING);
@@ -293,18 +293,18 @@ export class Store {
     }
     if (timer === 'pause') update(PAUSE, RUNNING);
     if (timer === 'reset') update({ time_spent: 0, timer_started_at: null });
-    // Le reste en une seule écriture ; l'ordre compte : jira 'none' efface le
-    // ticket, jiraKey / jiraUrl le remplacent ensuite.
+    // Le reste en une seule écriture ; l'ordre compte : bugtracker 'none' efface le
+    // ticket, bugtrackerKey / bugtrackerUrl le remplacent ensuite.
     const set: SQLiteUpdateSetSource<typeof task> = {};
     if (title !== undefined) set.title = title;
     if (timeSpent !== undefined) set.time_spent = timeSpent;
     if (timerStartedAt !== undefined) set.timer_started_at = timerStartedAt;
-    if (jira === 'none') Object.assign(set, { jira_wanted_at: null, jira_at: null, jira_key: null, jira_url: null });
-    if (jira === 'wanted' || jira === 'done') set.jira_wanted_at = sql`COALESCE(${task.jira_wanted_at}, ${NOW})`;
-    if (jira === 'wanted') set.jira_at = null;
-    if (jira === 'done') set.jira_at = sql`COALESCE(${task.jira_at}, ${NOW})`;
-    if (jiraKey !== undefined) set.jira_key = jiraKey;
-    if (jiraUrl !== undefined) set.jira_url = jiraUrl;
+    if (bugtracker === 'none') Object.assign(set, { bugtracker_wanted_at: null, bugtracker_at: null, bugtracker_key: null, bugtracker_url: null });
+    if (bugtracker === 'wanted' || bugtracker === 'done') set.bugtracker_wanted_at = sql`COALESCE(${task.bugtracker_wanted_at}, ${NOW})`;
+    if (bugtracker === 'wanted') set.bugtracker_at = null;
+    if (bugtracker === 'done') set.bugtracker_at = sql`COALESCE(${task.bugtracker_at}, ${NOW})`;
+    if (bugtrackerKey !== undefined) set.bugtracker_key = bugtrackerKey;
+    if (bugtrackerUrl !== undefined) set.bugtracker_url = bugtrackerUrl;
     if (notes !== undefined) set.notes = notes;
     if (dayAt !== undefined) set.day_at = dayAt;
     if (priority !== undefined) set.priority = priority;
@@ -406,7 +406,7 @@ export class Store {
     const rows = this.orm.select().from(setting).all();
     const map = new Map(rows.map((r) => [r.key, r.value]));
     return {
-      jira_base_url: map.get('jira_base_url') ?? null,
+      bugtracker_base_url: map.get('bugtracker_base_url') ?? null,
       day_capacity: Number(map.get('day_capacity')) || DEFAULT_DAY_CAPACITY,
     };
   }

@@ -75,7 +75,7 @@ Chaque session démarre dans un conteneur neuf : les dépendances doivent y êtr
 - Priorité d'une tâche : icône chiffre à droite, pleine et colorée (1 rouge, 2 orange, 3 bleu), sinon « 1 » dans un carré à contour, au survol (ce que donne un clic). `1` `2` `3` sur la tâche donnent la priorité, le même chiffre la retire ; clic sur l'icône : aucune → 1 → 2 → 3 → aucune. Même icône et mêmes touches dans la fiche. Annulable (`u`).
 - Icônes d'une tâche : toutes à droite, même style (atténuées et vides ; pleines quand actives, et alors toujours visibles).
 - Report : une tâche passe « à reporter », puis « reporté » (badge après le titre : l'identifiant du ticket s'il y en a un, « reporté » sinon ; date du report en info-bulle).
-- Réglages (icône ⚙, page `/admin`, `Échap` pour revenir) : URL de base des tickets (ex. `https://entreprise.atlassian.net`), qui transforme les identifiants en liens (`URL/browse/PROJ-123`), conservée en base ; nombre de tâches maximum par jour (Aujourd’hui) ; export / import des données.
+- Réglages (icône ⚙, page `/admin`, `Échap` pour revenir) : URL de base des tickets (ex. `https://entreprise.tickets.fr`), qui transforme les identifiants en liens (`URL/browse/PROJ-123`), conservée en base ; nombre de tâches maximum par jour (Aujourd’hui) ; export / import des données.
 
 Clavier (`?` affiche l'aide, un 2e `?` ou `Échap` la ferme ; groupée par thème : navigation, fiche, tâche, projet, filtres des projets, Log, général ; sur un petit écran, la liste défile sous le titre) :
 
@@ -159,10 +159,10 @@ En dev, l'API est branchée dans le serveur Vite (`vite.config.ts`) : une seule 
 
 Description complète et commentée : [`server/schema.ts`](server/schema.ts) (une base migrée doit lui correspondre exactement, `server/test/schema.test.ts`). En bref :
 
-`project` (id, name, created_at, archived_at, favorite_at, position) : 1 projet a 0..n `task` (id, project_id, title, created_at, done_at, position, notes, jira_wanted_at, jira_at, jira_key, jira_url, time_spent, timer_started_at, day_at, priority).
-`setting` (key, value) : réglages de l'application (ex. `jira_base_url`, `day_capacity` = maximum de tâches par jour, 5 par défaut).
+`project` (id, name, created_at, archived_at, favorite_at, position) : 1 projet a 0..n `task` (id, project_id, title, created_at, done_at, position, notes, bugtracker_wanted_at, bugtracker_at, bugtracker_key, bugtracker_url, time_spent, timer_started_at, day_at, priority).
+`setting` (key, value) : réglages de l'application (ex. `bugtracker_base_url`, `day_capacity` = maximum de tâches par jour, 5 par défaut).
 `position` = ordre des projets, et ordre (priorité) des tâches dans leur projet.
-`notes` = contenu en Markdown. Chrono : `time_spent` = secondes cumulées, `timer_started_at` = chrono en marche depuis (UTC) ; temps passé = les deux additionnés. `day_at` = jour ('YYYY-MM-DD') pour lequel la tâche a été mise au plan (Aujourd’hui). `priority` = 1 (P1, la plus haute) à 3, NULL = aucune. Une tâche est faite quand `done_at` est rempli (le journal, ce sont ces tâches-là), à reporter quand `jira_wanted_at` l'est et pas `jira_at`, reportée quand `jira_at` l'est. Ticket : `jira_key` (lien construit avec `jira_base_url`, qui peut donc changer) ou `jira_url` (lien complet). Liens en http(s) uniquement.
+`notes` = contenu en Markdown. Chrono : `time_spent` = secondes cumulées, `timer_started_at` = chrono en marche depuis (UTC) ; temps passé = les deux additionnés. `day_at` = jour ('YYYY-MM-DD') pour lequel la tâche a été mise au plan (Aujourd’hui). `priority` = 1 (P1, la plus haute) à 3, NULL = aucune. Une tâche est faite quand `done_at` est rempli (le journal, ce sont ces tâches-là), à reporter quand `bugtracker_wanted_at` l'est et pas `bugtracker_at`, reportée quand `bugtracker_at` l'est. Ticket : `bugtracker_key` (lien construit avec `bugtracker_base_url`, qui peut donc changer) ou `bugtracker_url` (lien complet). Liens en http(s) uniquement.
 ### Versions du schéma
 
 - Chaque évolution de la base est un **script numéroté** dans `server/migrations.ts` (version, nom, SQL), reportée dans `server/schema.ts`. On ajoute une version en fin de liste, on ne modifie jamais un script publié.

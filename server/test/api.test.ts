@@ -198,25 +198,25 @@ test('import refuse une base contenant un trigger', async () => {
   assert.match(res.body.error, /trigger/);
 });
 
-test('report Jira : bascule, visible dans les projets et le journal', async () => {
-  const { body: p } = await call('POST', '/api/projects', { name: 'Jira' });
+test('report vers le bugtracker : bascule, visible dans les projets et le journal', async () => {
+  const { body: p } = await call('POST', '/api/projects', { name: 'bugtracker' });
   const { body: t } = await call('POST', '/api/tasks', { project_id: p.id, title: 'Ticket' });
-  assert.equal(t.jira_at, null);
+  assert.equal(t.bugtracker_at, null);
 
-  const { body: on } = await call('PATCH', `/api/tasks/${t.id}`, { jira: 'done' });
-  assert.ok(on.jira_at);
+  const { body: on } = await call('PATCH', `/api/tasks/${t.id}`, { bugtracker: 'done' });
+  assert.ok(on.bugtracker_at);
   let { body: state } = await call('GET', '/api/state');
-  assert.ok(state.projects.find((x: any) => x.id === p.id).tasks[0].jira_at);
+  assert.ok(state.projects.find((x: any) => x.id === p.id).tasks[0].bugtracker_at);
 
   await call('PATCH', `/api/tasks/${t.id}`, { done: true, done_at: '2026-09-01' });
   const { body: j } = await call('GET', `/api/journal?project=${p.id}`);
-  assert.ok(j.days[0].tasks[0].jira_at);
+  assert.ok(j.days[0].tasks[0].bugtracker_at);
 
-  const { body: off } = await call('PATCH', `/api/tasks/${t.id}`, { jira: 'none' });
-  assert.equal(off.jira_at, null);
+  const { body: off } = await call('PATCH', `/api/tasks/${t.id}`, { bugtracker: 'none' });
+  assert.equal(off.bugtracker_at, null);
 });
 
-test('migration : une base v1 (sans jira_at) est mise à niveau à l’ouverture', async () => {
+test('migration : une base v1 (sans colonne de report) est mise à niveau à l’ouverture', async () => {
   const { DatabaseSync } = await import('node:sqlite');
   const file = path.join(dir, 'v1.sqlite');
   const v1 = new DatabaseSync(file);
@@ -229,8 +229,8 @@ test('migration : une base v1 (sans jira_at) est mise à niveau à l’ouverture
            PRAGMA user_version = 1;`);
   v1.close();
   const old = new Store(file);
-  assert.deepEqual(old.state().projects[0].tasks[0], { id: 1, project_id: 1, title: 'Tâche v1', jira_wanted_at: null, jira_at: null, jira_key: null, jira_url: null, notes: null, time_spent: 0, timer_started_at: null, day_at: null, priority: null });
-  assert.ok(old.updateTask(1, { jira: 'done' })?.jira_at);
+  assert.deepEqual(old.state().projects[0].tasks[0], { id: 1, project_id: 1, title: 'Tâche v1', bugtracker_wanted_at: null, bugtracker_at: null, bugtracker_key: null, bugtracker_url: null, notes: null, time_spent: 0, timer_started_at: null, day_at: null, priority: null });
+  assert.ok(old.updateTask(1, { bugtracker: 'done' })?.bugtracker_at);
   old.close();
 });
 
@@ -266,44 +266,44 @@ test('déplacement : dans le projet, vers un autre projet (même vide), validati
   assert.equal((await call('POST', `/api/tasks/${ids.un}/move`, { project_id: a.id, index: 0 })).status, 404);
 });
 
-test('Jira : à reporter puis reportée, lien, compteur et filtre du journal', async () => {
-  const { body: p } = await call('POST', '/api/projects', { name: 'Suivi Jira' });
+test('bugtracker : à reporter puis reportée, lien, compteur et filtre du journal', async () => {
+  const { body: p } = await call('POST', '/api/projects', { name: 'Suivi du bugtracker' });
   const { body: t } = await call('POST', '/api/tasks', { project_id: p.id, title: 'À reporter' });
-  const pending = async () => (await call('GET', '/api/state')).body.jiraPending;
+  const pending = async () => (await call('GET', '/api/state')).body.bugtrackerPending;
   const before = await pending();
 
-  const { body: wanted } = await call('PATCH', `/api/tasks/${t.id}`, { jira: 'wanted' });
-  assert.ok(wanted.jira_wanted_at);
-  assert.equal(wanted.jira_at, null);
+  const { body: wanted } = await call('PATCH', `/api/tasks/${t.id}`, { bugtracker: 'wanted' });
+  assert.ok(wanted.bugtracker_wanted_at);
+  assert.equal(wanted.bugtracker_at, null);
   assert.equal(await pending(), before + 1);
 
   // Faite mais pas reportée : visible dans le journal filtré, quelle que soit la date.
   await call('PATCH', `/api/tasks/${t.id}`, { done: true, done_at: '2020-01-01' });
-  const { body: j } = await call('GET', '/api/journal?jira=pending');
+  const { body: j } = await call('GET', '/api/journal?bugtracker=pending');
   assert.ok(j.days.some((d: any) => d.tasks.some((x: any) => x.id === t.id)));
 
   const { body: done } = await call('PATCH', `/api/tasks/${t.id}`, {
-    jira: 'done',
-    jira_ticket: 'https://exemple.atlassian.net/browse/PROJ-123',
+    bugtracker: 'done',
+    bugtracker_ticket: 'https://exemple.tickets.fr/browse/PROJ-123',
   });
-  assert.ok(done.jira_at);
-  assert.equal(done.jira_wanted_at, wanted.jira_wanted_at); // date de demande conservée
-  assert.equal(done.jira_url, 'https://exemple.atlassian.net/browse/PROJ-123');
+  assert.ok(done.bugtracker_at);
+  assert.equal(done.bugtracker_wanted_at, wanted.bugtracker_wanted_at); // date de demande conservée
+  assert.equal(done.bugtracker_url, 'https://exemple.tickets.fr/browse/PROJ-123');
   assert.equal(await pending(), before);
-  const { body: j2 } = await call('GET', '/api/journal?jira=pending');
+  const { body: j2 } = await call('GET', '/api/journal?bugtracker=pending');
   assert.ok(!j2.days.some((d: any) => d.tasks.some((x: any) => x.id === t.id)));
 
   // Liens refusés : autre protocole (XSS via javascript:), texte libre.
   for (const bad of ['javascript:alert(1)', 'data:text/html,x', 'pas un ticket', 42]) {
-    assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { jira_ticket: bad })).status, 400, String(bad));
+    assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { bugtracker_ticket: bad })).status, 400, String(bad));
   }
-  assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { jira: 'oui' })).status, 400);
+  assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { bugtracker: 'oui' })).status, 400);
 
   // Lien vidé ; retour à « rien » efface tout.
-  assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { jira_ticket: '' })).body.jira_url, null);
-  await call('PATCH', `/api/tasks/${t.id}`, { jira_ticket: 'proj-9' });
-  const { body: none } = await call('PATCH', `/api/tasks/${t.id}`, { jira: 'none' });
-  assert.deepEqual([none.jira_wanted_at, none.jira_at, none.jira_key, none.jira_url], [null, null, null, null]);
+  assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { bugtracker_ticket: '' })).body.bugtracker_url, null);
+  await call('PATCH', `/api/tasks/${t.id}`, { bugtracker_ticket: 'proj-9' });
+  const { body: none } = await call('PATCH', `/api/tasks/${t.id}`, { bugtracker: 'none' });
+  assert.deepEqual([none.bugtracker_wanted_at, none.bugtracker_at, none.bugtracker_key, none.bugtracker_url], [null, null, null, null]);
 });
 
 test('migration 4 : une tâche déjà « reportée » (v3) garde son état', async () => {
@@ -321,20 +321,20 @@ test('migration 4 : une tâche déjà « reportée » (v3) garde son état', asy
   v3.close();
   const store3 = new Store(file);
   const task = store3.state().projects[0].tasks[0];
-  assert.equal(task.jira_at, '2026-09-01 10:00:00');
-  assert.equal(task.jira_wanted_at, '2026-09-01 10:00:00');
+  assert.equal(task.bugtracker_at, '2026-09-01 10:00:00');
+  assert.equal(task.bugtracker_wanted_at, '2026-09-01 10:00:00');
   store3.close();
 });
 
-test('réglages : URL Jira d’entreprise conservée en base, validée', async () => {
-  assert.deepEqual((await call('GET', '/api/settings')).body, { jira_base_url: null, day_capacity: 5 });
-  const { body } = await call('PUT', '/api/settings', { jira_base_url: 'https://entreprise.atlassian.net/' });
-  assert.equal(body.jira_base_url, 'https://entreprise.atlassian.net'); // sans « / » final
-  assert.equal((await call('GET', '/api/state')).body.settings.jira_base_url, 'https://entreprise.atlassian.net');
-  assert.equal((await call('PUT', '/api/settings', { jira_base_url: 'javascript:alert(1)' })).status, 400);
-  assert.equal((await call('PUT', '/api/settings', { jira_base_url: '' })).body.jira_base_url, null);
+test('réglages : URL du bugtracker conservée en base, validée', async () => {
+  assert.deepEqual((await call('GET', '/api/settings')).body, { bugtracker_base_url: null, day_capacity: 5 });
+  const { body } = await call('PUT', '/api/settings', { bugtracker_base_url: 'https://entreprise.tickets.fr/' });
+  assert.equal(body.bugtracker_base_url, 'https://entreprise.tickets.fr'); // sans « / » final
+  assert.equal((await call('GET', '/api/state')).body.settings.bugtracker_base_url, 'https://entreprise.tickets.fr');
+  assert.equal((await call('PUT', '/api/settings', { bugtracker_base_url: 'javascript:alert(1)' })).status, 400);
+  assert.equal((await call('PUT', '/api/settings', { bugtracker_base_url: '' })).body.bugtracker_base_url, null);
   // Formulaire d'un autre site : refusé comme le reste de l'API.
-  assert.equal((await call('PUT', '/api/settings', { jira_base_url: 'https://x.io' }, { Origin: 'https://evil.example' })).status, 403);
+  assert.equal((await call('PUT', '/api/settings', { bugtracker_base_url: 'https://x.io' }, { Origin: 'https://evil.example' })).status, 403);
 });
 
 test('détails de la tâche : notes (Markdown), ticket par sa clé', async () => {
@@ -343,12 +343,12 @@ test('détails de la tâche : notes (Markdown), ticket par sa clé', async () =>
 
   const { body: d } = await call('PATCH', `/api/tasks/${t.id}`, {
     notes: '  Contexte : voir [la spec](https://docs.exemple.fr/specs).  ',
-    jira_ticket: 'abc-42',
+    bugtracker_ticket: 'abc-42',
   });
   assert.equal(d.notes, 'Contexte : voir [la spec](https://docs.exemple.fr/specs).');
-  assert.equal(d.jira_key, 'ABC-42'); // clé normalisée en majuscules
-  assert.equal(d.jira_url, null);
-  assert.ok(d.jira_at); // un ticket renseigné vaut « reportée »
+  assert.equal(d.bugtracker_key, 'ABC-42'); // clé normalisée en majuscules
+  assert.equal(d.bugtracker_url, null);
+  assert.ok(d.bugtracker_at); // un ticket renseigné vaut « reportée »
 
   assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { notes: 'x'.repeat(20_001) })).status, 400);
   const { body: cleared } = await call('PATCH', `/api/tasks/${t.id}`, { notes: '' });
@@ -378,10 +378,33 @@ test('migration 6 : le lien d’une tâche (v5) rejoint ses notes', async () => 
   store5.close();
 });
 
+test('migration 12 : colonnes et réglage du ticket renommés (bugtracker), données gardées', async () => {
+  const { DatabaseSync } = await import('node:sqlite');
+  const { MIGRATIONS } = await import('../migrations.ts');
+  const file = path.join(dir, 'v11.sqlite');
+  const v11 = new DatabaseSync(file);
+  for (const m of MIGRATIONS.filter((m) => m.version <= 11)) v11.exec(m.sql);
+  v11.exec(`INSERT INTO project (name) VALUES ('P');
+            INSERT INTO task (project_id, title, done_at, jira_wanted_at, jira_at, jira_key, jira_url)
+              VALUES (1, 'Reportée', '2026-09-01', '2026-09-01 10:00:00', '2026-09-02 11:00:00', 'PROJ-7', 'https://t.fr/7');
+            INSERT INTO setting (key, value) VALUES ('jira_base_url', 'https://t.fr'), ('day_capacity', '4');
+            PRAGMA user_version = 11;`);
+  v11.close();
+  const store11 = new Store(file);
+  assert.deepEqual(store11.migration.applied.map((m) => m.version), [12]);
+  const [done] = store11.journal({ limit: 5 }).days[0].tasks;
+  assert.deepEqual(
+    [done.bugtracker_wanted_at, done.bugtracker_at, done.bugtracker_key, done.bugtracker_url],
+    ['2026-09-01 10:00:00', '2026-09-02 11:00:00', 'PROJ-7', 'https://t.fr/7'],
+  );
+  assert.deepEqual(store11.settings(), { bugtracker_base_url: 'https://t.fr', day_capacity: 4 });
+  store11.close();
+});
+
 test('suppression annulable : DELETE renvoie la tâche, restore la réinsère à l’identique', async () => {
   const { body: p } = await call('POST', '/api/projects', { name: 'Annulation' });
   const { body: t } = await call('POST', '/api/tasks', { project_id: p.id, title: 'À restaurer' });
-  await call('PATCH', `/api/tasks/${t.id}`, { notes: 'Mes notes', jira_ticket: 'ABC-1', done: true, done_at: '2026-09-01' });
+  await call('PATCH', `/api/tasks/${t.id}`, { notes: 'Mes notes', bugtracker_ticket: 'ABC-1', done: true, done_at: '2026-09-01' });
 
   const { status, body: deleted } = await call('DELETE', `/api/tasks/${t.id}`);
   assert.equal(status, 200);
@@ -395,8 +418,8 @@ test('suppression annulable : DELETE renvoie la tâche, restore la réinsère à
   assert.equal((await call('POST', '/api/tasks/restore', deleted)).status, 409);
   await call('DELETE', `/api/tasks/${t.id}`);
   for (const bad of [
-    { ...deleted, jira_url: 'javascript:alert(1)' },
-    { ...deleted, jira_key: 'pas une clé' },
+    { ...deleted, bugtracker_url: 'javascript:alert(1)' },
+    { ...deleted, bugtracker_key: 'pas une clé' },
     { ...deleted, done_at: 'hier' },
     { ...deleted, title: '' },
     { ...deleted, id: -1 },
@@ -428,7 +451,7 @@ test('suppression de projet annulable : DELETE renvoie projet et tâches, restor
   for (const bad of [
     { ...deleted, project: { ...deleted.project, name: '' } },
     { ...deleted, tasks: [{ ...deleted.tasks[0], project_id: p.id + 1 }] },
-    { ...deleted, tasks: [{ ...deleted.tasks[0], jira_url: 'javascript:alert(1)' }] },
+    { ...deleted, tasks: [{ ...deleted.tasks[0], bugtracker_url: 'javascript:alert(1)' }] },
     { project: deleted.project },
   ]) {
     assert.equal((await call('POST', '/api/projects/restore', bad)).status, 400, JSON.stringify(bad).slice(0, 80));
@@ -511,8 +534,8 @@ test('versions du schéma : base v2 → dernière version (3, 4, 5, 6…), sauve
   assert.deepEqual(rows.filter((r) => !r.applied_at).map((r) => r.version), [1, 2]);
   // Données conservées et transformées par les migrations.
   assert.deepEqual(store2.state().projects[0].tasks[0], {
-    id: 1, project_id: 1, title: 'Reportée en v2', jira_wanted_at: '2026-01-01 09:00:00',
-    jira_at: '2026-01-01 09:00:00', jira_key: null, jira_url: null, notes: null, time_spent: 0, timer_started_at: null, day_at: null, priority: null,
+    id: 1, project_id: 1, title: 'Reportée en v2', bugtracker_wanted_at: '2026-01-01 09:00:00',
+    bugtracker_at: '2026-01-01 09:00:00', bugtracker_key: null, bugtracker_url: null, notes: null, time_spent: 0, timer_started_at: null, day_at: null, priority: null,
   });
   store2.close();
 
@@ -553,7 +576,7 @@ test('recherche dans le Log : titre, contenu, ticket ; casse et accents ignorés
   };
   await make('Réunion budget', {}, '2018-05-01');
   await make('Préparer slides', { notes: 'Voir la **réunion** de lundi' }, '2018-05-02');
-  await make('Déployer', { jira_ticket: 'OPS-42' }, '2018-05-02');
+  await make('Déployer', { bugtracker_ticket: 'OPS-42' }, '2018-05-02');
   await make('Taux à 100%_ok', {}, '2018-05-03');
 
   const search = async (q: string) =>

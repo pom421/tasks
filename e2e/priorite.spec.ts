@@ -113,7 +113,7 @@ test('! : filtre priorité 1 → 2 → 3 → toutes (zone des projets seulement)
   };
   store.updateTask(ids.un, { priority: 1 });
   store.updateTask(ids.deux, { priority: 2 });
-  store.updateTask(ids.trois, { priority: 3, jira: 'wanted' });
+  store.updateTask(ids.trois, { priority: 3, bugtracker: 'wanted' });
   store.updateTask(store.createTask(beta.id, 'Faite').id, { priority: 1, doneAt: '2026-09-25' });
   await page.goto('/');
   await expect(page.locator('.project')).toHaveCount(2);

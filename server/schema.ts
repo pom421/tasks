@@ -38,11 +38,11 @@ export const task = sqliteTable(
     notes: text(), // contenu, en Markdown
     priority: integer().$type<Priority>(), // 1 (P1, la plus haute) à 3, NULL = aucune
     day_at: text(), // 'YYYY-MM-DD' : au plan de cette journée (Aujourd'hui)
-    // Report : à reporter = jira_wanted_at sans jira_at, reportée = jira_at.
-    jira_wanted_at: text(),
-    jira_at: text(),
-    jira_key: text(), // clé du ticket (PROJ-123), lien construit avec le réglage jira_base_url
-    jira_url: text(), // ou lien complet vers le ticket (http/https)
+    // Report : à reporter = bugtracker_wanted_at sans bugtracker_at, reportée = bugtracker_at.
+    bugtracker_wanted_at: text(),
+    bugtracker_at: text(),
+    bugtracker_key: text(), // clé du ticket (PROJ-123), lien construit avec le réglage bugtracker_base_url
+    bugtracker_url: text(), // ou lien complet vers le ticket (http/https)
     // Chrono : temps passé = time_spent + durée depuis timer_started_at.
     time_spent: integer().notNull().default(0), // secondes cumulées (hors période en cours)
     timer_started_at: text(), // en marche depuis, NULL = arrêté
@@ -50,7 +50,7 @@ export const task = sqliteTable(
   (t) => [index('task_project').on(t.project_id), index('task_done_at').on(t.done_at)],
 );
 
-// Réglages de l'application : jira_base_url, day_capacity (maximum de tâches
+// Réglages de l'application : bugtracker_base_url, day_capacity (maximum de tâches
 // par jour dans Aujourd'hui).
 export const setting = sqliteTable('setting', {
   key: text().primaryKey(),

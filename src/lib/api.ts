@@ -1,4 +1,4 @@
-import type { ImportResult, JiraState, Priority, TimerAction, Journal, JournalFilter, Settings, State } from '../../shared/types.ts';
+import type { ImportResult, BugtrackerState, Priority, TimerAction, Journal, JournalFilter, Settings, State } from '../../shared/types.ts';
 
 // Le serveur exige un Content-Type précis par route (protection CSRF).
 async function request<T>(method: string, url: string, body?: unknown): Promise<T> {
@@ -24,8 +24,8 @@ export interface TaskPatch {
   title?: string;
   done?: boolean;
   done_at?: string;
-  jira?: JiraState;
-  jira_ticket?: string | null; // clé (PROJ-123) ou lien complet
+  bugtracker?: BugtrackerState;
+  bugtracker_ticket?: string | null; // clé (PROJ-123) ou lien complet
   notes?: string | null;
   timer?: TimerAction;
   time_spent?: number; // annulation du chrono
@@ -38,12 +38,12 @@ export const api = {
   state: (day: string) => request<State>('GET', `/api/state?day=${day}`),
   settings: () => request<Settings>('GET', '/api/settings'),
   updateSettings: (patch: Partial<Settings>) => request<Settings>('PUT', '/api/settings', patch),
-  journal: ({ from, to, projectId, jiraPending, q, limit }: JournalFilter) => {
+  journal: ({ from, to, projectId, bugtrackerPending, q, limit }: JournalFilter) => {
     const params = new URLSearchParams();
     if (from) params.set('from', from);
     if (to) params.set('to', to);
     if (projectId) params.set('project', String(projectId));
-    if (jiraPending) params.set('jira', 'pending');
+    if (bugtrackerPending) params.set('bugtracker', 'pending');
     if (q) params.set('q', q);
     if (limit) params.set('limit', String(limit));
     return request<Journal>('GET', `/api/journal?${params}`);

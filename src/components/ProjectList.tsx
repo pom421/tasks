@@ -1,6 +1,6 @@
 import { useRef, useState, type FocusEvent, type KeyboardEvent } from 'react';
 import { Archive, ArchiveRestore, Heart, Trash2 } from 'lucide-react';
-import { jiraState, type JiraState, type Priority, type Project, type Task } from '../../shared/types.ts';
+import { bugtrackerState, type BugtrackerState, type Priority, type Project, type Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
 import { useActions } from '@/lib/actions';
 import { moveDirection } from '@/lib/nav';
@@ -176,16 +176,16 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
 interface ProjectListProps {
   projects: Project[];
   archivedOnly: boolean;
-  jiraFilter: JiraState; // filtre report : 'none' = aucun, sinon tâches à reporter / reportées
+  bugtrackerFilter: BugtrackerState; // filtre report : 'none' = aucun, sinon tâches à reporter / reportées
   priorityFilter: Priority | null; // filtre priorité : null = aucun
   favoritesOnly: boolean;
 }
 
-export function ProjectList({ projects, archivedOnly, jiraFilter, priorityFilter, favoritesOnly }: ProjectListProps) {
-  const jiraOnly = jiraFilter !== 'none';
+export function ProjectList({ projects, archivedOnly, bugtrackerFilter, priorityFilter, favoritesOnly }: ProjectListProps) {
+  const bugtrackerOnly = bugtrackerFilter !== 'none';
   // Filtres portant sur les tâches (report, priorité), combinés en ET.
-  const taskFilter = jiraOnly || priorityFilter !== null;
-  const keep = (t: Task) => (!jiraOnly || jiraState(t) === jiraFilter) && (!priorityFilter || t.priority === priorityFilter);
+  const taskFilter = bugtrackerOnly || priorityFilter !== null;
+  const keep = (t: Task) => (!bugtrackerOnly || bugtrackerState(t) === bugtrackerFilter) && (!priorityFilter || t.priority === priorityFilter);
   const { undoable } = useActions();
   const visible = projects
     .filter((p) => Boolean(p.archived_at) === archivedOnly) // Archivés : seulement eux
@@ -196,9 +196,9 @@ export function ProjectList({ projects, archivedOnly, jiraFilter, priorityFilter
   // Liste vide : message propre au filtre actif ; plusieurs filtres combinés :
   // message générique (tâches si un filtre de tâches en fait partie, sinon projets).
   const emptyMessage = () => {
-    const active = [jiraOnly, priorityFilter, archivedOnly, favoritesOnly].filter(Boolean).length;
+    const active = [bugtrackerOnly, priorityFilter, archivedOnly, favoritesOnly].filter(Boolean).length;
     if (active > 1) return taskFilter ? 'Aucune tâche avec les filtres demandés.' : 'Aucun projet avec les filtres demandés.';
-    if (jiraOnly) return jiraFilter === 'wanted' ? 'Aucune tâche à faire à reporter.' : 'Aucune tâche à faire reportée.';
+    if (bugtrackerOnly) return bugtrackerFilter === 'wanted' ? 'Aucune tâche à faire à reporter.' : 'Aucune tâche à faire reportée.';
     if (priorityFilter) return `Aucune tâche à faire de priorité ${priorityFilter}.`;
     if (archivedOnly) return 'Aucun projet archivé.';
     if (favoritesOnly) return 'Aucun projet favori : cliquez sur le cœur d’un projet.';
