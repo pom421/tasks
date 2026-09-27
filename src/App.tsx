@@ -46,17 +46,17 @@ export function App() {
     dayDone: 0,
   });
   // Pages, sans routeur : quatre onglets, Projets (/), Aujourd’hui (/plan),
-  // Prochainement (/prochainement) et Log (/log), et les réglages (/admin).
+  // Suivant (/suivant) et Log (/log), et les réglages (/admin).
   const [path, setPath] = useState(window.location.pathname);
   const dayView = path === '/plan';
   const logView = path === '/log';
-  const upcomingView = path === '/prochainement';
+  const upcomingView = path === '/suivant';
   const projectsView = !dayView && !logView && !upcomingView;
-  // Onglets, dans l'ordre (Alt+← / Alt+→) ; P, T, L vont directement à l'un d'eux.
-  const TABS: { label: string; to: string; key?: string; selected: boolean }[] = [
+  // Onglets, dans l'ordre (Alt+← / Alt+→) ; P, T, S, L vont directement à l'un d'eux.
+  const TABS = [
     { label: 'Projets', to: '/', key: 'P', selected: projectsView },
     { label: 'Aujourd’hui', to: '/plan', key: 'T', selected: dayView },
-    { label: 'Prochainement', to: '/prochainement', selected: upcomingView },
+    { label: 'Suivant', to: '/suivant', key: 'S', selected: upcomingView },
     { label: 'Log', to: '/log', key: 'L', selected: logView },
   ];
   // Fiche d'une tâche : id, champ focalisé, open à false pendant l'animation de
@@ -261,7 +261,7 @@ export function App() {
         F: () => projectsView && setFavoritesOnly((v) => !v),
         A: () => projectsView && setArchivedOnly((v) => !v),
         '!': () => projectsView && cyclePriorityFilter(),
-        ...Object.fromEntries(TABS.filter((t) => t.key).map((t) => [t.key, () => navigate(t.to)])),
+        ...Object.fromEntries(TABS.map((t) => [t.key, () => navigate(t.to)])),
         // Filtre par tags de l'onglet courant (Log ou Projets ; ailleurs : Projets).
         '#': () => {
           if (!logView && !projectsView) flushSync(() => navigate('/'));
@@ -359,7 +359,7 @@ export function App() {
                   type="button"
                   role="tab"
                   aria-selected={tab.selected}
-                  title={tab.key ? `${tab.label} (${tab.key})` : `${tab.label} (Alt+← / Alt+→)`}
+                  title={`${tab.label} (${tab.key})`}
                   className={cn(
                     'border-b-2 font-semibold',
                     tab.selected ? 'border-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',

@@ -4,7 +4,7 @@ import { TaskRow } from './TaskRow';
 
 type Entry = Task & { project_name: string };
 
-// Onglet « Prochainement » : agenda des tâches à faire datées, à partir
+// Onglet « Suivant » : agenda des tâches à faire datées, à partir
 // d'aujourd'hui, un cadre par jour (comme le Log). Une tâche apparaît à sa
 // date prévue et à son échéance ; ses étiquettes disent laquelle. Avant,
 // un cadre par jour d'échéance dépassée, titre en rouge. Les dates prévues
@@ -26,7 +26,7 @@ export function UpcomingView({ projects }: { projects: Project[] }) {
   const dates = [...byDate.keys()].sort();
 
   return (
-    <section id="upcoming" aria-label="Prochainement">
+    <section id="upcoming" aria-label="Suivant">
       {dates.map((date) => (
         <Day key={date} title={date < today ? `${formatDay(date)} (échéance dépassée)` : formatDay(date)} late={date < today} tasks={byDate.get(date)!} />
       ))}

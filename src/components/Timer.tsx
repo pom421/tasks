@@ -56,7 +56,8 @@ export type TimerState = ReturnType<typeof useTimer>;
 // Icônes du chrono : lancer / pause (pleine en marche, temps passé en
 // info-bulle), remise à zéro s'il y a du temps.
 export function TimerButtons({ timer, className }: { timer: TimerState; className?: string }) {
-  const time = timer.running || timer.seconds > 0 ? `${formatDuration(timer.seconds)} · ` : '';
+  const hasTime = timer.running || timer.seconds > 0;
+  const time = hasTime ? `${formatDuration(timer.seconds)} · ` : '';
   return (
     <span className={cn('timer flex flex-none', className)}>
       <Button
@@ -71,19 +72,19 @@ export function TimerButtons({ timer, className }: { timer: TimerState; classNam
       >
         {timer.running ? <Pause aria-hidden fill="currentColor" /> : <Play aria-hidden />}
       </Button>
-      {(timer.running || timer.seconds > 0) && (
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          tabIndex={-1}
-          className="timer-reset text-muted-foreground"
-          aria-label="Remettre le chrono à zéro"
-          title="Remettre à zéro (C)"
-          onClick={timer.reset}
-        >
-          <RotateCcw aria-hidden />
-        </Button>
-      )}
+      {/* Place gardée même sans temps passé : les icônes suivantes ne bougent pas. */}
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        tabIndex={-1}
+        className={cn('timer-reset text-muted-foreground', !hasTime && 'invisible')}
+        aria-hidden={!hasTime || undefined}
+        aria-label="Remettre le chrono à zéro"
+        title="Remettre à zéro (C)"
+        onClick={timer.reset}
+      >
+        <RotateCcw aria-hidden />
+      </Button>
     </span>
   );
 }

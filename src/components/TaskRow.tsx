@@ -161,20 +161,23 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
         <TaskTags tags={task.tags} />
         {!done && <TaskDates task={task} />}
         <ReportBadge task={task} />
-        {hasDetails(task) && (
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            tabIndex={-1}
-            className="details flex-none text-muted-foreground"
-            title="Voir le contenu (o ou Maj+Entrée)"
-            aria-label="Voir les détails"
-            onClick={() => openTask(task, 'notes')}
-          >
-            <NotebookText aria-hidden />
-          </Button>
-        )}
       </span>
+      {/* Icônes : emplacements fixes, toujours à la même place d'une ligne à
+          l'autre (une icône sans objet garde sa place, invisible). */}
+      {!confirmDelete && (
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          tabIndex={-1}
+          className={cn('details flex-none text-muted-foreground', !hasDetails(task) && 'invisible')}
+          title="Voir le contenu (o ou Maj+Entrée)"
+          aria-label="Voir les détails"
+          aria-hidden={!hasDetails(task) || undefined}
+          onClick={() => openTask(task, 'notes')}
+        >
+          <NotebookText aria-hidden />
+        </Button>
+      )}
       {/* Chrono : visible au survol, toujours visible en marche (icône pause pleine). */}
       {!done && !confirmDelete && (
         <TimerButtons

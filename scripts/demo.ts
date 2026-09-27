@@ -53,10 +53,10 @@ store.updateTask(3, { tags: ['api', 'client'] });
 const today = iso(new Date());
 const inDays = (n: number) => iso(new Date(Date.now() + n * 86_400_000));
 // timeSpent : temps passé (secondes), visible dans la fiche (sablier).
-type Todo = { priority?: 1 | 2 | 3; dayAt?: string; dueAt?: string; tags?: string[]; timeSpent?: number; bugtracker?: 'wanted' };
+type Todo = { priority?: 1 | 2 | 3; dayAt?: string; dueAt?: string; tags?: string[]; timeSpent?: number; notes?: string; bugtracker?: 'wanted' };
 const todo: [number, string, Todo?][] = [
   [api.id, 'Gérer les avoirs partiels', { priority: 1, dayAt: today, dueAt: inDays(3), tags: ['client'], timeSpent: 5400 }],
-  [api.id, 'Limiter le débit de l’API', { priority: 2, dayAt: inDays(2), dueAt: inDays(6), tags: ['api', 'perf'], timeSpent: 1500 }],
+  [api.id, 'Limiter le débit de l’API', { priority: 2, dayAt: inDays(2), dueAt: inDays(6), tags: ['api', 'perf'], timeSpent: 1500, notes: 'Quota par client : **100 req/min**' }],
   [api.id, 'Relancer le client sur le format des avoirs', { dayAt: workdays.at(-1), tags: ['client'] }],
   [site.id, 'Page « Mentions légales »', { bugtracker: 'wanted', dueAt: inDays(10) }],
   [site.id, 'Mode sombre', { priority: 3, tags: ['ui'] }],

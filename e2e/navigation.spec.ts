@@ -1110,7 +1110,7 @@ test('une colonne : le Log, dans son onglet, prend la place des projets (écran 
   for (const width of [1280, 800]) {
     await page.setViewportSize({ width, height: 600 });
     await reload(page);
-    await expect(page.getByRole('tab')).toHaveText(['Projets', 'Aujourd’hui', 'Prochainement', 'Log']);
+    await expect(page.getByRole('tab')).toHaveText(['Projets', 'Aujourd’hui', 'Suivant', 'Log']);
     await expect(page.locator('#journal')).toHaveCount(0);
     const projects = (await page.locator('#projects').boundingBox())!;
     await page.keyboard.press('L');

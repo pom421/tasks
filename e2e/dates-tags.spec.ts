@@ -101,14 +101,17 @@ test('Aujourd’hui : ☀ sur une tâche en retard la ramène au jour', async ({
   expect(taskRow(store, data.deux.id)).toMatchObject({ day_at: TODAY });
 });
 
-test('Prochainement : agenda par jour, tâche à ses deux dates, un cadre rouge par échéance dépassée', async ({ page, store, data }) => {
+test('Suivant : agenda par jour, tâche à ses deux dates, un cadre rouge par échéance dépassée', async ({ page, store, data }) => {
   store.updateTask(data.une.id, { dayAt: '2026-09-28', dueAt: '2026-10-02' });
   store.updateTask(data.deux.id, { dueAt: '2026-09-20' });
   store.updateTask(data.trois.id, { dayAt: '2026-09-23', dueAt: '2026-09-22' }); // prévue avant : pas ici ; échéance dépassée : ici
   await open(page, '/plan');
   await page.keyboard.press('Alt+ArrowRight');
-  await expect(tab(page, 'Prochainement')).toHaveAttribute('aria-selected', 'true');
-  await expect(page).toHaveURL(/\/prochainement$/);
+  await expect(tab(page, 'Suivant')).toHaveAttribute('aria-selected', 'true');
+  await expect(page).toHaveURL(/\/suivant$/);
+  await page.keyboard.press('P');
+  await page.keyboard.press('S'); // touche de l'onglet
+  await expect(tab(page, 'Suivant')).toHaveAttribute('aria-selected', 'true');
   const days = page.locator('#upcoming .upcoming-day');
   await expect(days.locator('h3')).toHaveText([
     'dimanche 20 septembre 2026 (échéance dépassée)',
@@ -221,4 +224,21 @@ test('non-régression : # s’écrit dans un champ de saisie ; ☀ et t inchang�
   await page.keyboard.press('t');
   await expect(row(page, 'Deux').getByRole('button', { name: 'Pour aujourd’hui' })).toHaveAttribute('aria-pressed', 'true');
   expect(taskRow(store, data.deux.id)).toMatchObject({ day_at: TODAY });
+});
+
+test('icônes toujours à la même place : étiquettes (tags, dates, report) avant, emplacements fixes après', async ({ page, store, data }) => {
+  store.updateTask(data.une.id, { notes: 'Contenu', tags: ['client', 'interne', 'api-publique', 'urgent'], dayAt: '2026-09-28', dueAt: '2026-10-12', bugtracker: 'wanted' });
+  store.updateTask(data.deux.id, { timeSpent: 600 });
+  store.updateTask(data.trois.id, { priority: 2 });
+  await open(page);
+  const x = async (title: string, selector: string) => (await row(page, title).locator(selector).boundingBox())!.x;
+  for (const selector of ['.details', '.timer-toggle', '.timer-reset', '.day-toggle']) {
+    const xs = await Promise.all(['Une', 'Deux', 'Trois'].map((t) => x(t, selector)));
+    expect(new Set(xs.map(Math.round)).size, selector).toBe(1);
+  }
+  // Tags trop longs : coupés, tous dans l'info-bulle.
+  await expect(row(page, 'Une').locator('.tags')).toHaveAttribute('title', 'Tags : #client #interne #api-publique #urgent');
+  // Icône 🗒 : visible seulement s'il y a du contenu.
+  await expect(row(page, 'Une').getByRole('button', { name: 'Voir les détails' })).toBeVisible();
+  await expect(row(page, 'Deux').getByRole('button', { name: 'Voir les détails' })).toHaveCount(0);
 });
