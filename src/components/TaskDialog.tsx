@@ -7,6 +7,7 @@ import { focusByKey } from '@/lib/nav';
 import { renderMarkdown } from '@/lib/markdown';
 import { formatDay, isComplete } from '@/lib/dates';
 import { cn } from '@/lib/utils';
+import { Hourglass } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -277,9 +278,10 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, open, onC
                 la gauche sans déplacer les icônes. Texte normal chrono en marche. */}
             {(timer.running || timer.seconds > 0) && (
               <span
-                className={cn('time-spent mr-1 text-sm tabular-nums', timer.running ? 'text-foreground' : 'text-muted-foreground')}
+                className={cn('time-spent mr-1 flex items-center gap-0.5 text-sm tabular-nums', timer.running ? 'text-foreground' : 'text-muted-foreground')}
                 title={timer.running ? 'Temps passé, chrono en marche' : 'Temps passé'}
               >
+                <Hourglass aria-hidden className="size-3.5" />
                 {formatDuration(timer.seconds)}
               </span>
             )}

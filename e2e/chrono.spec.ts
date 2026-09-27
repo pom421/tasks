@@ -160,6 +160,7 @@ test('fiche : durée en cours (2h34) et durée d’une tâche faite', async ({ p
   await page.keyboard.press('o');
   const dialog = page.getByRole('dialog');
   await expect(dialog.locator('.time-spent')).toHaveText('2h34');
+  await expect(dialog.locator('.time-spent svg')).toHaveClass(/lucide-hourglass/);
   await expect(dialog.locator('.time-spent')).toHaveAttribute('title', 'Temps passé, chrono en marche');
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);

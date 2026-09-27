@@ -7,7 +7,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-Rien.
+- [~] Prochainement : un cadre rouge par jour d'échéance dépassée ; icônes distinctes (calendrier prévue, réveil échéance, sablier durée) ; placeholder « Tags… » sans « (#) » ; démo enrichie
 
 ## Décisions attendues
 

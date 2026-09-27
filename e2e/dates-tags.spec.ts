@@ -80,6 +80,9 @@ test('étiquettes : date prévue du jour masquée (☀), en retard et échéance
   await expect(une.locator('.due-date')).toHaveAttribute('title', 'Échéance dépassée : jeudi 24 septembre 2026');
   await expect(row(page, 'Deux').locator('.planned-date')).toHaveText('en retard, prévuemer. 23');
   await expect(row(page, 'Deux').locator('.planned-date')).toHaveClass(/late/);
+  // Icônes distinctes : calendrier (prévue), réveil (échéance) ; sablier pour la durée (fiche).
+  await expect(row(page, 'Deux').locator('.planned-date svg')).toHaveClass(/lucide-calendar-days/);
+  await expect(une.locator('.due-date svg')).toHaveClass(/lucide-alarm-clock/);
   await page.keyboard.press('L');
   await expect(page.locator('#journal li.task', { hasText: 'Trois' }).locator('.due-date')).toHaveCount(0);
 });
@@ -98,25 +101,33 @@ test('Aujourd’hui : ☀ sur une tâche en retard la ramène au jour', async ({
   expect(taskRow(store, data.deux.id)).toMatchObject({ day_at: TODAY });
 });
 
-test('Prochainement : agenda par jour, tâche à ses deux dates, échéances dépassées en tête', async ({ page, store, data }) => {
+test('Prochainement : agenda par jour, tâche à ses deux dates, un cadre rouge par échéance dépassée', async ({ page, store, data }) => {
   store.updateTask(data.une.id, { dayAt: '2026-09-28', dueAt: '2026-10-02' });
   store.updateTask(data.deux.id, { dueAt: '2026-09-20' });
-  store.updateTask(data.trois.id, { dayAt: '2026-09-23' }); // prévue avant : dans Aujourd'hui, pas ici
+  store.updateTask(data.trois.id, { dayAt: '2026-09-23', dueAt: '2026-09-22' }); // prévue avant : pas ici ; échéance dépassée : ici
   await open(page, '/plan');
   await page.keyboard.press('Alt+ArrowRight');
   await expect(tab(page, 'Prochainement')).toHaveAttribute('aria-selected', 'true');
   await expect(page).toHaveURL(/\/prochainement$/);
   const days = page.locator('#upcoming .upcoming-day');
-  await expect(days.locator('h3')).toHaveText(['Échéance dépassée', 'lundi 28 septembre 2026', 'vendredi 2 octobre 2026']);
+  await expect(days.locator('h3')).toHaveText([
+    'dimanche 20 septembre 2026 (échéance dépassée)',
+    'mardi 22 septembre 2026 (échéance dépassée)',
+    'lundi 28 septembre 2026',
+    'vendredi 2 octobre 2026',
+  ]);
+  await expect(days.nth(0).locator('h3')).toHaveClass(/text-destructive/);
+  await expect(days.nth(2).locator('h3')).not.toHaveClass(/text-destructive/);
   await expect(days.nth(0).locator('li.task .name')).toHaveText(['Deux']);
-  await expect(days.nth(1).locator('li.task .name')).toHaveText(['Une']);
+  await expect(days.nth(1).locator('li.task .name')).toHaveText(['Trois']);
   await expect(days.nth(2).locator('li.task .name')).toHaveText(['Une']);
-  await expect(days.nth(1).locator('.project-label')).toHaveText(['Alpha']);
+  await expect(days.nth(3).locator('li.task .name')).toHaveText(['Une']);
+  await expect(days.nth(2).locator('.project-label')).toHaveText(['Alpha']);
   // Filtres des projets masqués.
   await expect(page.getByRole('group', { name: 'Filtres des projets' })).toHaveCount(0);
 
   // Plus de date : message exact.
-  for (const t of [data.une, data.deux]) store.updateTask(t.id, { dayAt: null, dueAt: null });
+  for (const t of [data.une, data.deux, data.trois]) store.updateTask(t.id, { dayAt: null, dueAt: null });
   await page.reload();
   await expect(page.locator('#upcoming .empty')).toHaveText('Aucune tâche datée à venir.');
 });

@@ -144,7 +144,7 @@ export function Journal({ days, dates, tags, projects, filter, onFilter }: Journ
             onChange={(t) => onFilter({ ...filter, tags: t })}
             label="Filtrer le Log par tags"
             title="Seulement les tâches portant tous ces tags (#)"
-            placeholder="Tags… (#)"
+            placeholder="Tags…"
             removeLabel={(tag) => `Retirer #${tag} du filtre`}
           />
         )}

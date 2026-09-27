@@ -1,4 +1,4 @@
-import { CalendarDays, Hourglass } from 'lucide-react';
+import { AlarmClock, CalendarDays } from 'lucide-react';
 import type { Task } from '../../shared/types.ts';
 import { formatDay, localToday, shortDay } from '@/lib/dates';
 import { cn } from '@/lib/utils';
@@ -6,7 +6,8 @@ import { cn } from '@/lib/utils';
 const badge = 'flex flex-none items-center gap-0.5 rounded px-1 text-[11px] leading-[18px] whitespace-nowrap [&_svg]:size-3';
 
 // Dates d'une tâche à faire, en étiquettes courtes (« demain », « lun. 29 »),
-// date complète en info-bulle. Date prévue : fond gris ; masquée si c'est
+// date complète en info-bulle. Icônes distinctes : calendrier (prévue),
+// réveil (échéance), sablier (durée, dans la fiche). Date prévue : fond gris ; masquée si c'est
 // aujourd'hui (le ☀ plein le dit déjà) ; en retard : texte rouge.
 // Échéance : fond ambré ; dépassée : fond rouge.
 export function TaskDates({ task }: { task: Pick<Task, 'day_at' | 'due_at'> }) {
@@ -35,7 +36,7 @@ export function TaskDates({ task }: { task: Pick<Task, 'day_at' | 'due_at'> }) {
           )}
           title={`${due < today ? 'Échéance dépassée' : 'Échéance'} : ${formatDay(due)}`}
         >
-          <Hourglass aria-hidden />
+          <AlarmClock aria-hidden />
           <span className="sr-only">{due < today ? 'échéance dépassée' : 'échéance'}</span>
           {shortDay(due, today)}
         </span>

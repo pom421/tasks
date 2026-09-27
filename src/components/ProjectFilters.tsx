@@ -55,7 +55,7 @@ export function ProjectFilters({ projects, bugtrackerFilter, onBugtrackerFilter,
           onChange={onTagFilter}
           label="Filtrer par tags"
           title="Seulement les tâches portant tous ces tags (#)"
-          placeholder="Tags… (#)"
+          placeholder="Tags…"
           removeLabel={(tag) => `Retirer #${tag} du filtre`}
           className="mr-auto"
         />

@@ -6,8 +6,9 @@ type Entry = Task & { project_name: string };
 
 // Onglet « Prochainement » : agenda des tâches à faire datées, à partir
 // d'aujourd'hui, un cadre par jour (comme le Log). Une tâche apparaît à sa
-// date prévue et à son échéance ; ses étiquettes disent laquelle. En tête,
-// les échéances dépassées. Les dates prévues passées sont dans Aujourd’hui.
+// date prévue et à son échéance ; ses étiquettes disent laquelle. Avant,
+// un cadre par jour d'échéance dépassée, titre en rouge. Les dates prévues
+// passées sont dans Aujourd’hui.
 export function UpcomingView({ projects }: { projects: Project[] }) {
   const today = localToday();
   const byDate = new Map<string, Entry[]>();
@@ -18,7 +19,7 @@ export function UpcomingView({ projects }: { projects: Project[] }) {
   for (const p of projects) {
     for (const task of p.tasks) {
       const t = { ...task, project_name: p.name };
-      if (t.due_at && t.due_at < today) put('', t); // '' : échéance dépassée
+      if (t.due_at && t.due_at < today) put(t.due_at, t); // échéance dépassée
       for (const date of [t.day_at, t.due_at]) if (date && date >= today) put(date, t);
     }
   }
@@ -27,7 +28,7 @@ export function UpcomingView({ projects }: { projects: Project[] }) {
   return (
     <section id="upcoming" aria-label="Prochainement">
       {dates.map((date) => (
-        <Day key={date} title={date ? formatDay(date) : 'Échéance dépassée'} late={!date} tasks={byDate.get(date)!} />
+        <Day key={date} title={date < today ? `${formatDay(date)} (échéance dépassée)` : formatDay(date)} late={date < today} tasks={byDate.get(date)!} />
       ))}
       {!dates.length && <p className="empty mt-3 italic text-muted-foreground">Aucune tâche datée à venir.</p>}
     </section>
