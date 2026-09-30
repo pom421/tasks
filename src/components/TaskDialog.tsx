@@ -1,5 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { BUGTRACKER_KEY_RE, formatDuration, type DoneTask, type Task } from '../../shared/types.ts';
+import { BUGTRACKER_KEY_RE, formatDuration, isValidTicket, type DoneTask, type Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
 import type { TaskField } from '@/lib/actions';
 import { record } from '@/lib/history';
@@ -31,7 +31,6 @@ interface TaskDialogProps {
 type Field = 'title' | 'ticket' | 'day' | 'due' | 'notes';
 
 const ticketOf = (t: Task) => t.bugtracker_key ?? t.bugtracker_url ?? '';
-const isValidTicket = (s: string) => !s || BUGTRACKER_KEY_RE.test(s.toUpperCase()) || /^https?:\/\/\S+$/i.test(s);
 
 // Fiche d'une tâche, façon GitLab : lecture seule par défaut ; e passe tout en
 // édition (titre, puis Tab : ticket, date prévue, échéance, tags, contenu Markdown) ; Ctrl+Entrée
@@ -56,8 +55,8 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, open, onC
     tags: task.tags,
     notes: task.notes ?? '',
   });
-  // Ouverte par e (édition complète) ou sur le ticket (L, r → reporté) : directement en édition.
-  const [editing, setEditing] = useState(field !== 'notes');
+  // Ouverte par e : directement en édition.
+  const [editing, setEditing] = useState(field === 'edit');
   const [error, setError] = useState<{ field: Field; message: string } | null>(null);
   const saved = useRef({ ...values, changed: false });
   const refs = {
@@ -188,13 +187,11 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, open, onC
     await persist();
   };
 
-  // Entrée dans le titre ou le ticket : comme Ctrl+Entrée. Fiche ouverte juste
-  // pour saisir le ticket (L, r → reporté) : Entrée enregistre et ferme.
+  // Entrée dans le titre ou le ticket : comme Ctrl+Entrée.
   const onInputEnter = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter' || e.ctrlKey || e.metaKey) return;
     e.preventDefault();
-    if (field === 'bugtracker') close();
-    else stopEditing();
+    stopEditing();
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
@@ -238,7 +235,7 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, open, onC
         }}
         onOpenAutoFocus={(e) => {
           e.preventDefault();
-          ({ notes: reader, edit: refs.title, bugtracker: refs.ticket }[field].current as HTMLElement | null)?.focus();
+          ({ notes: reader, edit: refs.title }[field].current as HTMLElement | null)?.focus();
         }}
         // À la fermeture, retour sur la tâche dans la liste pour reprendre la navigation.
         onCloseAutoFocus={(e) => {

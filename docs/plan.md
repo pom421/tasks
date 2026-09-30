@@ -7,7 +7,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-Rien.
+- [~] `r r` (reporté) : ticket saisi dans la ligne au lieu de la fiche ; `Entrée` enregistre, `Échap` passe, `u` retire le ticket
 
 ## Décisions attendues
 

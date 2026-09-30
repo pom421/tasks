@@ -70,14 +70,13 @@ Chaque session démarre dans un conteneur neuf : les dépendances doivent y êtr
 - Fiche d'une tâche (`Maj+Entrée`, `o` ou icône 🗒) : titre complet, identifiant du ticket (`PROJ-123`), date prévue, échéance, tags, puis contenu en Markdown. L'icône 🗒 signale une tâche qui a du contenu.
   - Lecture seule par défaut. `e` (comme GitLab) passe tout en édition : titre, puis `Tab` → ticket, date prévue, échéance, tags (autocomplétion ; `Entrée` ou `,` ajoute, ✕ retire), contenu. Double-clic sur le contenu : édition directement dedans.
   - `Ctrl+Entrée` (ou `Entrée` dans le titre / le ticket) enregistre et repasse en lecture seule ; un second `Ctrl+Entrée` (ou `Échap`) ferme. Enregistrement automatique.
-  - Ouverte par `r` → reporté, la fiche démarre en édition sur le ticket et `Entrée` la ferme.
 - Chrono d'une tâche à faire : au survol de la ligne (et dans la fiche), ▷ lance le chrono (`c`) ; en marche, l'icône devient une pause pleine, toujours visible. Temps passé dans l'info-bulle de l'icône (« 12 min », puis « 2h34 ») ; dans la fiche, affiché à gauche des icônes (texte normal chrono en marche, atténué sinon ; aussi pour une tâche faite). ↻ remet à zéro (`C`, sans confirmation, annulable par `u`). Un seul chrono en marche à la fois. Cocher la tâche arrête son chrono.
 - Dates d'une tâche (fiche, `e`) : **date prévue** (quand je compte la faire) et **échéance** (date limite imposée de l'extérieur). Sur la ligne d'une tâche à faire, en étiquettes courtes (« demain », « lun. 29 », « 12 oct. », date complète en info-bulle) : date prévue sur fond gris (rouge si passée), échéance sur fond ambré (rouge si dépassée). Tags en `#tag` atténués.
 - Aujourd’hui (plan du jour) : au survol d'une tâche à faire (et dans la fiche), ☀ l'ajoute à Aujourd’hui (`t`) : sa date prévue devient aujourd'hui ; une fois ajoutée, le soleil est plein et reste visible. L'onglet « Aujourd’hui » (`T`, adresse `/plan`) montre les tâches prévues aujourd'hui et, en tête sous « En retard », celles prévues avant et pas faites, par projet, sous un compteur « 3/5 tâches » (tâches du plan, en retard et faites comprises, sur le maximum par jour), en rouge au-delà du maximum. Une tâche cochée part dans le Log et reste comptée. ☀ sur une tâche en retard ou prévue plus tard la ramène à aujourd'hui. Maximum réglable dans les Réglages (5 par défaut). Filtres de la zone des projets masqués dans cet onglet. Annulable (`u`).
 - Suivant (`S`, adresse `/suivant`) : agenda des tâches à faire datées, un cadre par jour à partir d'aujourd'hui ; une tâche apparaît à sa date prévue et à son échéance. Avant, un cadre par jour d'échéance dépassée, titre en rouge suivi de « (échéance dépassée) ». Icônes : calendrier = date prévue, réveil = échéance, sablier = durée (temps passé, dans la fiche). Filtres de la zone des projets masqués dans cet onglet.
 - Priorité d'une tâche : icône chiffre à droite, pleine et colorée (1 rouge, 2 orange, 3 bleu), sinon « 1 » dans un carré à contour, au survol (ce que donne un clic). `1` `2` `3` sur la tâche donnent la priorité, le même chiffre la retire ; clic sur l'icône : aucune → 1 → 2 → 3 → aucune. Même icône et mêmes touches dans la fiche. Annulable (`u`).
 - Icônes d'une tâche : toutes à droite, même style (atténuées et vides ; pleines quand actives, et alors toujours visibles).
-- Report : une tâche passe « à reporter », puis « reporté » (badge après le titre : l'identifiant du ticket s'il y en a un, « reporté » sinon ; date du report en info-bulle).
+- Report : une tâche passe « à reporter », puis « reporté » (badge après le titre : l'identifiant du ticket s'il y en a un, « reporté » sinon ; date du report en info-bulle). Passée « reporté » sans ticket, un petit champ « Ticket » s'ouvre dans la ligne, à la place du badge : `Entrée` enregistre l'identifiant (`PROJ-123`) ou le lien, `Échap` (ou `Entrée` à vide, ou un clic ailleurs) passe ; le ticket se renseigne plus tard dans la fiche.
 - Réglages (icône ⚙, page `/admin`, `Échap` pour revenir) : URL de base des tickets (ex. `https://entreprise.tickets.fr`), qui transforme les identifiants en liens (`URL/browse/PROJ-123`), conservée en base ; nombre de tâches maximum par jour (Aujourd’hui) ; export / import des données.
 
 Clavier (`?` affiche l'aide, un 2e `?` ou `Échap` la ferme ; groupée par thème : navigation, fiche, tâche, projet, filtres des projets, Log, général ; sur un petit écran, la liste défile sous le titre) :
@@ -94,7 +93,7 @@ Clavier (`?` affiche l'aide, un 2e `?` ou `Échap` la ferme ; groupée par thèm
 | `Alt+↑` `Alt+↓` sur un projet | Monter / descendre tout le projet (avant / après le projet voisin) |
 | `Maj+Entrée` ou `o` | Ouvrir la fiche de la tâche (contenu Markdown, ticket) |
 | `e` | Ouvrir la fiche directement en édition (titre, `Tab` → ticket, `Tab` → contenu) |
-| `r` | Report : à reporter → reporté (fiche proposée pour le ticket) → rien |
+| `r` | Report : à reporter → reporté (champ du ticket dans la ligne : `Entrée` enregistre, `Échap` passe) → rien |
 | `c` | Chrono de la tâche : lancer / mettre en pause (aussi dans la fiche) |
 | `C` (majuscule) | Remettre le chrono à zéro (annulable par `u`) |
 | `t` | Ajouter la tâche à Aujourd’hui / l'en retirer (aussi dans la fiche) |
@@ -108,7 +107,7 @@ Clavier (`?` affiche l'aide, un 2e `?` ou `Échap` la ferme ; groupée par thèm
 | `a` sur un projet | Archiver / désarchiver |
 | `A` (majuscule) | Afficher seulement les projets archivés (ou clic sur « Archivés ») |
 | `x` puis `x` | Supprimer la tâche ou le projet : le 1er appui affiche ce qui va être supprimé, le 2e supprime (`Échap` annule). `Suppr` marche aussi |
-| `u` | Annuler la dernière action, puis celle d'avant, aussi loin que l'historique remonte : créer, renommer, cocher / décocher, supprimer, déplacer, report, chrono, Aujourd’hui, priorité, date, modifications de la fiche ; sur un projet favori, archivage. Le curseur revient sur l'élément |
+| `u` | Annuler la dernière action, puis celle d'avant, aussi loin que l'historique remonte : créer, renommer, cocher / décocher, supprimer, déplacer, report, chrono, Aujourd’hui, priorité, date, ticket, modifications de la fiche ; sur un projet favori, archivage. Le curseur revient sur l'élément |
 | `U` (majuscule) | Rétablir (rejouer) l'action annulée, dans l'ordre. Une nouvelle action efface ce qui restait à rétablir |
 | `n` | Nouvelle tâche (dans le projet où est le curseur, sinon le dernier utilisé) |
 | `n` puis `n` | Nouveau projet (deux appuis rapprochés, comme `g` `g`) |

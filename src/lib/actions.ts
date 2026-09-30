@@ -1,9 +1,9 @@
 import { createContext, useContext } from 'react';
 import type { Settings, Task } from '../../shared/types.ts';
 
-// Ouverture de la fiche : lecture (notes), édition complète (edit, focus sur
-// le titre) ou édition rapide du ticket (bugtracker).
-export type TaskField = 'notes' | 'edit' | 'bugtracker';
+// Ouverture de la fiche : lecture (notes) ou édition complète (edit, focus sur
+// le titre).
+export type TaskField = 'notes' | 'edit';
 
 // Action annulable (u) et rejouable (U). run peut renvoyer { focus: clé }
 // comme pour act. redo : run par défaut (actions qui fixent une valeur).

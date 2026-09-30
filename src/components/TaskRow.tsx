@@ -1,5 +1,5 @@
 import { useRef, useState, type FocusEvent, type KeyboardEvent } from 'react';
-import { hasDetails, bugtrackerState, type DoneTask, type BugtrackerState, type Task } from '../../shared/types.ts';
+import { hasDetails, isValidTicket, bugtrackerState, type DoneTask, type BugtrackerState, type Task } from '../../shared/types.ts';
 import { NotebookText } from 'lucide-react';
 import { api, type TaskPatch } from '@/lib/api';
 import { useActions } from '@/lib/actions';
@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { EditableName } from './Editable';
 import { ReportBadge } from './ReportBadge';
-import { moveDirection } from '@/lib/nav';
+import { focusByKey, moveDirection } from '@/lib/nav';
 import { TimerButtons, useTimer } from './Timer';
 import { PlanButton, usePlan } from './Plan';
 import { PriorityButton, usePriority } from './Priority';
@@ -32,6 +32,8 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
   const done = 'done_at' in task;
   const [editingDate, setEditingDate] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Champ du ticket proposé dans la ligne, juste après r → reporté.
+  const [askTicket, setAskTicket] = useState(false);
   const navKey = `task:${task.id}`;
   const timer = useTimer(task);
   const plan = usePlan(task);
@@ -66,8 +68,8 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
     j.queue = j.queue.then(async () => {
       await change(BUGTRACKER_LABEL[next], { bugtracker: next }, { bugtracker: before });
       j.pending--;
-      // Tout juste reportée (dernier appui) : on propose de renseigner le ticket.
-      if (next === 'done' && !j.pending && !task.bugtracker_key && !task.bugtracker_url) openTask(task, 'bugtracker');
+      // Tout juste reportée (dernier appui) : on propose le ticket dans la ligne.
+      if (next === 'done' && !j.pending && !task.bugtracker_key && !task.bugtracker_url) setAskTicket(true);
     });
   };
 
@@ -160,7 +162,17 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
         />
         <TaskTags tags={task.tags} />
         {!done && <TaskDates task={task} />}
-        <ReportBadge task={task} />
+        {askTicket ? (
+          <TicketInput
+            onSave={(ticket) => change('ticket ajouté', { bugtracker_ticket: ticket }, { bugtracker_ticket: null })}
+            onClose={() => {
+              focusByKey(navKey);
+              setAskTicket(false);
+            }}
+          />
+        ) : (
+          <ReportBadge task={task} />
+        )}
       </span>
       {/* Icônes : emplacements fixes, toujours à la même place d'une ligne à
           l'autre (une icône sans objet garde sa place, invisible). */}
@@ -213,5 +225,40 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
         )
       )}
     </li>
+  );
+}
+
+// Ticket proposé dans la ligne après r → reporté : Entrée l'enregistre (vide :
+// rien), Échap ou un clic ailleurs passe (à renseigner plus tard dans la fiche).
+// Dans tous les cas, le curseur revient sur la tâche.
+function TicketInput({ onSave, onClose }: { onSave: (ticket: string) => void; onClose: () => void }) {
+  const { toast } = useActions();
+  const [invalid, setInvalid] = useState(false);
+  return (
+    <input
+      className="ticket-input w-32 flex-none rounded-full border border-primary/60 bg-transparent px-1.5 font-mono text-[11px] leading-[18px] outline-none placeholder:font-sans placeholder:text-muted-foreground aria-invalid:border-destructive"
+      aria-label="Ticket"
+      title="Identifiant du ticket, ex. PROJ-123, ou lien (Entrée : enregistrer · Échap : plus tard)"
+      placeholder="Ticket, ex. PROJ-123"
+      autoComplete="off"
+      autoFocus
+      aria-invalid={invalid}
+      onBlur={onClose}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          e.stopPropagation(); // pas de réinitialisation des filtres
+          onClose();
+        }
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        const ticket = e.currentTarget.value.trim();
+        if (!isValidTicket(ticket)) {
+          setInvalid(true);
+          return toast('Identifiant attendu, ex. PROJ-123');
+        }
+        onClose();
+        if (ticket) onSave(ticket);
+      }}
+    />
   );
 }

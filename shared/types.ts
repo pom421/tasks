@@ -56,6 +56,8 @@ export function bugtrackerLink(t: Pick<Task, 'bugtracker_key' | 'bugtracker_url'
 }
 
 export const BUGTRACKER_KEY_RE = /^[A-Z][A-Z0-9_]*-\d+$/;
+// Ticket saisi (fiche ou ligne) : clé (PROJ-123) ou lien complet ; vide = aucun.
+export const isValidTicket = (s: string) => !s || BUGTRACKER_KEY_RE.test(s.toUpperCase()) || /^https?:\/\/\S+$/i.test(s);
 
 export const hasDetails = (t: Pick<Task, 'notes'>) => Boolean(t.notes);
 

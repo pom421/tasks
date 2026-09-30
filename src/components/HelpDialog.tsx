@@ -33,7 +33,7 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
       [[['Espace']], 'Cocher / décocher'],
       [[['Alt+↑', 'Alt+↓'], ['Alt+k', 'Alt+j']], 'Monter / descendre, jusque dans le projet voisin'],
       [[['1', '2', '3']], 'Priorité ; le même chiffre la retire'],
-      [[['r']], 'Report : à reporter → reporté → rien'],
+      [[['r']], 'Report : à reporter → reporté (ticket : Entrée, ou Échap pour passer) → rien'],
       [[['c']], 'Chrono : lancer / mettre en pause'],
       [[['C']], 'Chrono à zéro'],
       [[['t']], 'Aujourd’hui : ajouter / retirer'],

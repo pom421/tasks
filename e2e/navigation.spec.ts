@@ -670,7 +670,7 @@ test('clavier sur un projet : f favori, a archiver, x x supprimer, u annule tout
 
 const row = (page: Page, taskId: number) => page.locator(`li.task:has([data-nav-key="task:${taskId}"])`);
 
-test('J fait tourner : à reporter (contour) → reportée (plein, fiche proposée) → rien', async ({ page, store, data }) => {
+test('r fait tourner : à reporter (contour) → reportée (plein, ticket proposé dans la ligne) → rien', async ({ page, store, data }) => {
   const une = row(page, data.tasks.une.id);
   await pressDown(page, 2);
   await page.keyboard.press('r');
@@ -678,33 +678,33 @@ test('J fait tourner : à reporter (contour) → reportée (plein, fiche propos�
   expect(store.state().bugtrackerPending).toBe(1);
 
   await page.keyboard.press('r');
-  await expect(une.locator('.report-done')).toHaveText('reporté'); // sans identifiant : le mot, visible
-  // Fiche proposée sur le champ du ticket ; Échap la ferme et rend le focus à la tâche.
-  const dialog = page.getByRole('dialog', { name: 'Une' });
-  await expect(dialog.getByLabel('Ticket', { exact: true })).toBeFocused();
+  // Ticket proposé dans la ligne, sans fiche ; Échap passe et rend le focus à la tâche.
+  const ticket = une.getByRole('textbox', { name: 'Ticket' });
+  await expect(ticket).toBeFocused();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.keyboard.press('Escape');
-  await expect(dialog).toHaveCount(0);
+  await expect(ticket).toHaveCount(0);
+  await expect(une.locator('.report-done')).toHaveText('reporté'); // sans identifiant : le mot, visible
   await expect.poll(() => current(page)).toBe(`task:${data.tasks.une.id}`);
+  await expect(page.locator('#toast')).toHaveCount(0); // Échap n'a rien fait d'autre
 
   await page.keyboard.press('r');
   await expect(une.locator('.report')).toHaveCount(0);
   expect(store.state().projects[0].tasks[0]).toMatchObject({ bugtracker_wanted_at: null, bugtracker_at: null, bugtracker_key: null });
 });
 
-test('fiche : r r ouvre sur le ticket, clé + URL du bugtracker = lien cliquable', async ({ page, store, data }) => {
+test('r r : ticket saisi dans la ligne, clé + URL du bugtracker = lien cliquable, u le retire', async ({ page, store, data }) => {
   store.updateSettings({ bugtracker_base_url: 'https://entreprise.tickets.fr' });
   await reload(page);
   await pressDown(page, 2);
   await page.keyboard.press('r');
-  await page.keyboard.press('r'); // reportée : fiche ouverte sur le ticket
-  const dialog = page.getByRole('dialog', { name: 'Une' });
-  await expect(dialog).toHaveAccessibleDescription(/Alpha · à faire/);
-  await expect(dialog.getByLabel('Ticket', { exact: true })).toBeFocused();
+  await page.keyboard.press('r'); // reportée : ticket proposé dans la ligne
+  const ticket = row(page, data.tasks.une.id).getByRole('textbox', { name: 'Ticket' });
+  await expect(ticket).toBeFocused();
   await page.keyboard.type('proj-7');
-  await expect(dialog).not.toContainText('https://entreprise.tickets.fr'); // lien non répété dans la fiche
   await page.keyboard.press('Enter');
 
-  await expect(dialog).toHaveCount(0);
+  await expect(ticket).toHaveCount(0);
   const link = row(page, data.tasks.une.id).locator('a.report-link');
   await expect(link).toHaveAttribute('href', 'https://entreprise.tickets.fr/browse/PROJ-7');
   await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
@@ -713,21 +713,32 @@ test('fiche : r r ouvre sur le ticket, clé + URL du bugtracker = lien cliquable
   await expect(link.getByText('reporté', { exact: false })).toHaveClass(/sr-only/);
   await expect(link.locator('.report-key')).toHaveText('PROJ-7');
   await expect(row(page, data.tasks.une.id).locator('.report-done')).toBeVisible(); // ticket = reportée
-  expect(await current(page)).toBe(`task:${data.tasks.une.id}`);
+  await expect.poll(() => current(page)).toBe(`task:${data.tasks.une.id}`);
+
+  // u retire le ticket, la tâche reste reportée.
+  await page.keyboard.press('u');
+  await expect(page.locator('#toast')).toHaveText('Annulé : ticket ajouté');
+  await expect(row(page, data.tasks.une.id).locator('.report-done')).toHaveText('reporté');
 });
 
-test('fiche : identifiant invalide annoncé, la fiche reste ouverte', async ({ page, store }) => {
+test('r r : identifiant invalide annoncé, le champ reste ouvert ; vide + Entrée = sans ticket', async ({ page, store, data }) => {
   await pressDown(page, 2);
   await page.keyboard.press('r');
-  await page.keyboard.press('r'); // reportée : fiche ouverte sur le ticket
-  const dialog = page.getByRole('dialog', { name: 'Une' });
-  await expect(dialog.getByLabel('Ticket', { exact: true })).toBeFocused();
+  await page.keyboard.press('r');
+  const ticket = row(page, data.tasks.une.id).getByRole('textbox', { name: 'Ticket' });
+  await expect(ticket).toBeFocused();
   await page.keyboard.type('pas un ticket');
-  await page.keyboard.press('Escape');
-  await expect(dialog.getByRole('alert')).toHaveText('Identifiant attendu, ex. PROJ-123');
-  await expect(dialog.getByLabel('Ticket', { exact: true })).toHaveAttribute('aria-invalid', 'true');
-  await expect(dialog).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#toast')).toHaveText('Identifiant attendu, ex. PROJ-123');
+  await expect(ticket).toHaveAttribute('aria-invalid', 'true');
+  await expect(ticket).toBeFocused();
   expect(store.state().projects[0].tasks[0]).toMatchObject({ bugtracker_key: null, bugtracker_url: null });
+
+  await ticket.fill('');
+  await page.keyboard.press('Enter');
+  await expect(ticket).toHaveCount(0);
+  await expect.poll(() => current(page)).toBe(`task:${data.tasks.une.id}`);
+  await expect(row(page, data.tasks.une.id).locator('.report-done')).toHaveText('reporté');
 });
 
 test('fiche Markdown : e édite (titre → Tab → ticket → dates → tags → contenu), Ctrl+Entrée lecture puis fermeture', async ({ page, store, data }) => {
@@ -981,10 +992,9 @@ test('fiche rouverte : contenu relu depuis les données à jour', async ({ page,
   await page.getByRole('dialog', { name: 'Une' }).getByLabel('Contenu').fill('premier jet');
   await page.keyboard.press('Escape'); // enregistré à la fermeture
   await expect.poll(() => current(page)).toBe(`task:${data.tasks.une.id}`);
-  await page.keyboard.press('r'); // à reporter
-  await page.keyboard.press('r'); // reportée : la fiche s'ouvre sur le ticket
+  await page.keyboard.press('o'); // rouverte
+  await page.keyboard.press('e');
   const dialog = page.getByRole('dialog', { name: 'Une' });
-  await expect(dialog.getByLabel('Ticket', { exact: true })).toBeFocused();
   await expect(dialog.getByLabel('Contenu')).toHaveValue('premier jet'); // relu depuis la base
 });
 
@@ -1050,6 +1060,7 @@ test('ligne épurée et fiche ordonnée : titre, ticket, dates, tags, contenu', 
   await pressDown(page, 2);
   await page.keyboard.press('Shift+Enter');
   const dialog = page.getByRole('dialog', { name: 'Une' });
+  await expect(dialog).toHaveAccessibleDescription(/Alpha · à faire/);
   await page.keyboard.press('e');
   // Titre en haut (champ nommé « Titre », sans libellé visible), puis ticket et contenu.
   await expect(dialog.getByLabel('Titre')).toBeFocused();
