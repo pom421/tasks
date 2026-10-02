@@ -8,7 +8,7 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
   [
     'Navigation',
     [
-      [[['↑', '↓'], ['k', 'j']], 'Élément précédent / suivant (3 voisins restent visibles)'],
+      [[['↑', '↓'], ['k', 'j']], 'Élément précédent / suivant (5 voisins restent visibles)'],
       [[['Début', 'Fin'], ['g g', 'G']], 'Premier / dernier élément'],
       [[['Maj+↑', 'Maj+↓'], ['K', 'J']], 'Projet précédent / suivant'],
       [[['Entrée']], 'Modifier le nom ; sur « + Ajouter », écrire'],
