@@ -117,18 +117,7 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
           className={cn('font-semibold', confirmDelete && 'shrink-0')}
           onSave={(name) => change('renommage du projet', { name }, { name: p.name })}
         />
-        {editTicket ? (
-          <TicketInput
-            defaultValue={ticket}
-            onSave={saveTicket}
-            onClose={() => {
-              focusByKey(navKey);
-              setEditTicket(false);
-            }}
-          />
-        ) : (
-          <ProjectTicket project={p} />
-        )}
+        {!editTicket && <ProjectTicket project={p} />}
         <span className="count text-xs text-muted-foreground">{p.tasks.length || ''}</span>
         {/* Bouton bascule : nom fixe (« Favori »), état annoncé par aria-pressed. */}
         <Button
@@ -142,6 +131,17 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
         >
           <Heart aria-hidden fill={favorite ? 'currentColor' : 'none'} />
         </Button>
+        {/* Saisie du ticket après le cœur ; la pastille, elle, reste après le nom. */}
+        {editTicket && (
+          <TicketInput
+            defaultValue={ticket}
+            onSave={saveTicket}
+            onClose={() => {
+              focusByKey(navKey);
+              setEditTicket(false);
+            }}
+          />
+        )}
         {/* Suppression en deux temps, au clavier (x x) comme à la souris
             (corbeille, puis corbeille à nouveau) : pas de fenêtre de confirmation. */}
         {confirmDelete && (

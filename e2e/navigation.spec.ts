@@ -730,6 +730,13 @@ test('r sur un projet : ticket dans la ligne, pastille cliquable après le nom, 
   const ticket = head.getByRole('textbox', { name: 'Ticket' });
   await expect(ticket).toBeFocused();
   await expect(ticket).toHaveValue('');
+  // Champ après le cœur (favori), pas juste après le nom.
+  const after = await head.evaluate((h) => {
+    const heart = h.querySelector('.favorite')!;
+    const input = h.querySelector('.ticket-input')!;
+    return Boolean(heart.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+  expect(after).toBe(true);
   await page.keyboard.type('epic-12');
   await page.keyboard.press('Enter');
 
