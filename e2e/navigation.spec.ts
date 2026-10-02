@@ -740,6 +740,8 @@ test('r sur un projet : ticket dans la ligne, pastille cliquable après le nom, 
   await expect(link).toHaveAttribute('title', 'Ticket du projet — ouvrir le ticket');
   await expect(link).toHaveText('ticket · EPIC-12');
   await expect(link.locator('.report-key')).toHaveText('EPIC-12'); // même pastille qu'une tâche reportée
+  await expect(link).toHaveClass(/bg-pink-100/); // rose : distincte du bleu des tâches reportées
+  await expect(link).not.toHaveClass(/report-done/);
   await expect.poll(() => current(page)).toBe(`project:${data.alpha.id}`);
   // Seulement sur le projet : ses tâches ne sont pas reportées pour autant.
   await expect(page.locator('li.task .report')).toHaveCount(0);
@@ -1142,6 +1144,34 @@ test('ligne épurée et fiche ordonnée : titre, ticket, dates, tags, contenu', 
   await expect(dialog.getByLabel('Titre')).toBeFocused();
   const labels = await dialog.locator('label').allTextContents();
   expect(labels).toEqual(['Ticket', 'Date prévue', 'Échéance', 'Tags', 'Contenu']);
+});
+
+test('fiche en lecture : ticket cliquable comme dans la ligne (clé + URL de base, ou lien complet)', async ({ page, store, data }) => {
+  store.updateTask(data.tasks.une.id, { bugtrackerKey: 'PROJ-8' });
+  await reload(page);
+  await pressDown(page, 2);
+  await page.keyboard.press('o');
+  const dialog = page.getByRole('dialog', { name: 'Une' });
+  // Sans URL de base : texte seul, pas de lien vide.
+  await expect(dialog.locator('.ticket-value')).toHaveText('PROJ-8');
+  await expect(dialog.locator('a.ticket-link')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+
+  store.updateSettings({ bugtracker_base_url: 'https://entreprise.tickets.fr' });
+  await reload(page);
+  await pressDown(page, 2);
+  await page.keyboard.press('o');
+  const link = dialog.getByRole('link', { name: 'PROJ-8' });
+  await expect(link).toHaveAttribute('href', 'https://entreprise.tickets.fr/browse/PROJ-8');
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  await page.keyboard.press('Escape');
+
+  store.updateTask(data.tasks.une.id, { bugtrackerKey: null, bugtrackerUrl: 'https://autre.exemple.fr/t/3' });
+  await reload(page);
+  await pressDown(page, 2);
+  await page.keyboard.press('o');
+  await expect(dialog.locator('a.ticket-link')).toHaveAttribute('href', 'https://autre.exemple.fr/t/3');
 });
 
 test('fiche : e modifie aussi le titre et le ticket ; Entrée dans un champ = enregistrer', async ({ page, store, data }) => {

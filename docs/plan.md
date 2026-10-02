@@ -8,6 +8,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
+- [~] Ticket d'un projet en pastille rose (bleu réservé aux tâches reportées) ; fiche : ticket cliquable en lecture, comme dans la ligne
 - [~] Jira (Data Center, PAT) : fiche, ☁↑ pousser (`>`) / ☁↓ récupérer (`<`) titre, contenu et échéance, après une fenêtre de comparaison ; désactivés sans identifiant, URL ou PAT ; annulable (`u`) ; PAT masqué dans les Réglages, jamais relu ni exporté
 
 ## Décisions attendues

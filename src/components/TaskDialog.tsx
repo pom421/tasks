@@ -1,7 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { BUGTRACKER_KEY_RE, formatDuration, isValidTicket, type DoneTask, type JiraFields, type Task } from '../../shared/types.ts';
+import { BUGTRACKER_KEY_RE, bugtrackerLink, formatDuration, isValidTicket, type DoneTask, type JiraFields, type Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
-import type { TaskField } from '@/lib/actions';
+import { useActions, type TaskField } from '@/lib/actions';
 import { record } from '@/lib/history';
 import { focusByKey } from '@/lib/nav';
 import { renderMarkdown } from '@/lib/markdown';
@@ -179,6 +179,11 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
   // Jira : comparaison ouverte (valeurs du ticket lues à l'instant), message.
   const ticketKey = BUGTRACKER_KEY_RE.test(values.ticket.trim().toUpperCase()) ? values.ticket.trim().toUpperCase() : null;
   const blocker = jiraBlocker(ticketKey, jira);
+  // Lien du ticket en lecture, comme le badge de la ligne : clé + URL de base, ou lien complet.
+  const { settings } = useActions();
+  const ticketLink = values.ticket
+    ? bugtrackerLink({ bugtracker_key: ticketKey, bugtracker_url: ticketKey ? null : values.ticket.trim() }, settings)
+    : null;
   const [compare, setCompare] = useState<{ direction: JiraDirection; key: string; local: JiraFields; remote: JiraFields } | null>(null);
   const [jiraBusy, setJiraBusy] = useState(false);
   const [jiraStatus, setJiraStatus] = useState<{ ok?: string; error?: string }>({});
@@ -433,7 +438,21 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
           >
             <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-sm">
               <dt className="text-muted-foreground">Ticket :</dt>
-              <dd className="ticket-value font-mono">{values.ticket || 'aucun'}</dd>
+              <dd className="ticket-value font-mono">
+                {ticketLink ? (
+                  <a
+                    className="ticket-link text-primary underline-offset-2 hover:underline"
+                    href={ticketLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Ouvrir le ticket"
+                  >
+                    {values.ticket}
+                  </a>
+                ) : (
+                  values.ticket || 'aucun'
+                )}
+              </dd>
               <dt className="text-muted-foreground">Date prévue :</dt>
               <dd className="day-value first-letter:uppercase">{values.day ? formatDay(values.day) : 'aucune'}</dd>
               <dt className="text-muted-foreground">Échéance :</dt>
