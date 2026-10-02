@@ -13,7 +13,7 @@ interface ToolbarProps {
 export function Toolbar({ helpOpen, onHelpOpen }: ToolbarProps) {
   const { navigate } = useActions();
   return (
-    <header className="flex flex-wrap items-center justify-between gap-2 pt-6 pb-2">
+    <header data-nav-header className="flex flex-wrap items-center justify-between gap-2 pt-6 pb-2">
       <h1 className="text-2xl font-bold">Tâches</h1>
       <nav className="flex flex-wrap items-center gap-1.5">
         <Button title="Raccourcis (?)" onClick={() => onHelpOpen(true)}>

@@ -353,7 +353,7 @@ export function App() {
         <Toolbar helpOpen={helpOpen} onHelpOpen={setHelpOpen} />
         <main className="pb-16">
           <div className="min-w-0">
-            <div role="tablist" aria-label="Vue" className="mt-3 flex h-[26px] items-center gap-4 lg:mt-5">
+            <div data-nav-header role="tablist" aria-label="Vue" className="mt-3 flex h-[26px] items-center gap-4 lg:mt-5">
               {TABS.map((tab) => (
                 <button
                   key={tab.to}

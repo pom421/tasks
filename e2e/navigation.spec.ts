@@ -1680,17 +1680,26 @@ test('↑/↓ : 5 éléments visibles avant et après l’élément courant', as
     await page.keyboard.press('k');
     expect(await visible(-5)).toBe(true);
   }
-  // L'en-tête compte dans la marge : dans les 5 premiers éléments, haut de
-  // page déjà atteint (pas de saut en arrivant sur le premier projet).
+  // Les 3 blocs de l'en-tête (barre, onglets, filtres) comptent dans la marge :
+  // ils réapparaissent un par un, haut de page atteint au premier.
   const state = () =>
-    page.evaluate(() => ({
-      index: [...document.querySelectorAll('[data-nav]')].indexOf(document.activeElement as Element),
-      top: window.scrollY,
-    }));
+    page.evaluate(() => {
+      const visible = (el: Element) => el.getBoundingClientRect().top >= 0;
+      const header = [...document.querySelectorAll('[data-nav-header]')];
+      const items = [...document.querySelectorAll('[data-nav]')];
+      const index = items.indexOf(document.activeElement as Element);
+      const j = index + header.length - 5;
+      return { index, headers: header.length, top: window.scrollY, ok: j <= 0 ? window.scrollY === 0 : window.scrollY > 0 && visible([...header, ...items][j]) };
+    });
+  const seen = new Set<number>();
   for (let s = await state(); s.index > 0; s = await state()) {
-    if (s.index < 5) expect(s.top).toBe(0);
+    expect(s.headers).toBe(3);
+    expect(s.ok).toBe(true);
+    seen.add(s.top);
     await page.keyboard.press('k');
   }
+  // Remontée progressive : plusieurs positions distinctes près du haut, pas un saut.
+  expect(seen.size).toBeGreaterThan(3);
 });
 
 test('clic sur une tâche : pas de défilement anticipé', async ({ page, store, data }) => {
