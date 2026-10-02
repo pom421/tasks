@@ -84,7 +84,7 @@ Clavier (`?` affiche l'aide, un 2e `?` ou `Échap` la ferme ; groupée par thèm
 
 | Touche | Action |
 |---|---|
-| `↑` `↓` ou `j` `k` | Passer d'un projet, d'une tâche ou d'un champ « + Ajouter » à l'autre (`Début` / `Fin` ou `g` `g` / `G` : premier / dernier). La page défile en avance : 5 éléments restent visibles après l'élément courant en descendant, avant en remontant, l'en-tête comptant comme un élément (au clavier seulement, pas au clic). Un champ « + Ajouter » atteint ainsi reste en lecture : `Entrée` pour écrire (par `n`, `n` `n` ou un clic : écriture directe) |
+| `↑` `↓` ou `j` `k` | Passer d'un projet, d'une tâche ou d'un champ « + Ajouter » à l'autre (`Début` / `Fin` ou `g` `g` / `G` : premier / dernier). La page défile en avance : 5 éléments restent visibles après l'élément courant en descendant, avant en remontant, les 3 blocs de l'en-tête (barre, onglets, filtres) comptant comme des éléments (au clavier seulement, pas au clic). Un champ « + Ajouter » atteint ainsi reste en lecture : `Entrée` pour écrire (par `n`, `n` `n` ou un clic : écriture directe) |
 | `Maj+↑` `Maj+↓` ou `K` `J` (`Maj+k` `Maj+j`) | En-tête du projet précédent / suivant |
 | `Entrée` | Modifier le nom sélectionné, puis `Entrée` pour enregistrer |
 | `Échap` | Quitter l'édition sans enregistrer, retour à la navigation ; dans un champ « + Ajouter » en écriture : le vide et le repasse en lecture (curseur sur le champ, `j` / `k` et `n` utilisables) |

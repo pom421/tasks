@@ -27,10 +27,12 @@ function focusItem(el: HTMLElement | undefined, { margin = false } = {}) {
   if (i === 0) return window.scrollTo({ top: 0 });
   if (margin) {
     items[Math.min(i + MARGIN, items.length - 1)].scrollIntoView({ block: 'nearest' });
-    // L'en-tête compte comme un élément avant le premier : s'il est dans la
-    // marge, haut de page (pas de saut au moment d'atteindre le premier projet).
-    if (i - MARGIN < 0) window.scrollTo({ top: 0 });
-    else items[i - MARGIN].scrollIntoView({ block: 'nearest' });
+    // Les blocs de l'en-tête (barre, onglets, filtres) comptent comme des
+    // éléments avant le premier : il réapparaît bloc par bloc, sans saut.
+    const header = [...document.querySelectorAll<HTMLElement>('[data-nav-header]')].filter((h) => h.offsetParent !== null);
+    const j = i + header.length - MARGIN;
+    if (j <= 0) window.scrollTo({ top: 0 });
+    else [...header, ...items][j].scrollIntoView({ block: 'nearest' });
   }
   // En dernier : l'élément courant reste visible même sur un petit écran.
   el.scrollIntoView({ block: 'nearest' });
