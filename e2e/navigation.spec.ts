@@ -896,6 +896,40 @@ test('fiche : ticket en un contrôle, aucun → à reporter → identifiant ; É
   await expect(une.locator('.report-done')).toHaveText('reporté · PROJ-2');
 });
 
+test('fiche : r comme sur la ligne (lecture et édition hors champ) ; clic ailleurs = retour à aucun ; r dans le titre = une lettre', async ({ page, store }) => {
+  await pressDown(page, 2);
+  await page.keyboard.press('o');
+  const dialog = page.getByRole('dialog', { name: 'Une' });
+  const control = dialog.locator('.report-control');
+  await page.keyboard.press('r');
+  await expect(control).toHaveText('à reporter');
+  await page.keyboard.press('r');
+  const ticket = dialog.getByRole('textbox', { name: 'Ticket' });
+  await expect(ticket).toBeFocused();
+  // Clic ailleurs : comme Échap, retour à « aucun ».
+  await dialog.locator('.notes-preview').click();
+  await expect(ticket).toHaveCount(0);
+  await expect(control).toHaveText('aucun');
+  expect(store.state().bugtrackerPending).toBe(0);
+
+  await page.keyboard.press('r');
+  await page.keyboard.press('r');
+  await expect(ticket).toBeFocused();
+  await page.keyboard.type('proj-3');
+  await page.keyboard.press('Enter');
+  await expect(dialog.locator('.report-done')).toHaveText('reporté · PROJ-3');
+  await control.locator('button').focus(); // ✕
+  await page.keyboard.press('r'); // retire le report
+  await expect(control).toHaveText('aucun');
+
+  // En édition, dans le titre : r s'écrit.
+  await page.keyboard.press('e');
+  await dialog.getByLabel('Titre').press('End');
+  await page.keyboard.type('r');
+  await expect(dialog.getByLabel('Titre')).toHaveValue('Uner');
+  await expect(control).toHaveText('aucun');
+});
+
 test('fiche Markdown : e édite (titre → Tab → ticket → dates → tags → contenu), Ctrl+Entrée lecture puis fermeture', async ({ page, store, data }) => {
   await pressDown(page, 3); // « Deux »
   await page.keyboard.press('Shift+Enter');

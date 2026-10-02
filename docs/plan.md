@@ -8,12 +8,11 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-- [~] Pastille « reporté » supprimée : reportée = un identifiant ; `r` sur une tâche à reporter demande l'identifiant, saisie abandonnée (Échap, vide, invalide) = retour à rien ; fiche : ticket en un seul contrôle (aucun → à reporter → identifiant ; ✕ le retire), en lecture et en édition ; ticket = identifiant seul (tâche et projet), plus de lien complet ; migrations 15 et 16 ([PR #5](https://github.com/pom421/tasks/pull/5))
+- [~] Pastille « reporté » supprimée : reportée = un identifiant ; `r` sur une tâche à reporter demande l'identifiant, saisie abandonnée (Échap, vide, invalide, clic ailleurs) = retour à rien ; fiche : ticket en un seul contrôle (aucun → à reporter → identifiant ; ✕ le retire ; `r` comme sur la ligne), en lecture et en édition ; ticket = identifiant seul (tâche et projet), plus de lien complet ; migrations 15 et 16 ([PR #5](https://github.com/pom421/tasks/pull/5))
 - [~] Ticket d'un projet en pastille rose (bleu réservé aux tâches reportées) ; fiche : ticket cliquable en lecture, comme dans la ligne
 
 ## Décisions attendues
 
-- [?] Fiche : le contrôle du ticket n'a pas de raccourci (`Tab` puis `Entrée`). `r` comme sur la ligne ?
 - [?] Lien d'un ticket par sa clé : `URL/browse/CLÉ` est le format de Jira. Pour un autre outil (GitLab `/-/issues/N`, GitHub `/issues/N`), régler un modèle d'URL (`https://…/browse/{clé}`) ?
 - [?] Log : aujourd'hui sans entrée n'apparaît plus (avant : cadre « Rien de fait ce jour-là »). À réafficher ?
 - [?] Compteur « N tâches à reporter » : ne compte plus les tâches **faites** à

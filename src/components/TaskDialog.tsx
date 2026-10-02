@@ -40,8 +40,9 @@ type Field = 'title' | 'day' | 'due' | 'notes';
 // Chrono comme sur la ligne : c lance / met en pause, C remet à zéro.
 // Aujourd’hui comme sur la ligne : t ou ☀.
 // Priorité comme sur la ligne : 1, 2, 3 (le même chiffre la retire) ou clic.
-// Ticket (report), enregistré tout de suite, en lecture comme en édition :
-// aucun → à reporter → identifiant (Échap ou invalide : reste à reporter) ; ✕ le retire.
+// Ticket (report), enregistré tout de suite, en lecture comme en édition, comme
+// sur la ligne (r ou clic) : aucun → à reporter → identifiant (Échap, vide,
+// invalide ou clic ailleurs : retour à aucun) → aucun (r ou ✕).
 // Jira (ticket PROJ-123, URL et PAT renseignés) : > pousse vers Jira, < récupère
 // depuis Jira, après une fenêtre de comparaison ; annulable (u).
 // Tout est enregistré automatiquement, rien n'est perdu.
@@ -264,6 +265,11 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
     if ((e.key === '>' || e.key === '<') && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault();
       startJira(e.key === '>' ? 'push' : 'pull');
+      return;
+    }
+    if (e.key === 'r' && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      report.cycle();
       return;
     }
     if (e.key === 'e' && !editing && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {
