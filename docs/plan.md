@@ -9,7 +9,6 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 ## En cours
 
 - [~] Ticket d'un projet en pastille rose (bleu réservé aux tâches reportées) ; fiche : ticket cliquable en lecture, comme dans la ligne
-- [~] Défilement anticipé au clavier : 5 éléments visibles avant / après l’élément courant (branche d’essai, peut être abandonnée)
 
 ## Décisions attendues
 
@@ -41,6 +40,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
+- [x] Défilement anticipé au clavier : 5 éléments visibles avant / après l’élément courant, blocs de l’en-tête comptés ([#4](https://github.com/pom421/tasks/pull/4))
 - [x] Projet : pastille et champ du ticket à droite, juste avant l'icône d'archive ; icône ticket retirée (`r` seulement, comme le report d'une tâche) (`49602a1`)
 - [x] Projet : champ du ticket après le cœur (favori), la pastille reste après le nom (`c2e995c`)
 - [x] Livraison par PR (plus de push direct sur `main`) : `CLAUDE.md`, skills `livrer` et `verifier-ci`
