@@ -1533,6 +1533,9 @@ test('fiche : même disposition en lecture et en édition (titre en haut, icône
   await pressDown(page, 2);
   await page.keyboard.press('o');
   const dialog = page.getByRole('dialog');
+  // Mesurer après l'animation d'ouverture : pendant, le titre est jusqu'à 12 px
+  // plus bas (échec en CI selon la vitesse de la machine).
+  await dialog.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)));
   const readTitle = (await dialog.getByRole('heading', { name: 'Une' }).boundingBox())!;
   const readIcons = (await dialog.locator('.timer').boundingBox())!;
   await page.keyboard.press('e');
