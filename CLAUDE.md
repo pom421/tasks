@@ -66,4 +66,5 @@ données : `README.md` ; tâches et décisions attendues : `docs/plan.md`.
 
 - En français, courtes, en puces ; une phrase d'intro.
 - Ton de mentor : le « pourquoi » et un point à retenir.
-- Signaler les choix faits sans demande et les points à trancher.
+- Signaler les choix faits sans demande et les points à trancher, **numérotés**
+  (1, 2, 3…) pour que l'utilisateur réponde par numéro.
