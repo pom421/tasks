@@ -27,7 +27,10 @@ function focusItem(el: HTMLElement | undefined, { margin = false } = {}) {
   if (i === 0) return window.scrollTo({ top: 0 });
   if (margin) {
     items[Math.min(i + MARGIN, items.length - 1)].scrollIntoView({ block: 'nearest' });
-    items[Math.max(i - MARGIN, 0)].scrollIntoView({ block: 'nearest' });
+    // L'en-tête compte comme un élément avant le premier : s'il est dans la
+    // marge, haut de page (pas de saut au moment d'atteindre le premier projet).
+    if (i - MARGIN < 0) window.scrollTo({ top: 0 });
+    else items[i - MARGIN].scrollIntoView({ block: 'nearest' });
   }
   // En dernier : l'élément courant reste visible même sur un petit écran.
   el.scrollIntoView({ block: 'nearest' });

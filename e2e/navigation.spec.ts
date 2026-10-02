@@ -1680,6 +1680,17 @@ test('↑/↓ : 5 éléments visibles avant et après l’élément courant', as
     await page.keyboard.press('k');
     expect(await visible(-5)).toBe(true);
   }
+  // L'en-tête compte dans la marge : dans les 5 premiers éléments, haut de
+  // page déjà atteint (pas de saut en arrivant sur le premier projet).
+  const state = () =>
+    page.evaluate(() => ({
+      index: [...document.querySelectorAll('[data-nav]')].indexOf(document.activeElement as Element),
+      top: window.scrollY,
+    }));
+  for (let s = await state(); s.index > 0; s = await state()) {
+    if (s.index < 5) expect(s.top).toBe(0);
+    await page.keyboard.press('k');
+  }
 });
 
 test('clic sur une tâche : pas de défilement anticipé', async ({ page, store, data }) => {
