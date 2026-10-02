@@ -16,7 +16,7 @@ export function navItems(): HTMLElement[] {
 
 // Navigation au clavier : éléments gardés visibles avant et après l'élément
 // courant (comme le scrolloff de vim), pour voir ce qui vient.
-const MARGIN = 3;
+const MARGIN = 5;
 
 function focusItem(el: HTMLElement | undefined, { margin = false } = {}) {
   if (!el) return;

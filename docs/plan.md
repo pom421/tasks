@@ -9,7 +9,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 ## En cours
 
 - [~] Ticket d'un projet en pastille rose (bleu réservé aux tâches reportées) ; fiche : ticket cliquable en lecture, comme dans la ligne
-- [~] Défilement anticipé au clavier : 3 éléments visibles avant / après l’élément courant (branche d’essai, peut être abandonnée)
+- [~] Défilement anticipé au clavier : 5 éléments visibles avant / après l’élément courant (branche d’essai, peut être abandonnée)
 
 ## Décisions attendues
 

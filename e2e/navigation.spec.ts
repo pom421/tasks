@@ -1656,9 +1656,9 @@ test('? ouvre l’aide, ? la referme', async ({ page }) => {
   await expect(page.getByRole('dialog', { name: 'Raccourcis' })).toBeVisible();
 });
 
-// Défilement anticipé : au clavier, 3 éléments restent visibles après (en
+// Défilement anticipé : au clavier, 5 éléments restent visibles après (en
 // descendant) et avant (en remontant) l'élément courant, comme le scrolloff de vim.
-test('↑/↓ : 3 éléments visibles avant et après l’élément courant', async ({ page, store, data }) => {
+test('↑/↓ : 5 éléments visibles avant et après l’élément courant', async ({ page, store, data }) => {
   for (let i = 1; i <= 30; i++) store.createTask(data.beta.id, `Tâche ${i}`);
   await page.setViewportSize({ width: 1000, height: 500 });
   await reload(page);
@@ -1672,13 +1672,13 @@ test('↑/↓ : 3 éléments visibles avant et après l’élément courant', as
     }, offset);
   for (let i = 0; i < 25; i++) {
     await page.keyboard.press('j');
-    expect(await visible(3)).toBe(true);
+    expect(await visible(5)).toBe(true);
   }
   // La page a bien défilé avant le bas de l'écran.
   expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
   for (let i = 0; i < 15; i++) {
     await page.keyboard.press('k');
-    expect(await visible(-3)).toBe(true);
+    expect(await visible(-5)).toBe(true);
   }
 });
 
