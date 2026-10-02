@@ -1,6 +1,6 @@
 import { flushSync } from 'react-dom';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { DEFAULT_DAY_CAPACITY, allTags, type BugtrackerState, type JournalDay, type Priority, type Project, type Settings, type Task } from '../shared/types.ts';
+import { DEFAULT_DAY_CAPACITY, allTags, jiraReady, type BugtrackerState, type JournalDay, type Priority, type Project, type Settings, type Task } from '../shared/types.ts';
 import { api } from '@/lib/api';
 import { ActionsContext, type Actions, type TaskField } from '@/lib/actions';
 import { record, useHistory } from '@/lib/history';
@@ -40,7 +40,7 @@ export function App() {
   const [data, setData] = useState<Data>({
     projects: [],
     days: [],
-    settings: { bugtracker_base_url: null, day_capacity: DEFAULT_DAY_CAPACITY },
+    settings: { bugtracker_base_url: null, day_capacity: DEFAULT_DAY_CAPACITY, jira_pat_set: false },
     dates: [],
     logTags: [],
     dayDone: 0,
@@ -339,6 +339,7 @@ export function App() {
           task={current}
           projectName={projectName(current)}
           field={openTask.field}
+          jira={jiraReady(data.settings)}
           tagSuggestions={[...new Set([...allTags(data.projects.flatMap((p) => p.tasks)), ...data.logTags])].sort((a, b) => a.localeCompare(b, 'fr'))}
           open={openTask.open}
           onClose={(changed) => {

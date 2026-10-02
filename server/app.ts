@@ -5,7 +5,8 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { type DeletedProject, type ProjectPatch, type Store, type TaskPatch, isDate, today } from './db.ts';
 import type { ProjectRow, TaskRow } from './schema.ts';
-import { BUGTRACKER_KEY_RE, PRIORITIES, normalizeTag, type BugtrackerState, type Priority, type Settings, type TimerAction } from '../shared/types.ts';
+import { BUGTRACKER_KEY_RE, PRIORITIES, normalizeTag, type BugtrackerState, type JiraFields, type Priority, type SettingsPatch, type TimerAction } from '../shared/types.ts';
+import { JiraError, readIssue, writeIssue, type JiraConfig } from './jira.ts';
 import { parseMarkdown } from './markdown.ts';
 
 type Req = IncomingMessage;
@@ -250,6 +251,19 @@ export interface AppOptions {
 
 export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, staticDir }: AppOptions = {}) {
   // Table de routage : [méthode, regex, handler(req, res, url, ...params)].
+  // Appel à Jira avec l'URL des tickets et le PAT des Réglages ; ses erreurs
+  // sont renvoyées telles quelles (502 : c'est Jira qui a échoué).
+  async function jira<T>(fn: (config: JiraConfig) => Promise<T>): Promise<T> {
+    const { bugtracker_base_url: baseUrl } = store.settings();
+    const pat = store.jiraPat();
+    if (!baseUrl || !pat) throw new HttpError(400, 'Renseigner l’URL des tickets et le PAT Jira dans les Réglages');
+    try {
+      return await fn({ baseUrl, pat });
+    } catch (err) {
+      throw err instanceof JiraError ? new HttpError(502, err.message) : err;
+    }
+  }
+
   const routes: [string, RegExp, Handler][] = [
     // day : journée de « Plan journée » (date du navigateur), facultative.
     ['GET', /^\/api\/state$/, (_req, res, url) => {
@@ -277,7 +291,7 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
 
     ['PUT', /^\/api\/settings$/, async (req, res) => {
       const body = await readJson(req);
-      const patch: Partial<Settings> = {};
+      const patch: SettingsPatch = {};
       // URL du bugtracker, sans « / » final (on y ajoute /browse/CLÉ).
       if ('bugtracker_base_url' in body) patch.bugtracker_base_url = httpUrl(body.bugtracker_base_url)?.replace(/\/+$/, '') ?? null;
       // Plan journée : maximum de tâches, de 1 à 50.
@@ -286,7 +300,25 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
         if (!Number.isInteger(n) || (n as number) < 1 || (n as number) > 50) throw new HttpError(400, 'Maximum invalide : nombre de 1 à 50 attendu');
         patch.day_capacity = n as number;
       }
+      // PAT Jira : écrit, jamais relu par le navigateur ; null le retire.
+      if ('jira_pat' in body) patch.jira_pat = optionalText(body.jira_pat, 'PAT', 500);
       send(res, 200, store.updateSettings(patch));
+    }],
+
+    // Ticket Jira : lecture (aperçu avant de pousser ou de récupérer) et écriture.
+    ['GET', /^\/api\/jira\/([A-Z][A-Z0-9_]*-\d+)$/, async (_req, res, _url, key) => {
+      send(res, 200, await jira((config) => readIssue(config, key)));
+    }],
+
+    ['PUT', /^\/api\/jira\/([A-Z][A-Z0-9_]*-\d+)$/, async (req, res, _url, key) => {
+      const body = await readJson(req);
+      const fields: JiraFields = {
+        title: requireText(body.title, 'Titre'),
+        notes: optionalText(body.notes, 'Contenu', 100_000),
+        due_at: dayAt(body.due_at),
+      };
+      await jira((config) => writeIssue(config, key, fields));
+      send(res, 200, { ok: true });
     }],
 
     ['POST', /^\/api\/projects$/, async (req, res) => {

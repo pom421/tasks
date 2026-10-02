@@ -327,7 +327,7 @@ test('migration 4 : une tâche déjà « reportée » (v3) garde son état', asy
 });
 
 test('réglages : URL du bugtracker conservée en base, validée', async () => {
-  assert.deepEqual((await call('GET', '/api/settings')).body, { bugtracker_base_url: null, day_capacity: 5 });
+  assert.deepEqual((await call('GET', '/api/settings')).body, { bugtracker_base_url: null, day_capacity: 5, jira_pat_set: false });
   const { body } = await call('PUT', '/api/settings', { bugtracker_base_url: 'https://entreprise.tickets.fr/' });
   assert.equal(body.bugtracker_base_url, 'https://entreprise.tickets.fr'); // sans « / » final
   assert.equal((await call('GET', '/api/state')).body.settings.bugtracker_base_url, 'https://entreprise.tickets.fr');
@@ -399,7 +399,7 @@ test('migration 12 : colonnes et réglage du ticket renommés (bugtracker), donn
   );
   // Migration 13 : ni échéance ni tag sur les tâches existantes.
   assert.deepEqual([done.due_at, done.tags], [null, []]);
-  assert.deepEqual(store11.settings(), { bugtracker_base_url: 'https://t.fr', day_capacity: 4 });
+  assert.deepEqual(store11.settings(), { bugtracker_base_url: 'https://t.fr', day_capacity: 4, jira_pat_set: false });
   store11.close();
 });
 
@@ -746,4 +746,68 @@ test('priorité : P1 à P3, aucune, validation, conservée à la restauration', 
   const { body: deleted } = await call('DELETE', `/api/tasks/${t.id}`);
   assert.equal((await call('POST', '/api/tasks/restore', deleted)).body.priority, 3);
   assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { priority: null })).body.priority, null);
+});
+
+test('Jira : PAT jamais relu ni exporté, lecture et écriture d’un ticket', async () => {
+  // Faux Jira Data Center : un ticket, PAT attendu en Bearer.
+  const issues: Record<string, { summary: string; description: string | null; duedate: string | null }> = {
+    'JIRA-1': { summary: 'Dans Jira', description: 'Texte\r\nJira', duedate: '2026-10-12' },
+  };
+  const jira = http.createServer(async (req, res) => {
+    const key = req.url!.match(/\/rest\/api\/2\/issue\/([^?]+)/)?.[1] ?? '';
+    if (req.headers.authorization !== 'Bearer secret') return res.writeHead(401).end();
+    if (!issues[key]) return res.writeHead(404).end();
+    if (req.method === 'PUT') {
+      const chunks: Buffer[] = [];
+      for await (const c of req) chunks.push(c as Buffer);
+      const { fields } = JSON.parse(Buffer.concat(chunks).toString());
+      if (!fields.summary) return res.writeHead(400, { 'Content-Type': 'application/json' }).end(JSON.stringify({ errors: { summary: 'obligatoire' } }));
+      issues[key] = fields;
+      return res.writeHead(204).end();
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ key, fields: issues[key] }));
+  });
+  await new Promise<void>((r) => jira.listen(0, '127.0.0.1', r));
+  const jiraUrl = `http://127.0.0.1:${(jira.address() as { port: number }).port}`;
+  try {
+    // Sans URL ni PAT : refusé, avec la marche à suivre.
+    await call('PUT', '/api/settings', { bugtracker_base_url: null, jira_pat: null });
+    const missing = await call('GET', '/api/jira/JIRA-1');
+    assert.equal(missing.status, 400);
+    assert.match(missing.body.error, /Réglages/);
+
+    // Le PAT s'écrit mais ne se relit pas (ni réglages, ni état).
+    const { body: saved } = await call('PUT', '/api/settings', { bugtracker_base_url: jiraUrl, jira_pat: 'secret' });
+    assert.equal(saved.jira_pat_set, true);
+    assert.ok(!JSON.stringify(saved).includes('secret'));
+    assert.ok(!JSON.stringify((await call('GET', '/api/state')).body).includes('secret'));
+
+    // Lecture : description sans \r, date seule.
+    assert.deepEqual((await call('GET', '/api/jira/JIRA-1')).body, { title: 'Dans Jira', notes: 'Texte\nJira', due_at: '2026-10-12' });
+    // Écriture : summary, description, duedate.
+    assert.equal((await call('PUT', '/api/jira/JIRA-1', { title: 'Depuis Tasks', notes: null, due_at: null })).status, 200);
+    assert.deepEqual(issues['JIRA-1'], { summary: 'Depuis Tasks', description: '', duedate: null });
+    assert.equal((await call('PUT', '/api/jira/JIRA-1', { title: '', notes: null, due_at: null })).status, 400);
+    assert.equal((await call('PUT', '/api/jira/JIRA-1', { title: 'x', due_at: '12/10' })).status, 400);
+    // Clé invalide : route inconnue.
+    assert.equal((await call('GET', '/api/jira/jira-1')).status, 404);
+
+    // Erreurs de Jira renvoyées telles quelles (502).
+    const unknown = await call('GET', '/api/jira/JIRA-9');
+    assert.equal(unknown.status, 502);
+    assert.match(unknown.body.error, /JIRA-9 introuvable/);
+    await call('PUT', '/api/settings', { jira_pat: 'faux' });
+    assert.match((await call('GET', '/api/jira/JIRA-1')).body.error, /PAT refusé/);
+
+    // Export : le PAT n'est pas dans le fichier.
+    const { body: file } = await call('GET', '/api/export');
+    assert.ok(!file.includes(Buffer.from('faux')));
+    assert.ok(file.includes(Buffer.from(jiraUrl)));
+
+    // Retrait du PAT.
+    assert.equal((await call('PUT', '/api/settings', { jira_pat: null })).body.jira_pat_set, false);
+  } finally {
+    jira.close();
+    await call('PUT', '/api/settings', { bugtracker_base_url: null, jira_pat: null });
+  }
 });

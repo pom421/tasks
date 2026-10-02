@@ -15,6 +15,7 @@ import type {
   Priority,
   Project,
   Settings,
+  SettingsPatch,
   State,
   TimerAction,
 } from '../shared/types.ts';
@@ -424,10 +425,16 @@ export class Store {
     return {
       bugtracker_base_url: map.get('bugtracker_base_url') ?? null,
       day_capacity: Number(map.get('day_capacity')) || DEFAULT_DAY_CAPACITY,
+      jira_pat_set: Boolean(map.get('jira_pat')),
     };
   }
 
-  updateSettings(patch: Partial<Settings>): Settings {
+  // PAT Jira : lu seulement par le serveur, jamais renvoyé au navigateur.
+  jiraPat(): string | null {
+    return this.orm.select().from(setting).where(eq(setting.key, 'jira_pat')).get()?.value ?? null;
+  }
+
+  updateSettings(patch: SettingsPatch): Settings {
     for (const [key, v] of Object.entries(patch)) {
       const value = v === null || v === undefined ? null : String(v);
       this.orm.insert(setting).values({ key, value }).onConflictDoUpdate({ target: setting.key, set: { value } }).run();
@@ -439,6 +446,10 @@ export class Store {
 
   exportTo(file: string) {
     this.db.exec(`VACUUM INTO '${file.replaceAll("'", "''")}'`);
+    // Le PAT Jira reste sur ce poste : il ne part pas dans le fichier exporté.
+    const copy = new DatabaseSync(file);
+    copy.exec("DELETE FROM setting WHERE key = 'jira_pat'; VACUUM");
+    copy.close();
   }
 
   replaceWith(file: string) {

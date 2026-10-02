@@ -44,7 +44,22 @@ export type Priority = (typeof PRIORITIES)[number];
 export interface Settings {
   bugtracker_base_url: string | null; // ex. https://entreprise.tickets.fr
   day_capacity: number; // Plan journée : nombre de tâches maximum
+  jira_pat_set: boolean; // PAT Jira enregistré (sa valeur ne quitte jamais le serveur)
 }
+
+// Modification des réglages : le PAT s'écrit mais ne se relit pas.
+export type SettingsPatch = Partial<Omit<Settings, 'jira_pat_set'>> & { jira_pat?: string | null };
+
+// Champs d'une tâche synchronisés avec un ticket Jira (titre ↔ summary,
+// contenu ↔ description, échéance ↔ duedate).
+export interface JiraFields {
+  title: string;
+  notes: string | null;
+  due_at: string | null; // 'YYYY-MM-DD'
+}
+
+// Pousser / récupérer : possible avec un identifiant (PROJ-123), l'URL et le PAT.
+export const jiraReady = (s: Settings) => Boolean(s.bugtracker_base_url && s.jira_pat_set);
 
 export const DEFAULT_DAY_CAPACITY = 5;
 

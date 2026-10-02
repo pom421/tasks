@@ -1,4 +1,4 @@
-import type { ImportResult, BugtrackerState, Priority, TimerAction, Journal, JournalFilter, Settings, State } from '../../shared/types.ts';
+import type { ImportResult, BugtrackerState, JiraFields, Priority, TimerAction, Journal, JournalFilter, Settings, SettingsPatch, State } from '../../shared/types.ts';
 
 // Le serveur exige un Content-Type précis par route (protection CSRF).
 async function request<T>(method: string, url: string, body?: unknown): Promise<T> {
@@ -39,7 +39,7 @@ export interface TaskPatch {
 export const api = {
   state: (day: string) => request<State>('GET', `/api/state?day=${day}`),
   settings: () => request<Settings>('GET', '/api/settings'),
-  updateSettings: (patch: Partial<Settings>) => request<Settings>('PUT', '/api/settings', patch),
+  updateSettings: (patch: SettingsPatch) => request<Settings>('PUT', '/api/settings', patch),
   journal: ({ from, to, projectId, bugtrackerPending, q, tags, limit }: JournalFilter) => {
     const params = new URLSearchParams();
     if (from) params.set('from', from);
@@ -65,6 +65,9 @@ export const api = {
   // Renvoie la tâche supprimée (toutes ses colonnes), à passer à restoreTask pour annuler.
   deleteTask: (id: number) => request<Record<string, unknown>>('DELETE', `/api/tasks/${id}`),
   restoreTask: (row: Record<string, unknown>) => request('POST', '/api/tasks/restore', row),
+  // Ticket Jira (clé PROJ-123) : lecture et écriture des champs synchronisés.
+  jiraIssue: (key: string) => request<JiraFields>('GET', `/api/jira/${key}`),
+  updateJiraIssue: (key: string, fields: JiraFields) => request('PUT', `/api/jira/${key}`, fields),
   importDb: (file: Blob) => request('POST', '/api/import', file),
   importMarkdown: (text: string) => request<ImportResult>('POST', '/api/import-markdown', text),
 };

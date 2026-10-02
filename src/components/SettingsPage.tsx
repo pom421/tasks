@@ -11,6 +11,9 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
   const id = useId();
   const [bugtrackerBaseUrl, setBugtrackerBaseUrl] = useState('');
   const [status, setStatus] = useState<{ ok?: string; error?: string }>({});
+  // PAT Jira : saisi masqué, jamais relu (on sait seulement s'il est enregistré).
+  const [pat, setPat] = useState('');
+  const [patSet, setPatSet] = useState(false);
   // Aujourd’hui : maximum de tâches par jour (texte saisi, vérifié par le serveur).
   const [capacity, setCapacity] = useState('');
   const [dayStatus, setDayStatus] = useState<{ ok?: string; error?: string }>({});
@@ -37,6 +40,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
       .then((s) => {
         setBugtrackerBaseUrl((v) => v || (s.bugtracker_base_url ?? ''));
         setCapacity((v) => v || String(s.day_capacity));
+        setPatSet(s.jira_pat_set);
       })
       .catch((err) => setStatus({ error: err.message }));
   }, []);
@@ -74,9 +78,22 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
     e.preventDefault();
     setStatus({});
     try {
-      const saved = await api.updateSettings({ bugtracker_base_url: bugtrackerBaseUrl.trim() || null });
+      // PAT vide : celui enregistré est gardé.
+      const saved = await api.updateSettings({ bugtracker_base_url: bugtrackerBaseUrl.trim() || null, ...(pat.trim() && { jira_pat: pat.trim() }) });
       setBugtrackerBaseUrl(saved.bugtracker_base_url ?? '');
+      setPat('');
+      setPatSet(saved.jira_pat_set);
       setStatus({ ok: 'Réglages enregistrés.' });
+    } catch (err) {
+      setStatus({ error: (err as Error).message });
+    }
+  };
+
+  const removePat = async () => {
+    setStatus({});
+    try {
+      setPatSet((await api.updateSettings({ jira_pat: null })).jira_pat_set);
+      setStatus({ ok: 'PAT retiré.' });
     } catch (err) {
       setStatus({ error: (err as Error).message });
     }
@@ -128,6 +145,31 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
           <p id={`${id}-hint`} className="text-xs text-muted-foreground">
             Ex. https://entreprise.tickets.fr. Un identifiant saisi sur une tâche (PROJ-123) devient un lien vers{' '}
             {bugtrackerBaseUrl.trim() || 'cette URL'}/browse/PROJ-123.
+          </p>
+          <Label htmlFor={`${id}-pat`} className="mt-3">
+            PAT Jira (jeton d’accès personnel)
+          </Label>
+          <div className="flex items-center gap-1.5">
+            <Input
+              id={`${id}-pat`}
+              type="password"
+              autoComplete="new-password"
+              spellCheck={false}
+              placeholder={patSet ? 'Enregistré (laisser vide pour le garder)' : 'Aucun'}
+              value={pat}
+              onChange={(e) => setPat(e.target.value)}
+              className="h-8"
+              aria-describedby={`${id}-pat-hint`}
+            />
+            {patSet && (
+              <Button type="button" onClick={removePat}>
+                Retirer
+              </Button>
+            )}
+          </div>
+          <p id={`${id}-pat-hint`} className="text-xs text-muted-foreground">
+            Jira Data Center : profil → Jetons d’accès personnels. Sert à pousser une tâche vers son ticket et à la récupérer depuis Jira (fiche, &gt; et &lt;). Gardé
+            sur ce poste, jamais réaffiché ni exporté.
           </p>
           <div className="mt-2 flex items-center gap-3">
             <Button type="submit">

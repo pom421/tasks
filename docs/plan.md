@@ -7,7 +7,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-Rien.
+- [~] Jira (Data Center, PAT) : fiche, ☁↑ pousser (`>`) / ☁↓ récupérer (`<`) titre, contenu et échéance, après une fenêtre de comparaison ; désactivés sans identifiant, URL ou PAT ; annulable (`u`) ; PAT masqué dans les Réglages, jamais relu ni exporté
 
 ## Décisions attendues
 
@@ -22,6 +22,8 @@ Rien.
 - [?] Aujourd’hui : les tâches en retard comptent dans « 3/5 tâches ». À garder ?
 - [?] Fiche : dans un champ date, `Tab` parcourt jour / mois / année (natif du navigateur) avant le champ suivant. Acceptable ?
 - [?] Plan journée : compteur rouge seulement **au-delà** du maximum (6/5), pas à 5/5. Orange à 5/5 ?
+- [?] Jira : contenu envoyé tel quel (Markdown) dans la description, qui est en wiki Jira (`##` ne devient pas un titre). Convertir Markdown ↔ wiki ?
+- [?] Jira : créer le ticket depuis la tâche quand il n'y a pas encore d'identifiant ?
 - [?] Priorité : trier les tâches par priorité (en plus du filtre `P`) ?
 
 ## Idées / plus tard

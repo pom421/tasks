@@ -1,5 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { BUGTRACKER_KEY_RE, formatDuration, isValidTicket, type DoneTask, type Task } from '../../shared/types.ts';
+import { BUGTRACKER_KEY_RE, formatDuration, isValidTicket, type DoneTask, type JiraFields, type Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
 import type { TaskField } from '@/lib/actions';
 import { record } from '@/lib/history';
@@ -17,12 +17,14 @@ import { TimerButtons, useTimer } from './Timer';
 import { PlanButton, usePlan } from './Plan';
 import { PriorityButton, usePriority } from './Priority';
 import { TagInput } from './TagInput';
+import { JiraButtons, JiraCompare, jiraBlocker, sameJira, type JiraDirection } from './Jira';
 
 interface TaskDialogProps {
   task: Task | DoneTask;
   projectName: string;
   field: TaskField;
   tagSuggestions: string[]; // tags existants (autocomplétion)
+  jira: boolean; // URL des tickets et PAT renseignés : pousser / récupérer possibles
   open: boolean;
   // changed : quelque chose a été enregistré (les données sont à recharger).
   onClose: (changed: boolean) => void;
@@ -38,10 +40,12 @@ const ticketOf = (t: Task) => t.bugtracker_key ?? t.bugtracker_url ?? '';
 // Chrono comme sur la ligne : c lance / met en pause, C remet à zéro.
 // Aujourd’hui comme sur la ligne : t ou ☀.
 // Priorité comme sur la ligne : 1, 2, 3 (le même chiffre la retire) ou clic.
+// Jira (ticket PROJ-123, URL et PAT renseignés) : > pousse vers Jira, < récupère
+// depuis Jira, après une fenêtre de comparaison ; annulable (u).
 // Tout est enregistré automatiquement, rien n'est perdu.
 // Accessibilité : focus piégé, titre et description annoncés (Radix),
 // libellés reliés aux champs, erreurs annoncées.
-export function TaskDialog({ task, projectName, field, tagSuggestions, open, onClose }: TaskDialogProps) {
+export function TaskDialog({ task, projectName, field, tagSuggestions, jira, open, onClose }: TaskDialogProps) {
   const id = useId();
   const done = 'done_at' in task;
   const timer = useTimer(task);
@@ -172,6 +176,71 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, open, onC
     }
   };
 
+  // Jira : comparaison ouverte (valeurs du ticket lues à l'instant), message.
+  const ticketKey = BUGTRACKER_KEY_RE.test(values.ticket.trim().toUpperCase()) ? values.ticket.trim().toUpperCase() : null;
+  const blocker = jiraBlocker(ticketKey, jira);
+  const [compare, setCompare] = useState<{ direction: JiraDirection; key: string; local: JiraFields; remote: JiraFields } | null>(null);
+  const [jiraBusy, setJiraBusy] = useState(false);
+  const [jiraStatus, setJiraStatus] = useState<{ ok?: string; error?: string }>({});
+  const localJira = (): JiraFields => ({ title: saved.current.title, notes: saved.current.notes.trim() || null, due_at: saved.current.due || null });
+
+  // 1er temps : enregistre la fiche, lit le ticket et ouvre la comparaison.
+  const startJira = async (direction: JiraDirection) => {
+    if (blocker || !ticketKey || jiraBusy) return;
+    setJiraStatus({});
+    if (!(await persist())) return;
+    setJiraBusy(true);
+    try {
+      const remote = await api.jiraIssue(ticketKey);
+      const local = localJira();
+      if (sameJira(local, remote)) setJiraStatus({ ok: 'Déjà identique dans Jira.' });
+      else setCompare({ direction, key: ticketKey, local, remote });
+    } catch (err) {
+      setJiraStatus({ error: (err as Error).message });
+    } finally {
+      setJiraBusy(false);
+    }
+  };
+
+  // 2e temps (confirmé) : écrit dans Jira ou dans la tâche, annulable (u).
+  const confirmJira = async () => {
+    if (!compare) return;
+    const { direction, key, local, remote } = compare;
+    setJiraBusy(true);
+    try {
+      if (direction === 'push') {
+        await api.updateJiraIssue(key, local);
+        record({
+          label: 'envoi vers Jira',
+          focus: `task:${task.id}`,
+          undo: () => api.updateJiraIssue(key, remote),
+          redo: () => api.updateJiraIssue(key, local),
+        });
+        setJiraStatus({ ok: `Poussé vers Jira (${key}).` });
+      } else {
+        const patch = { title: remote.title, notes: remote.notes, due_at: remote.due_at };
+        await api.updateTask(task.id, patch);
+        record({
+          label: 'récupération depuis Jira',
+          focus: `task:${task.id}`,
+          undo: () => api.updateTask(task.id, local),
+          redo: () => api.updateTask(task.id, patch),
+        });
+        const fields = { title: remote.title, notes: remote.notes ?? '', due: remote.due_at ?? '' };
+        saved.current = { ...saved.current, ...fields, changed: true };
+        latest.current = { ...latest.current, ...fields };
+        setValues(latest.current);
+        setJiraStatus({ ok: `Récupéré depuis Jira (${key}).` });
+      }
+    } catch (err) {
+      setJiraStatus({ error: (err as Error).message });
+    } finally {
+      setJiraBusy(false);
+      setCompare(null);
+      focusSoon('reader');
+    }
+  };
+
   const close = async () => {
     if (await persist()) onClose(saved.current.changed);
   };
@@ -199,6 +268,11 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, open, onC
     if (!inField && !done && !e.ctrlKey && !e.metaKey && !e.altKey && timer.onKey(e)) return;
     if (!inField && !done && !e.ctrlKey && !e.metaKey && !e.altKey && plan.onKey(e)) return;
     if (!inField && !e.ctrlKey && !e.metaKey && !e.altKey && priority.onKey(e)) return;
+    if ((e.key === '>' || e.key === '<') && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      startJira(e.key === '>' ? 'push' : 'pull');
+      return;
+    }
     if (e.key === 'e' && !editing && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault();
       startEditing();
@@ -285,6 +359,7 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, open, onC
             {!done && <TimerButtons timer={timer} />}
             {!done && <PlanButton plan={plan} />}
             <PriorityButton priority={task.priority} onClick={priority.cycle} />
+            <JiraButtons blocker={blocker} onClick={startJira} />
           </span>
         </div>
 
@@ -377,6 +452,30 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, open, onC
           </div>
         )}
 
+        {jiraStatus.ok && (
+          <p role="status" className="jira-status text-sm text-muted-foreground">
+            {jiraStatus.ok}
+          </p>
+        )}
+        {jiraStatus.error && (
+          <p role="alert" className="jira-status text-sm text-destructive">
+            {jiraStatus.error}
+          </p>
+        )}
+        {compare && (
+          <JiraCompare
+            direction={compare.direction}
+            ticketKey={compare.key}
+            local={compare.local}
+            remote={compare.remote}
+            busy={jiraBusy}
+            onConfirm={confirmJira}
+            onCancel={() => {
+              setCompare(null);
+              focusSoon('reader');
+            }}
+          />
+        )}
         <div className="flex items-center justify-between gap-2">
           <p id={`${id}-hint`} className="text-xs text-muted-foreground">
             {editing
