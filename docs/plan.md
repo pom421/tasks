@@ -1,7 +1,8 @@
 # Plan de travail
 
 Suivi des tâches de développement. Mis à jour à chaque demande : une ligne par
-tâche, cochée quand elle est poussée sur `main` **et** que la CI est verte.
+tâche, cochée quand la CI de sa PR est verte (lien de la PR) ; fusion par
+l'utilisateur.
 
 Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision attendue
 
@@ -39,6 +40,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
+- [x] Livraison par PR (plus de push direct sur `main`) : `CLAUDE.md`, skills `livrer` et `verifier-ci`
 - [x] Ticket d'un projet (epic…) : `r` sur le projet ou icône 🎫, pastille après le nom (onglet Projets), lien vers le ticket ; migration 14 (`392a7ec`)
 - [x] `r r` (reporté) : ticket saisi dans la ligne au lieu de la fiche ; `Entrée` enregistre, `Échap` passe, `u` retire le ticket (`bc006ac`)
 - [x] Onglet « Prochainement » renommé « Suivant » (`S`, `/suivant`) ; icônes d'une tâche toujours à la même place (étiquettes d'abord, tags coupés) ; un cadre rouge par jour d'échéance dépassée ; icônes distinctes (calendrier prévue, réveil échéance, sablier durée) ; placeholder « Tags… » sans « (#) » ; démo enrichie (`4e9b2e1`, `39e4504`)

@@ -43,8 +43,9 @@ données : `README.md` ; tâches et décisions attendues : `docs/plan.md`.
 
 - Chaque demande : code + tests e2e (dont non-régression) + README + aide `?` +
   `docs/plan.md`.
-- Pousser sur `main` après `pnpm typecheck`, `pnpm test`, `pnpm test:e2e`, puis
-  vérifier la CI.
+- Livrer par une **PR** (jamais de push direct sur `main`) après
+  `pnpm typecheck`, `pnpm test`, `pnpm test:e2e` ; donner le lien de la PR,
+  vérifier sa CI. L'utilisateur relit et fusionne.
 - pnpm uniquement (version épinglée, pas de scripts d'installation).
 
 ## Pièges connus

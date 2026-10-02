@@ -1,19 +1,20 @@
 ---
 name: verifier-ci
-description: Vérifier le résultat de la CI GitHub Actions de pom421/tasks pour un commit poussé sur main, et corriger si elle est rouge. À utiliser quand un rappel de vérification de CI se déclenche ou après un push.
+description: Vérifier le résultat de la CI GitHub Actions de pom421/tasks pour une PR (ou un commit), et corriger si elle est rouge. À utiliser quand un rappel de vérification de CI se déclenche ou après un push.
 ---
 
 # Vérifier la CI
 
-1. Retrouver le run du commit (`head_sha`) parmi les derniers de `pom421/tasks`
-   (`gh run list --limit 5`, ou l'outil GitHub `list_workflow_runs`).
+1. PR : `gh pr checks <numéro> --repo pom421/tasks`. Commit : retrouver son run
+   (`head_sha`) parmi les derniers (`gh run list --limit 5`).
 2. **En cours** : revérifier dans 3 minutes, sans rien dire.
-3. **Vert** : tâche en « Fait » (avec le sha) dans `docs/plan.md` ; 2-3 puces
-   avec le lien du run.
+3. **Vert** : tâche en « Fait » (avec le lien de la PR) dans `docs/plan.md`,
+   commit `docs:` sur la **branche de la PR** (pas de PR à part) ; 2-3 puces avec
+   les liens de la PR et du run.
 4. **Rouge** :
    - lire les logs du job en échec (~120 lignes), reproduire en local ;
    - trouver la **cause** : jamais relancer « pour voir », désactiver un test ni
      commit vide ;
    - cause fréquente : test e2e qui attend la base au lieu de l'affichage ;
    - corriger, `--repeat-each 20` sur le test, toute la suite, puis skill
-     `livrer` ; expliquer la cause en 3 puces + un point « à retenir ».
+     `livrer` (même branche, même PR) ; expliquer la cause en 3 puces + un point « à retenir ».
