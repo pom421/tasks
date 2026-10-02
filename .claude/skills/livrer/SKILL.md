@@ -15,7 +15,9 @@ description: Vérifier, documenter, commiter, pousser et ouvrir une PR vers main
    verte, questions dans « Décisions attendues »).
 4. **Commit** en français (`feat:` / `fix:` / `style:` / `test:` / `docs:`),
    titre court, corps en puces, lignes d'attribution de la session.
-5. **Pousser et ouvrir la PR** : jamais de push direct sur `main`. Sur une
+5. **Pousser et ouvrir la PR** : jamais de push direct sur `main`, sauf pour
+   un changement qui ne touche que la configuration de Claude (`CLAUDE.md`,
+   `.claude/`) : `git push origin HEAD:main`, sans PR. Sur une
    branche de travail (en créer une si on est sur `main`) :
    `git push -u origin <branche>` (réessayer jusqu'à 4 fois si erreur réseau :
    2, 4, 8, 16 s), puis `gh pr create --base main` (titre = celui du commit,

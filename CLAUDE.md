@@ -45,7 +45,9 @@ données : `README.md` ; tâches et décisions attendues : `docs/plan.md`.
   `docs/plan.md`.
 - Livrer par une **PR** (jamais de push direct sur `main`) après
   `pnpm typecheck`, `pnpm test`, `pnpm test:e2e` ; donner le lien de la PR,
-  vérifier sa CI. L'utilisateur relit et fusionne.
+  vérifier sa CI. L'utilisateur relit et fusionne. Exception : configuration
+  de Claude seule (`CLAUDE.md`, `.claude/` : skills, hooks, réglages) →
+  directement sur `main`, sans PR.
 - pnpm uniquement (version épinglée, pas de scripts d'installation).
 
 ## Pièges connus
