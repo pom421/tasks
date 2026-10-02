@@ -47,16 +47,16 @@ test('boutons désactivés sans identifiant valide, sans URL ou sans PAT ; raiso
   await page.keyboard.press('>');
   await expect(page.getByRole('dialog')).toHaveCount(1);
 
-  // Lien complet au lieu d'un identifiant : toujours désactivés.
+  // Lien complet au lieu d'un identifiant : refusé, toujours désactivés.
   await page.keyboard.press('e');
   await page.keyboard.press('Tab');
   await page.keyboard.type('https://ailleurs.fr/x');
   await page.keyboard.press('Enter');
+  await expect(dialog.getByRole('alert')).toHaveText('Identifiant attendu, ex. PROJ-123');
+  await expect(dialog.getByLabel('Ticket')).toBeFocused();
   await expect(push).toBeDisabled();
 
   // Identifiant mais ni URL ni PAT : désactivés, renvoi aux Réglages.
-  await page.keyboard.press('e');
-  await page.keyboard.press('Tab');
   await page.keyboard.press('ControlOrMeta+a');
   await page.keyboard.type('proj-1');
   await page.keyboard.press('Enter');

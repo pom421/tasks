@@ -53,8 +53,6 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
       ? change('tâche décochée', { done: false }, { done_at: task.done_at }, true)
       : change('tâche cochée', { done: true, done_at: localToday() }, { done: false }, true);
   const rename = (title: string) => change('renommage', { title }, { title: task.title });
-  // Ticket actuel (clé ou lien), pour annuler son retrait.
-  const ticket = task.bugtracker_key ?? task.bugtracker_url;
   // r tapé plusieurs fois vite : chaque appui part du dernier état demandé
   // (pas de celui encore affiché) et les requêtes s'enchaînent dans l'ordre.
   const bugtracker = useRef({ state: bugtrackerState(task), pending: 0, queue: Promise.resolve() });
@@ -69,7 +67,7 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
     j.pending++;
     j.queue = j.queue.then(async () => {
       if (next === 'wanted') await change('à reporter', { bugtracker: 'wanted' }, { bugtracker: 'none' });
-      else await change('retrait du report', { bugtracker: 'none' }, { bugtracker_ticket: ticket });
+      else await change('retrait du report', { bugtracker: 'none' }, { bugtracker_ticket: task.bugtracker_key });
       j.pending--;
     });
   };
@@ -251,7 +249,7 @@ export function TicketInput({
         className,
       )}
       aria-label="Ticket"
-      title="Identifiant du ticket, ex. PROJ-123, ou lien (Entrée : enregistrer · Échap : plus tard)"
+      title="Identifiant du ticket, ex. PROJ-123 (Entrée : enregistrer · Échap : abandonner)"
       placeholder="Ticket, ex. PROJ-123"
       autoComplete="off"
       autoFocus

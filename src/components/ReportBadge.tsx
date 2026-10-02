@@ -8,8 +8,8 @@ const day = (ts: string) => ts.slice(0, 10).split('-').reverse().join('/');
 const BASE = 'report flex-none rounded-full border px-1.5 text-[11px] leading-[18px] whitespace-nowrap';
 const DONE = 'report-done border-primary/30 bg-primary/10 text-primary';
 
-// Pastille pleine d'un ticket : lien vers le ticket (URL de base des réglages
-// ou lien complet), simple texte sans URL de base. color : fond et texte
+// Pastille pleine d'un ticket : lien vers le ticket (URL de base des réglages),
+// simple texte sans URL de base. color : fond et texte
 // (bleu pour une tâche reportée par défaut).
 function TicketPill({
   href,
@@ -40,8 +40,8 @@ function TicketPill({
 }
 
 // Suivi du report d'une tâche : « à reporter » (contour), puis, reportée,
-// l'identifiant de son ticket (« ticket » pour un lien complet), qui l'ouvre ;
-// « reporté » reste lu par les lecteurs d'écran et dans l'info-bulle.
+// l'identifiant de son ticket, qui l'ouvre ; « reporté » reste lu par les
+// lecteurs d'écran et dans l'info-bulle.
 export function ReportBadge({ task }: { task: Task }) {
   const { settings } = useActions();
   const state = bugtrackerState(task);
@@ -58,16 +58,16 @@ export function ReportBadge({ task }: { task: Task }) {
   return (
     <TicketPill href={bugtrackerLink(task, settings)} title={`Reporté le ${day(task.bugtracker_at!)}`}>
       <span className="sr-only">reporté · </span>
-      {task.bugtracker_key ? <span className="report-key font-mono">{task.bugtracker_key}</span> : 'ticket'}
+      <span className="report-key font-mono">{task.bugtracker_key}</span>
     </TicketPill>
   );
 }
 
 // Ticket d'un projet (epic…), même pastille qu'une tâche reportée mais rose
-// (à distinguer des tickets des tâches) : la clé, ou « ticket » pour un lien complet.
+// (à distinguer des tickets des tâches) : l'identifiant.
 export function ProjectTicket({ project, className }: { project: Project; className?: string }) {
   const { settings } = useActions();
-  if (!project.bugtracker_key && !project.bugtracker_url) return null;
+  if (!project.bugtracker_key) return null;
   return (
     <TicketPill
       href={bugtrackerLink(project, settings)}
@@ -75,14 +75,8 @@ export function ProjectTicket({ project, className }: { project: Project; classN
       className={cn('project-ticket self-center', className)}
       color="border-pink-300 bg-pink-100 text-pink-800 dark:border-pink-800 dark:bg-pink-950 dark:text-pink-300"
     >
-      {project.bugtracker_key ? (
-        <>
-          <span className="sr-only">ticket · </span>
-          <span className="report-key font-mono">{project.bugtracker_key}</span>
-        </>
-      ) : (
-        'ticket'
-      )}
+      <span className="sr-only">ticket · </span>
+      <span className="report-key font-mono">{project.bugtracker_key}</span>
     </TicketPill>
   );
 }

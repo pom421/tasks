@@ -783,7 +783,7 @@ test('r sur un projet : ticket dans la ligne, pastille cliquable après le nom, 
   await expect(head.locator('.project-ticket')).toHaveCount(0);
 });
 
-test('ticket du projet : pas d’icône ; vidé, il est retiré ; lien complet ; absent des autres onglets', async ({ page, store, data }) => {
+test('ticket du projet : pas d’icône ; vidé, il est retiré ; lien refusé ; absent des autres onglets', async ({ page, store, data }) => {
   store.updateProject(data.beta.id, { bugtrackerKey: 'EPIC-3' });
   await reload(page);
   const head = page.locator(`#project-${data.beta.id} .project-head`);
@@ -800,14 +800,17 @@ test('ticket du projet : pas d’icône ; vidé, il est retiré ; lien complet ;
   await ticket.fill('');
   await page.keyboard.press('Enter');
   await expect(head.locator('.project-ticket')).toHaveCount(0);
-  expect(store.state().projects[1]).toMatchObject({ bugtracker_key: null, bugtracker_url: null });
+  expect(store.state().projects[1]).toMatchObject({ bugtracker_key: null });
 
-  // Lien complet (thème, autre outil) : « ticket », qui ouvre le lien.
+  // Lien complet refusé (identifiant seul) : message, rien ne change.
   await page.keyboard.press('r');
   await ticket.fill('https://roadmap.exemple.fr/theme/9');
   await page.keyboard.press('Enter');
-  await expect(head.locator('a.project-ticket')).toHaveAttribute('href', 'https://roadmap.exemple.fr/theme/9');
-  await expect(head.locator('a.project-ticket')).toHaveText('ticket');
+  await expect(page.locator('#toast')).toHaveText('Identifiant attendu, ex. PROJ-123 : rien n’a changé');
+  await expect(head.locator('.project-ticket')).toHaveCount(0);
+  store.updateProject(data.beta.id, { bugtrackerKey: 'EPIC-4' });
+  await reload(page);
+  await expect(head.locator('.project-ticket')).toHaveText('ticket · EPIC-4');
 
   // Onglet Aujourd'hui : pas de pastille de projet.
   await page.keyboard.press('T');
@@ -835,7 +838,7 @@ test('r r : identifiant invalide ou vide, la tâche reste à reporter', async ({
   await expect(ticket).toHaveCount(0);
   await expect(une.locator('.report-wanted')).toBeVisible();
   await expect.poll(() => current(page)).toBe(`task:${data.tasks.une.id}`);
-  expect(store.state().projects[0].tasks[0]).toMatchObject({ bugtracker_at: null, bugtracker_key: null, bugtracker_url: null });
+  expect(store.state().projects[0].tasks[0]).toMatchObject({ bugtracker_at: null, bugtracker_key: null });
 
   await page.keyboard.press('r');
   await expect(ticket).toBeFocused();
@@ -844,6 +847,53 @@ test('r r : identifiant invalide ou vide, la tâche reste à reporter', async ({
   await expect.poll(() => current(page)).toBe(`task:${data.tasks.une.id}`);
   await expect(une.locator('.report-wanted')).toBeVisible();
   await expect(une.locator('.report-done')).toHaveCount(0);
+});
+
+test('fiche : case « À reporter » sans identifiant, cochée d’office avec, décochée = plus de report ; u annule', async ({ page, store, data }) => {
+  const une = row(page, data.tasks.une.id);
+  await pressDown(page, 2);
+  await page.keyboard.press('e');
+  const dialog = page.getByRole('dialog', { name: 'Une' });
+  const check = dialog.getByRole('checkbox', { name: 'À reporter' });
+  await expect(check).not.toBeChecked();
+  // Titre → Tab → ticket → Tab → case.
+  await page.keyboard.press('Tab');
+  await expect(dialog.getByLabel('Ticket')).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(check).toBeFocused();
+  await page.keyboard.press(' ');
+  await expect(check).toBeChecked();
+  await page.keyboard.press('ControlOrMeta+Enter');
+  // En lecture : la case, sans identifiant.
+  await expect(dialog.locator('.reader')).toBeFocused();
+  await expect(check).toBeChecked();
+  await expect(dialog.locator('.ticket-value')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(une.locator('.report-wanted')).toBeVisible();
+  expect(store.state().bugtrackerPending).toBe(1);
+
+  // Identifiant saisi : case cochée d'office, tâche reportée.
+  await page.keyboard.press('e');
+  await page.keyboard.press('Tab');
+  await page.keyboard.type('proj-2');
+  await expect(check).toBeChecked();
+  await page.keyboard.press('Enter');
+  await expect(dialog.locator('.ticket-value')).toHaveText('PROJ-2');
+  await expect(check).toBeChecked();
+  await page.keyboard.press('Escape');
+  await expect(une.locator('.report-done')).toHaveText('reporté · PROJ-2');
+
+  // En lecture, décocher : plus de report (identifiant retiré), u le rend.
+  await page.keyboard.press('o');
+  await check.click();
+  await expect(check).not.toBeChecked();
+  await expect(dialog.locator('.ticket-value')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(une.locator('.report')).toHaveCount(0);
+  await page.keyboard.press('u');
+  await expect(une.locator('.report-done')).toHaveText('reporté · PROJ-2');
 });
 
 test('fiche : ticket vidé, la tâche revient à reporter', async ({ page, store, data }) => {
@@ -867,7 +917,8 @@ test('fiche Markdown : e édite (titre → Tab → ticket → dates → tags →
   const preview = dialog.locator('.notes-preview');
   await expect(dialog.locator('.reader')).toBeFocused();
   await expect(preview).toHaveText('Aucun contenu.');
-  await expect(dialog.locator('.ticket-value')).toHaveText('aucun');
+  await expect(dialog.locator('.ticket-value')).toHaveCount(0); // ni identifiant
+  await expect(dialog.getByRole('checkbox', { name: 'À reporter' })).not.toBeChecked();
 
   await page.keyboard.press('e');
   await expect(dialog.getByLabel('Titre')).toBeFocused();
@@ -1184,10 +1235,10 @@ test('ligne épurée et fiche ordonnée : titre, ticket, dates, tags, contenu', 
   // Titre en haut (champ nommé « Titre », sans libellé visible), puis ticket et contenu.
   await expect(dialog.getByLabel('Titre')).toBeFocused();
   const labels = await dialog.locator('label').allTextContents();
-  expect(labels).toEqual(['Ticket', 'Date prévue', 'Échéance', 'Tags', 'Contenu']);
+  expect(labels).toEqual(['Ticket', 'À reporter', 'Date prévue', 'Échéance', 'Tags', 'Contenu']);
 });
 
-test('fiche en lecture : ticket cliquable comme dans la ligne (clé + URL de base, ou lien complet)', async ({ page, store, data }) => {
+test('fiche en lecture : ticket cliquable comme dans la ligne (clé + URL de base)', async ({ page, store, data }) => {
   store.updateTask(data.tasks.une.id, { bugtrackerKey: 'PROJ-8' });
   await reload(page);
   await pressDown(page, 2);
@@ -1206,13 +1257,6 @@ test('fiche en lecture : ticket cliquable comme dans la ligne (clé + URL de bas
   await expect(link).toHaveAttribute('href', 'https://entreprise.tickets.fr/browse/PROJ-8');
   await expect(link).toHaveAttribute('target', '_blank');
   await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
-  await page.keyboard.press('Escape');
-
-  store.updateTask(data.tasks.une.id, { bugtrackerKey: null, bugtrackerUrl: 'https://autre.exemple.fr/t/3' });
-  await reload(page);
-  await pressDown(page, 2);
-  await page.keyboard.press('o');
-  await expect(dialog.locator('a.ticket-link')).toHaveAttribute('href', 'https://autre.exemple.fr/t/3');
 });
 
 test('fiche : e modifie aussi le titre et le ticket ; Entrée dans un champ = enregistrer', async ({ page, store, data }) => {

@@ -137,6 +137,14 @@ export const MIGRATIONS: Migration[] = [
       UPDATE task SET bugtracker_at = NULL
       WHERE bugtracker_at IS NOT NULL AND bugtracker_key IS NULL AND bugtracker_url IS NULL;`,
   },
+  {
+    version: 16,
+    name: 'ticket : identifiant seul, plus de lien complet',
+    sql: `
+      UPDATE task SET bugtracker_at = NULL WHERE bugtracker_key IS NULL;
+      ALTER TABLE task DROP COLUMN bugtracker_url;
+      ALTER TABLE project DROP COLUMN bugtracker_url;`,
+  },
 ];
 
 export const LATEST_VERSION = MIGRATIONS.at(-1)!.version;

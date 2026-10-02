@@ -23,7 +23,6 @@ export const project = sqliteTable('project', {
   favorite_at: text(), // favori depuis
   position: integer().notNull().default(0), // ordre d'affichage des projets
   bugtracker_key: text(), // ticket du projet (epic, PROJ-123), lien construit avec bugtracker_base_url
-  bugtracker_url: text(), // ou lien complet vers le ticket (http/https)
 });
 
 export const task = sqliteTable(
@@ -45,11 +44,10 @@ export const task = sqliteTable(
     due_at: text(), // échéance (contrainte extérieure) : 'YYYY-MM-DD'
     tags: text({ mode: 'json' }).$type<string[]>().notNull().default(sql`'[]'`), // tags, JSON : ["client", "urgent"]
     // Report : à reporter = bugtracker_wanted_at sans bugtracker_at, reportée = bugtracker_at
-    // (toujours avec un ticket : bugtracker_key ou bugtracker_url).
+    // (toujours avec un ticket : bugtracker_key).
     bugtracker_wanted_at: text(),
     bugtracker_at: text(),
     bugtracker_key: text(), // clé du ticket (PROJ-123), lien construit avec le réglage bugtracker_base_url
-    bugtracker_url: text(), // ou lien complet vers le ticket (http/https)
     // Chrono : temps passé = time_spent + durée depuis timer_started_at.
     time_spent: integer().notNull().default(0), // secondes cumulées (hors période en cours)
     timer_started_at: text(), // en marche depuis, NULL = arrêté

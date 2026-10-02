@@ -25,7 +25,7 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
   const { setLastProject, undoable } = useActions();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editTicket, setEditTicket] = useState(false);
-  const ticket = p.bugtracker_key ?? p.bugtracker_url ?? '';
+  const ticket = p.bugtracker_key ?? '';
   const archived = Boolean(p.archived_at);
   const favorite = Boolean(p.favorite_at);
   const navKey = `project:${p.id}`;
