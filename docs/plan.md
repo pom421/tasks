@@ -8,6 +8,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
+- [~] Pastille « reporté » supprimée : reportée = un ticket ; `r` sur une tâche à reporter demande le ticket, sans ticket valide elle reste à reporter ; ticket vidé = retour à « à reporter » ; migration 15 pour les reportées sans ticket
 - [~] Ticket d'un projet en pastille rose (bleu réservé aux tâches reportées) ; fiche : ticket cliquable en lecture, comme dans la ligne
 
 ## Décisions attendues

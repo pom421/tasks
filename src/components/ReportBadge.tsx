@@ -8,8 +8,8 @@ const day = (ts: string) => ts.slice(0, 10).split('-').reverse().join('/');
 const BASE = 'report flex-none rounded-full border px-1.5 text-[11px] leading-[18px] whitespace-nowrap';
 const DONE = 'report-done border-primary/30 bg-primary/10 text-primary';
 
-// Pastille pleine d'un ticket : lien vers le ticket s'il y en a un (URL de base
-// des réglages ou lien complet), simple texte sinon. color : fond et texte
+// Pastille pleine d'un ticket : lien vers le ticket (URL de base des réglages
+// ou lien complet), simple texte sans URL de base. color : fond et texte
 // (bleu pour une tâche reportée par défaut).
 function TicketPill({
   href,
@@ -39,10 +39,9 @@ function TicketPill({
   );
 }
 
-// Suivi du report d'une tâche, en toutes lettres : « à reporter » (contour),
-// « reporté » (plein), ou seulement l'identifiant du ticket s'il y en a un
-// (« reporté » reste lu par les lecteurs d'écran et dans l'info-bulle). Avec une URL de base
-// (réglages) ou un lien complet, le badge « reporté » ouvre le ticket.
+// Suivi du report d'une tâche : « à reporter » (contour), puis, reportée,
+// l'identifiant de son ticket (« ticket » pour un lien complet), qui l'ouvre ;
+// « reporté » reste lu par les lecteurs d'écran et dans l'info-bulle.
 export function ReportBadge({ task }: { task: Task }) {
   const { settings } = useActions();
   const state = bugtrackerState(task);
@@ -58,14 +57,8 @@ export function ReportBadge({ task }: { task: Task }) {
 
   return (
     <TicketPill href={bugtrackerLink(task, settings)} title={`Reporté le ${day(task.bugtracker_at!)}`}>
-      {task.bugtracker_key ? (
-        <>
-          <span className="sr-only">reporté · </span>
-          <span className="report-key font-mono">{task.bugtracker_key}</span>
-        </>
-      ) : (
-        'reporté'
-      )}
+      <span className="sr-only">reporté · </span>
+      {task.bugtracker_key ? <span className="report-key font-mono">{task.bugtracker_key}</span> : 'ticket'}
     </TicketPill>
   );
 }

@@ -294,7 +294,8 @@ export class Store {
   }
 
   // doneAt : 'YYYY-MM-DD' pour marquer faite, null pour remettre à faire.
-  // bugtracker : état du suivi du bugtracker ('none' efface aussi le ticket) ;
+  // bugtracker : état du suivi du bugtracker ('none' efface aussi le ticket ;
+  // 'done' sans ticket reste « à reporter ») ;
   // bugtrackerKey / bugtrackerUrl : ticket (clé ou lien complet) ; notes : détails (Markdown).
   // timer : chrono (un seul en marche à la fois ; une tâche faite l'arrête) ;
   // dayAt : date prévue (Aujourd'hui si c'est ce jour), null = aucune ;
@@ -330,6 +331,8 @@ export class Store {
     if (tags !== undefined) set.tags = tags;
     if (priority !== undefined) set.priority = priority;
     if (Object.keys(set).length) update(set);
+    // Reportée = un ticket : sans ticket, la tâche revient « à reporter ».
+    update({ bugtracker_at: null }, and(isNull(task.bugtracker_key), isNull(task.bugtracker_url)));
     return this.task(id);
   }
 

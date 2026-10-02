@@ -220,7 +220,11 @@ test('report vers le bugtracker : bascule, visible dans les projets et le journa
   const { body: t } = await call('POST', '/api/tasks', { project_id: p.id, title: 'Ticket' });
   assert.equal(t.bugtracker_at, null);
 
-  const { body: on } = await call('PATCH', `/api/tasks/${t.id}`, { bugtracker: 'done' });
+  // Reportée = un ticket : « done » sans ticket reste à reporter.
+  const { body: noTicket } = await call('PATCH', `/api/tasks/${t.id}`, { bugtracker: 'done' });
+  assert.equal(noTicket.bugtracker_at, null);
+  assert.ok(noTicket.bugtracker_wanted_at);
+  const { body: on } = await call('PATCH', `/api/tasks/${t.id}`, { bugtracker_ticket: 'PROJ-1' });
   assert.ok(on.bugtracker_at);
   let { body: state } = await call('GET', '/api/state');
   assert.ok(state.projects.find((x: any) => x.id === p.id).tasks[0].bugtracker_at);
@@ -247,7 +251,7 @@ test('migration : une base v1 (sans colonne de report) est mise à niveau à l�
   v1.close();
   const old = new Store(file);
   assert.deepEqual(old.state().projects[0].tasks[0], { id: 1, project_id: 1, title: 'Tâche v1', bugtracker_wanted_at: null, bugtracker_at: null, bugtracker_key: null, bugtracker_url: null, notes: null, time_spent: 0, timer_started_at: null, day_at: null, due_at: null, tags: [], priority: null });
-  assert.ok(old.updateTask(1, { bugtracker: 'done' })?.bugtracker_at);
+  assert.ok(old.updateTask(1, { bugtracker: 'done', bugtrackerKey: 'PROJ-1' })?.bugtracker_at);
   old.close();
 });
 
@@ -316,14 +320,16 @@ test('bugtracker : à reporter puis reportée, lien, compteur et filtre du journ
   }
   assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { bugtracker: 'oui' })).status, 400);
 
-  // Lien vidé ; retour à « rien » efface tout.
-  assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { bugtracker_ticket: '' })).body.bugtracker_url, null);
+  // Lien vidé : de nouveau à reporter ; retour à « rien » efface tout.
+  const { body: emptied } = await call('PATCH', `/api/tasks/${t.id}`, { bugtracker_ticket: '' });
+  assert.deepEqual([emptied.bugtracker_url, emptied.bugtracker_at], [null, null]);
+  assert.equal(emptied.bugtracker_wanted_at, wanted.bugtracker_wanted_at);
   await call('PATCH', `/api/tasks/${t.id}`, { bugtracker_ticket: 'proj-9' });
   const { body: none } = await call('PATCH', `/api/tasks/${t.id}`, { bugtracker: 'none' });
   assert.deepEqual([none.bugtracker_wanted_at, none.bugtracker_at, none.bugtracker_key, none.bugtracker_url], [null, null, null, null]);
 });
 
-test('migration 4 : une tâche déjà « reportée » (v3) garde son état', async () => {
+test('migrations 4 et 15 : une tâche « reportée » (v3) sans ticket redevient à reporter', async () => {
   const { DatabaseSync } = await import('node:sqlite');
   const file = path.join(dir, 'v3.sqlite');
   const v3 = new DatabaseSync(file);
@@ -338,7 +344,7 @@ test('migration 4 : une tâche déjà « reportée » (v3) garde son état', asy
   v3.close();
   const store3 = new Store(file);
   const task = store3.state().projects[0].tasks[0];
-  assert.equal(task.bugtracker_at, '2026-09-01 10:00:00');
+  assert.equal(task.bugtracker_at, null);
   assert.equal(task.bugtracker_wanted_at, '2026-09-01 10:00:00');
   store3.close();
 });
@@ -408,7 +414,7 @@ test('migration 12 : colonnes et réglage du ticket renommés (bugtracker), donn
             PRAGMA user_version = 11;`);
   v11.close();
   const store11 = new Store(file);
-  assert.deepEqual(store11.migration.applied.map((m) => m.version), [12, 13, 14]);
+  assert.deepEqual(store11.migration.applied.map((m) => m.version), [12, 13, 14, 15]);
   const [done] = store11.journal({ limit: 5 }).days[0].tasks;
   assert.deepEqual(
     [done.bugtracker_wanted_at, done.bugtracker_at, done.bugtracker_key, done.bugtracker_url],
@@ -557,7 +563,7 @@ test('versions du schéma : base v2 → dernière version (3, 4, 5, 6…), sauve
   // Données conservées et transformées par les migrations.
   assert.deepEqual(store2.state().projects[0].tasks[0], {
     id: 1, project_id: 1, title: 'Reportée en v2', bugtracker_wanted_at: '2026-01-01 09:00:00',
-    bugtracker_at: '2026-01-01 09:00:00', bugtracker_key: null, bugtracker_url: null, notes: null, time_spent: 0, timer_started_at: null, day_at: null, due_at: null, tags: [], priority: null,
+    bugtracker_at: null, bugtracker_key: null, bugtracker_url: null, notes: null, time_spent: 0, timer_started_at: null, day_at: null, due_at: null, tags: [], priority: null,
   });
   store2.close();
 

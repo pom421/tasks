@@ -44,7 +44,8 @@ export const task = sqliteTable(
     day_at: text(),
     due_at: text(), // échéance (contrainte extérieure) : 'YYYY-MM-DD'
     tags: text({ mode: 'json' }).$type<string[]>().notNull().default(sql`'[]'`), // tags, JSON : ["client", "urgent"]
-    // Report : à reporter = bugtracker_wanted_at sans bugtracker_at, reportée = bugtracker_at.
+    // Report : à reporter = bugtracker_wanted_at sans bugtracker_at, reportée = bugtracker_at
+    // (toujours avec un ticket : bugtracker_key ou bugtracker_url).
     bugtracker_wanted_at: text(),
     bugtracker_at: text(),
     bugtracker_key: text(), // clé du ticket (PROJ-123), lien construit avec le réglage bugtracker_base_url

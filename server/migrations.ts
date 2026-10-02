@@ -130,6 +130,13 @@ export const MIGRATIONS: Migration[] = [
       ALTER TABLE project ADD COLUMN bugtracker_key TEXT;
       ALTER TABLE project ADD COLUMN bugtracker_url TEXT;`,
   },
+  {
+    version: 15,
+    name: 'reportée seulement avec un ticket',
+    sql: `
+      UPDATE task SET bugtracker_at = NULL
+      WHERE bugtracker_at IS NOT NULL AND bugtracker_key IS NULL AND bugtracker_url IS NULL;`,
+  },
 ];
 
 export const LATEST_VERSION = MIGRATIONS.at(-1)!.version;

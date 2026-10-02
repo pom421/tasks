@@ -1,5 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { BUGTRACKER_KEY_RE, bugtrackerLink, formatDuration, isValidTicket, type DoneTask, type JiraFields, type Task } from '../../shared/types.ts';
+import { BUGTRACKER_KEY_RE, bugtrackerLink, bugtrackerState, formatDuration, isValidTicket, type DoneTask, type JiraFields, type Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
 import { useActions, type TaskField } from '@/lib/actions';
 import { record } from '@/lib/history';
@@ -153,6 +153,8 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
     const before: typeof patch = {};
     if ('title' in patch) before.title = saved.current.title;
     if ('bugtracker_ticket' in patch) before.bugtracker_ticket = saved.current.ticket || null;
+    // Ticket ajouté à une tâche sans report : l'annulation retire aussi le report.
+    if ('bugtracker_ticket' in patch && !saved.current.ticket && bugtrackerState(task) === 'none') before.bugtracker = 'none';
     if ('day_at' in patch) before.day_at = saved.current.day || null;
     if ('due_at' in patch) before.due_at = saved.current.due || null;
     if ('tags' in patch) before.tags = saved.current.tags;
