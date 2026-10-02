@@ -1,5 +1,5 @@
-import { useRef, useState, type FocusEvent, type KeyboardEvent } from 'react';
-import { hasDetails, isValidTicket, bugtrackerState, type DoneTask, type Task } from '../../shared/types.ts';
+import { useState, type FocusEvent, type KeyboardEvent } from 'react';
+import { hasDetails, type DoneTask, type Task } from '../../shared/types.ts';
 import { NotebookText } from 'lucide-react';
 import { api, type TaskPatch } from '@/lib/api';
 import { useActions } from '@/lib/actions';
@@ -10,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { EditableName } from './Editable';
 import { ReportBadge } from './ReportBadge';
+import { TicketInput, useReport } from './Report';
 import { focusByKey, moveDirection } from '@/lib/nav';
 import { TimerButtons, useTimer } from './Timer';
 import { PlanButton, usePlan } from './Plan';
@@ -32,12 +33,12 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
   const done = 'done_at' in task;
   const [editingDate, setEditingDate] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  // Champ du ticket proposé dans la ligne, sur r d'une tâche à reporter.
-  const [askTicket, setAskTicket] = useState(false);
   const navKey = `task:${task.id}`;
   const timer = useTimer(task);
   const plan = usePlan(task);
   const priority = usePriority(task);
+  // Report : r ; sur une tâche à reporter, l'identifiant est demandé dans la ligne.
+  const report = useReport(task);
 
   // Modification annulable (u) et rejouable (U) : before = valeurs d'avant.
   const change = (label: string, patch: TaskPatch, before: TaskPatch, stay = false) =>
@@ -53,25 +54,6 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
       ? change('tâche décochée', { done: false }, { done_at: task.done_at }, true)
       : change('tâche cochée', { done: true, done_at: localToday() }, { done: false }, true);
   const rename = (title: string) => change('renommage', { title }, { title: task.title });
-  // r tapé plusieurs fois vite : chaque appui part du dernier état demandé
-  // (pas de celui encore affiché) et les requêtes s'enchaînent dans l'ordre.
-  const bugtracker = useRef({ state: bugtrackerState(task), pending: 0, queue: Promise.resolve() });
-  if (!bugtracker.current.pending) bugtracker.current.state = bugtrackerState(task);
-  const cycleBugtracker = () => {
-    const j = bugtracker.current;
-    // À reporter → reportée : il faut le ticket, demandé dans la ligne
-    // (sans ticket valide, la tâche reste à reporter).
-    if (j.state === 'wanted') return setAskTicket(true);
-    const next = j.state === 'none' ? 'wanted' : 'none';
-    j.state = next;
-    j.pending++;
-    j.queue = j.queue.then(async () => {
-      if (next === 'wanted') await change('à reporter', { bugtracker: 'wanted' }, { bugtracker: 'none' });
-      else await change('retrait du report', { bugtracker: 'none' }, { bugtracker_ticket: task.bugtracker_key });
-      j.pending--;
-    });
-  };
-
   const remove = () => {
     let deleted: Record<string, unknown> | undefined;
     return undoable({
@@ -117,7 +99,7 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
     if (!done && plan.onKey(e)) return;
     if (e.key === 'r') {
       e.preventDefault();
-      cycleBugtracker();
+      report.cycle();
     }
     if (e.key === 'o' || e.key === 'e' || (e.key === 'Enter' && e.shiftKey)) {
       e.preventDefault();
@@ -161,12 +143,12 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
         />
         <TaskTags tags={task.tags} />
         {!done && <TaskDates task={task} />}
-        {askTicket ? (
+        {report.asking ? (
           <TicketInput
-            onSave={(value) => change('reportée', { bugtracker_ticket: value }, { bugtracker_ticket: null })}
-            onClose={() => {
+            onSave={report.save}
+            onClose={(saved) => {
               focusByKey(navKey);
-              setAskTicket(false);
+              report.stopAsking(saved);
             }}
           />
         ) : (
@@ -224,49 +206,5 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
         )
       )}
     </li>
-  );
-}
-
-// Ticket saisi dans la ligne (tâche à reporter sur r, projet sur r) : Entrée
-// l'enregistre s'il a changé (vide : retire celui d'avant) ; Échap, un clic
-// ailleurs ou un identifiant invalide (message) abandonne. Dans tous les cas, le curseur revient sur l'élément.
-export function TicketInput({
-  defaultValue = '',
-  className,
-  onSave,
-  onClose,
-}: {
-  defaultValue?: string;
-  className?: string;
-  onSave: (ticket: string) => void;
-  onClose: () => void;
-}) {
-  const { toast } = useActions();
-  return (
-    <input
-      className={cn(
-        'ticket-input w-32 flex-none rounded-full border border-primary/60 bg-transparent px-1.5 font-mono text-[11px] leading-[18px] outline-none placeholder:font-sans placeholder:text-muted-foreground',
-        className,
-      )}
-      aria-label="Ticket"
-      title="Identifiant du ticket, ex. PROJ-123 (Entrée : enregistrer · Échap : abandonner)"
-      placeholder="Ticket, ex. PROJ-123"
-      autoComplete="off"
-      autoFocus
-      defaultValue={defaultValue}
-      onBlur={onClose}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape') {
-          e.stopPropagation(); // pas de réinitialisation des filtres
-          onClose();
-        }
-        if (e.key !== 'Enter') return;
-        e.preventDefault();
-        const ticket = e.currentTarget.value.trim();
-        onClose();
-        if (!isValidTicket(ticket)) toast('Identifiant attendu, ex. PROJ-123 : rien n’a changé');
-        else if (ticket !== defaultValue) onSave(ticket);
-      }}
-    />
   );
 }

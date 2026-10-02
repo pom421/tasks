@@ -670,7 +670,7 @@ test('clavier sur un projet : f favori, a archiver, x x supprimer, u annule tout
 
 const row = (page: Page, taskId: number) => page.locator(`li.task:has([data-nav-key="task:${taskId}"])`);
 
-test('r fait tourner : à reporter (contour) → ticket demandé dans la ligne, Échap reste à reporter → rien', async ({ page, store, data }) => {
+test('r fait tourner : à reporter (contour) → ticket demandé dans la ligne (Échap : retour à rien) → reportée → rien', async ({ page, store, data }) => {
   const une = row(page, data.tasks.une.id);
   await pressDown(page, 2);
   await page.keyboard.press('r');
@@ -684,14 +684,14 @@ test('r fait tourner : à reporter (contour) → ticket demandé dans la ligne, 
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(ticket).toHaveCount(0);
-  // Pas de pastille « reporté » sans ticket : la tâche reste à reporter.
-  await expect(une.locator('.report-wanted')).toBeVisible();
-  await expect(une.locator('.report-done')).toHaveCount(0);
+  // Saisie abandonnée : plus de report (sinon, pas moyen d'en sortir).
+  await expect(une.locator('.report')).toHaveCount(0);
   await expect.poll(() => current(page)).toBe(`task:${data.tasks.une.id}`);
-  await expect(page.locator('#toast')).toHaveCount(0); // Échap n'a rien fait d'autre
-  expect(store.state().projects[0].tasks[0].bugtracker_at).toBeNull();
+  expect(store.state().projects[0].tasks[0]).toMatchObject({ bugtracker_wanted_at: null, bugtracker_at: null });
 
   // Reportée (avec ticket), r retire le report.
+  await page.keyboard.press('r');
+  await expect(une.locator('.report-wanted')).toBeVisible();
   await page.keyboard.press('r');
   await page.keyboard.type('PROJ-1');
   await page.keyboard.press('Enter');
@@ -806,7 +806,7 @@ test('ticket du projet : pas d’icône ; vidé, il est retiré ; lien refusé ;
   await page.keyboard.press('r');
   await ticket.fill('https://roadmap.exemple.fr/theme/9');
   await page.keyboard.press('Enter');
-  await expect(page.locator('#toast')).toHaveText('Identifiant attendu, ex. PROJ-123 : rien n’a changé');
+  await expect(page.locator('#toast')).toHaveText('Identifiant attendu, ex. PROJ-123');
   await expect(head.locator('.project-ticket')).toHaveCount(0);
   store.updateProject(data.beta.id, { bugtrackerKey: 'EPIC-4' });
   await reload(page);
@@ -825,7 +825,7 @@ test('r dans le nom d’un projet en édition : une lettre, pas le champ du tick
   await expect(page.getByRole('textbox', { name: 'Ticket' })).toHaveCount(0);
 });
 
-test('r r : identifiant invalide ou vide, la tâche reste à reporter', async ({ page, store, data }) => {
+test('r r : identifiant invalide ou vide, retour à rien ; u rend « à reporter »', async ({ page, store, data }) => {
   const une = row(page, data.tasks.une.id);
   await pressDown(page, 2);
   await page.keyboard.press('r');
@@ -834,80 +834,66 @@ test('r r : identifiant invalide ou vide, la tâche reste à reporter', async ({
   await expect(ticket).toBeFocused();
   await page.keyboard.type('pas un ticket');
   await page.keyboard.press('Enter');
-  await expect(page.locator('#toast')).toHaveText('Identifiant attendu, ex. PROJ-123 : rien n’a changé');
+  await expect(page.locator('#toast')).toHaveText('Identifiant attendu, ex. PROJ-123');
   await expect(ticket).toHaveCount(0);
-  await expect(une.locator('.report-wanted')).toBeVisible();
+  await expect(une.locator('.report')).toHaveCount(0);
   await expect.poll(() => current(page)).toBe(`task:${data.tasks.une.id}`);
-  expect(store.state().projects[0].tasks[0]).toMatchObject({ bugtracker_at: null, bugtracker_key: null });
+  expect(store.state().projects[0].tasks[0]).toMatchObject({ bugtracker_wanted_at: null, bugtracker_key: null });
+  // u : de nouveau à reporter.
+  await page.keyboard.press('u');
+  await expect(une.locator('.report-wanted')).toBeVisible();
 
   await page.keyboard.press('r');
   await expect(ticket).toBeFocused();
-  await page.keyboard.press('Enter');
+  await page.keyboard.press('Enter'); // vide
   await expect(ticket).toHaveCount(0);
   await expect.poll(() => current(page)).toBe(`task:${data.tasks.une.id}`);
-  await expect(une.locator('.report-wanted')).toBeVisible();
-  await expect(une.locator('.report-done')).toHaveCount(0);
+  await expect(une.locator('.report')).toHaveCount(0);
 });
 
-test('fiche : case « À reporter » sans identifiant, cochée d’office avec, décochée = plus de report ; u annule', async ({ page, store, data }) => {
+test('fiche : ticket en un contrôle, aucun → à reporter → identifiant ; Échap ou invalide : retour à aucun ; ✕ et u', async ({ page, store, data }) => {
   const une = row(page, data.tasks.une.id);
   await pressDown(page, 2);
-  await page.keyboard.press('e');
+  await page.keyboard.press('o');
   const dialog = page.getByRole('dialog', { name: 'Une' });
-  const check = dialog.getByRole('checkbox', { name: 'À reporter' });
-  await expect(check).not.toBeChecked();
-  // Titre → Tab → ticket → Tab → case.
-  await page.keyboard.press('Tab');
-  await expect(dialog.getByLabel('Ticket')).toBeFocused();
-  await page.keyboard.press('Tab');
-  await expect(check).toBeFocused();
-  await page.keyboard.press(' ');
-  await expect(check).toBeChecked();
-  await page.keyboard.press('ControlOrMeta+Enter');
-  // En lecture : la case, sans identifiant.
-  await expect(dialog.locator('.reader')).toBeFocused();
-  await expect(check).toBeChecked();
-  await expect(dialog.locator('.ticket-value')).toHaveCount(0);
-  await page.keyboard.press('Escape');
-  await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(une.locator('.report-wanted')).toBeVisible();
+  const control = dialog.locator('.report-control');
+  await expect(control).toHaveText('aucun');
+  await control.click();
+  await expect(control).toHaveText('à reporter');
   expect(store.state().bugtrackerPending).toBe(1);
 
-  // Identifiant saisi : case cochée d'office, tâche reportée.
-  await page.keyboard.press('e');
-  await page.keyboard.press('Tab');
-  await page.keyboard.type('proj-2');
-  await expect(check).toBeChecked();
-  await page.keyboard.press('Enter');
-  await expect(dialog.locator('.ticket-value')).toHaveText('PROJ-2');
-  await expect(check).toBeChecked();
+  // Champ de l'identifiant : Échap abandonne (la fiche reste ouverte) et revient à « aucun » ; invalide aussi.
+  await control.click();
+  const ticket = dialog.getByRole('textbox', { name: 'Ticket' });
+  await expect(ticket).toBeFocused();
   await page.keyboard.press('Escape');
+  await expect(ticket).toHaveCount(0);
+  await expect(dialog).toBeVisible();
+  await expect(control).toHaveText('aucun');
+  await expect(control).toBeFocused();
+  await control.click();
+  await control.click();
+  await page.keyboard.type('pas un ticket');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#toast')).toHaveText('Identifiant attendu, ex. PROJ-123');
+  await expect(control).toHaveText('aucun');
+
+  // Identifiant valide : reportée, comme sur la ligne.
+  await control.click();
+  await control.click();
+  await page.keyboard.type('proj-2');
+  await page.keyboard.press('Enter');
+  await expect(dialog.locator('.report-done')).toHaveText('reporté · PROJ-2');
   await expect(une.locator('.report-done')).toHaveText('reporté · PROJ-2');
 
-  // En lecture, décocher : plus de report (identifiant retiré), u le rend.
-  await page.keyboard.press('o');
-  await check.click();
-  await expect(check).not.toBeChecked();
-  await expect(dialog.locator('.ticket-value')).toHaveCount(0);
+  // ✕ : plus de report ; u le rend avec son identifiant.
+  await dialog.getByRole('button', { name: 'Retirer le report' }).click();
+  await expect(control).toHaveText('aucun');
+  expect(store.state().projects[0].tasks[0]).toMatchObject({ bugtracker_wanted_at: null, bugtracker_key: null });
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(une.locator('.report')).toHaveCount(0);
   await page.keyboard.press('u');
   await expect(une.locator('.report-done')).toHaveText('reporté · PROJ-2');
-});
-
-test('fiche : ticket vidé, la tâche revient à reporter', async ({ page, store, data }) => {
-  store.updateTask(data.tasks.une.id, { bugtracker: 'done', bugtrackerKey: 'PROJ-1' });
-  await reload(page);
-  const une = row(page, data.tasks.une.id);
-  await expect(une.locator('.report-done')).toHaveText('reporté · PROJ-1');
-  await pressDown(page, 2);
-  await page.keyboard.press('e');
-  await page.getByLabel('Ticket').fill('');
-  await page.keyboard.press('Control+Enter');
-  await page.keyboard.press('Escape');
-  await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(une.locator('.report-wanted')).toBeVisible();
 });
 
 test('fiche Markdown : e édite (titre → Tab → ticket → dates → tags → contenu), Ctrl+Entrée lecture puis fermeture', async ({ page, store, data }) => {
@@ -917,14 +903,13 @@ test('fiche Markdown : e édite (titre → Tab → ticket → dates → tags →
   const preview = dialog.locator('.notes-preview');
   await expect(dialog.locator('.reader')).toBeFocused();
   await expect(preview).toHaveText('Aucun contenu.');
-  await expect(dialog.locator('.ticket-value')).toHaveCount(0); // ni identifiant
-  await expect(dialog.getByRole('checkbox', { name: 'À reporter' })).not.toBeChecked();
+  await expect(dialog.locator('.report-control')).toHaveText('aucun');
 
   await page.keyboard.press('e');
   await expect(dialog.getByLabel('Titre')).toBeFocused();
   await expect(dialog.getByLabel('Titre')).toHaveValue('Deux');
   await page.keyboard.press('Tab');
-  await expect(dialog.getByLabel('Ticket', { exact: true })).toBeFocused();
+  await expect(dialog.locator('.report-control')).toBeFocused();
   // Champ date : Tab passe d'abord par ses parties (jour, mois, année ; natif,
   // leur nombre dépend du navigateur) : Tab jusqu'au champ suivant, dans l'ordre.
   const tabTo = async (field: Locator) => {
@@ -1235,7 +1220,7 @@ test('ligne épurée et fiche ordonnée : titre, ticket, dates, tags, contenu', 
   // Titre en haut (champ nommé « Titre », sans libellé visible), puis ticket et contenu.
   await expect(dialog.getByLabel('Titre')).toBeFocused();
   const labels = await dialog.locator('label').allTextContents();
-  expect(labels).toEqual(['Ticket', 'À reporter', 'Date prévue', 'Échéance', 'Tags', 'Contenu']);
+  expect(labels).toEqual(['Ticket', 'Date prévue', 'Échéance', 'Tags', 'Contenu']);
 });
 
 test('fiche en lecture : ticket cliquable comme dans la ligne (clé + URL de base)', async ({ page, store, data }) => {
@@ -1245,21 +1230,21 @@ test('fiche en lecture : ticket cliquable comme dans la ligne (clé + URL de bas
   await page.keyboard.press('o');
   const dialog = page.getByRole('dialog', { name: 'Une' });
   // Sans URL de base : texte seul, pas de lien vide.
-  await expect(dialog.locator('.ticket-value')).toHaveText('PROJ-8');
-  await expect(dialog.locator('a.ticket-link')).toHaveCount(0);
+  await expect(dialog.locator('.report-key')).toHaveText('PROJ-8');
+  await expect(dialog.locator('a.report-link')).toHaveCount(0);
   await page.keyboard.press('Escape');
 
   store.updateSettings({ bugtracker_base_url: 'https://entreprise.tickets.fr' });
   await reload(page);
   await pressDown(page, 2);
   await page.keyboard.press('o');
-  const link = dialog.getByRole('link', { name: 'PROJ-8' });
+  const link = dialog.getByRole('link', { name: 'reporté · PROJ-8' });
   await expect(link).toHaveAttribute('href', 'https://entreprise.tickets.fr/browse/PROJ-8');
   await expect(link).toHaveAttribute('target', '_blank');
   await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
 });
 
-test('fiche : e modifie aussi le titre et le ticket ; Entrée dans un champ = enregistrer', async ({ page, store, data }) => {
+test('fiche : e modifie le titre ; Entrée dans un champ = enregistrer', async ({ page, store, data }) => {
   // Processeur ralenti (×6), comme sur une CI chargée : la frappe rapide
   // après e puis Tab ne doit jamais retomber dans le titre.
   const cdp = await page.context().newCDPSession(page);
@@ -1271,12 +1256,10 @@ test('fiche : e modifie aussi le titre et le ticket ; Entrée dans un champ = en
   const title = dialog.getByLabel('Titre');
   await expect(title).toHaveValue('Une'); // le « e » n'a pas été saisi
   await title.fill('Une, renommée');
-  await page.keyboard.press('Tab');
-  await page.keyboard.type('proj-5');
   await page.keyboard.press('Enter'); // enregistre et repasse en lecture
   const renamed = page.getByRole('dialog', { name: 'Une, renommée', exact: true });
-  await expect(renamed.locator('.ticket-value')).toHaveText('PROJ-5');
-  expect(store.state().projects[0].tasks[0]).toMatchObject({ title: 'Une, renommée', bugtracker_key: 'PROJ-5' });
+  await expect(renamed.locator('.reader')).toBeFocused();
+  expect(store.state().projects[0].tasks[0]).toMatchObject({ title: 'Une, renommée' });
 
   // Titre vide refusé, erreur annoncée sous le champ (la fiche porte alors un nom vide).
   await page.keyboard.press('e');

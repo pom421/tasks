@@ -8,7 +8,8 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { AddInput, EditableName } from './Editable';
 import { ProjectTicket } from './ReportBadge';
-import { TaskRow, TicketInput } from './TaskRow';
+import { TaskRow } from './TaskRow';
+import { TicketInput } from './Report';
 
 type MoveTask = (task: Task, direction: -1 | 1) => void;
 

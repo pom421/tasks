@@ -5,7 +5,8 @@ import { cn } from '@/lib/utils';
 
 const day = (ts: string) => ts.slice(0, 10).split('-').reverse().join('/');
 
-const BASE = 'report flex-none rounded-full border px-1.5 text-[11px] leading-[18px] whitespace-nowrap';
+export const REPORT_BASE = 'report flex-none rounded-full border px-1.5 text-[11px] leading-[18px] whitespace-nowrap';
+export const REPORT_WANTED = 'report-wanted border-dashed border-muted-foreground/60 text-muted-foreground';
 const DONE = 'report-done border-primary/30 bg-primary/10 text-primary';
 
 // Pastille pleine d'un ticket : lien vers le ticket (URL de base des réglages),
@@ -24,10 +25,10 @@ function TicketPill({
   color?: string;
   children: ReactNode;
 }) {
-  if (!href) return <span className={cn(BASE, color, className)} title={title}>{children}</span>;
+  if (!href) return <span className={cn(REPORT_BASE, color, className)} title={title}>{children}</span>;
   return (
     <a
-      className={cn(BASE, color, 'report-link hover:underline', className)}
+      className={cn(REPORT_BASE, color, 'report-link hover:underline', className)}
       href={href}
       target="_blank"
       rel="noopener noreferrer"
@@ -49,7 +50,7 @@ export function ReportBadge({ task }: { task: Task }) {
 
   if (state === 'wanted') {
     return (
-      <span className={cn(BASE, 'report-wanted border-dashed border-muted-foreground/60 text-muted-foreground')}>
+      <span className={cn(REPORT_BASE, REPORT_WANTED)}>
         à reporter
       </span>
     );

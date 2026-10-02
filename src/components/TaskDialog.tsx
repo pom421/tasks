@@ -1,7 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { BUGTRACKER_KEY_RE, bugtrackerLink, bugtrackerState, formatDuration, type BugtrackerState, isValidTicket, type DoneTask, type JiraFields, type Task } from '../../shared/types.ts';
+import { formatDuration, type DoneTask, type JiraFields, type Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
-import { useActions, type TaskField } from '@/lib/actions';
+import type { TaskField } from '@/lib/actions';
 import { record } from '@/lib/history';
 import { focusByKey } from '@/lib/nav';
 import { renderMarkdown } from '@/lib/markdown';
@@ -9,7 +9,6 @@ import { formatDay, isComplete } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 import { Hourglass } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,6 +17,7 @@ import { TimerButtons, useTimer } from './Timer';
 import { PlanButton, usePlan } from './Plan';
 import { PriorityButton, usePriority } from './Priority';
 import { TagInput } from './TagInput';
+import { ReportControl, useReport } from './Report';
 import { JiraButtons, JiraCompare, jiraBlocker, sameJira, type JiraDirection } from './Jira';
 
 interface TaskDialogProps {
@@ -31,17 +31,17 @@ interface TaskDialogProps {
   onClose: (changed: boolean) => void;
 }
 
-type Field = 'title' | 'ticket' | 'day' | 'due' | 'notes';
+type Field = 'title' | 'day' | 'due' | 'notes';
 
-// Report saisi dans la fiche : identifiant = reportée, sinon case cochée = à reporter.
-const reportOf = (v: { ticket: string; wanted: boolean }): BugtrackerState => (v.ticket ? 'done' : v.wanted ? 'wanted' : 'none');
 
 // Fiche d'une tâche, façon GitLab : lecture seule par défaut ; e passe tout en
-// édition (titre, puis Tab : ticket, case « À reporter », date prévue, échéance, tags, contenu Markdown) ; Ctrl+Entrée
+// édition (titre, puis Tab : date prévue, échéance, tags, contenu Markdown) ; Ctrl+Entrée
 // enregistre et repasse en lecture ; un second Ctrl+Entrée (ou Échap) ferme.
 // Chrono comme sur la ligne : c lance / met en pause, C remet à zéro.
 // Aujourd’hui comme sur la ligne : t ou ☀.
 // Priorité comme sur la ligne : 1, 2, 3 (le même chiffre la retire) ou clic.
+// Ticket (report), enregistré tout de suite, en lecture comme en édition :
+// aucun → à reporter → identifiant (Échap ou invalide : reste à reporter) ; ✕ le retire.
 // Jira (ticket PROJ-123, URL et PAT renseignés) : > pousse vers Jira, < récupère
 // depuis Jira, après une fenêtre de comparaison ; annulable (u).
 // Tout est enregistré automatiquement, rien n'est perdu.
@@ -53,10 +53,9 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
   const timer = useTimer(task);
   const plan = usePlan(task);
   const priority = usePriority(task);
+  const report = useReport(task);
   const [values, setValues] = useState({
     title: task.title,
-    ticket: task.bugtracker_key ?? '',
-    wanted: bugtrackerState(task) !== 'none',
     day: task.day_at ?? '',
     due: task.due_at ?? '',
     tags: task.tags,
@@ -68,7 +67,6 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
   const saved = useRef({ ...values, changed: false });
   const refs = {
     title: useRef<HTMLInputElement>(null),
-    ticket: useRef<HTMLInputElement>(null),
     day: useRef<HTMLInputElement>(null),
     due: useRef<HTMLInputElement>(null),
     notes: useRef<HTMLTextAreaElement>(null),
@@ -81,13 +79,6 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
   const set = (key: Field) => (e: { target: { value: string } }) => {
     latest.current = { ...latest.current, [key]: e.target.value };
     setValues(latest.current);
-  };
-  // Case « À reporter » : décochée, elle retire aussi l'identifiant ; en lecture,
-  // enregistrée tout de suite.
-  const setWanted = (wanted: boolean) => {
-    latest.current = { ...latest.current, wanted, ticket: wanted ? latest.current.ticket : '' };
-    setValues(latest.current);
-    if (!editing) persist();
   };
   const setTags = (tags: string[]) => {
     latest.current = { ...latest.current, tags };
@@ -137,28 +128,18 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
   // Enregistre ce qui a changé. false en cas d'erreur (la fiche reste ouverte).
   const save = async (): Promise<boolean> => {
     const values = latest.current;
-    const ticket = values.ticket.trim();
     const next = {
       title: values.title.trim(),
-      // Identifiant normalisé comme côté serveur (proj-5 → PROJ-5).
-      ticket: ticket.toUpperCase(),
-      wanted: values.wanted || Boolean(ticket),
       day: values.day,
       due: values.due,
       tags: values.tags,
       notes: values.notes.trim(),
     };
     if (!next.title) return fail('title', 'Le titre est obligatoire');
-    if (!isValidTicket(next.ticket)) return fail('ticket', 'Identifiant attendu, ex. PROJ-123');
     if (!isComplete(next.day)) return fail('day', 'Date invalide');
     if (!isComplete(next.due)) return fail('due', 'Date invalide');
     const patch: Parameters<typeof api.updateTask>[1] = {};
     if (next.title !== saved.current.title) patch.title = next.title;
-    if (next.ticket !== saved.current.ticket) patch.bugtracker_ticket = next.ticket || null;
-    // Reportée vient de l'identifiant (base) ; à reporter / rien, de la case.
-    const report = reportOf(next);
-    const savedReport = reportOf(saved.current);
-    if (report !== savedReport && report !== 'done') patch.bugtracker = report;
     if (next.day !== saved.current.day) patch.day_at = next.day || null;
     if (next.due !== saved.current.due) patch.due_at = next.due || null;
     if (next.tags.join() !== saved.current.tags.join()) patch.tags = next.tags;
@@ -167,8 +148,6 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
     // Valeurs d'avant, pour annuler (u) une fois la fiche fermée.
     const before: typeof patch = {};
     if ('title' in patch) before.title = saved.current.title;
-    if ('bugtracker_ticket' in patch) before.bugtracker_ticket = saved.current.ticket || null;
-    if (report !== savedReport && savedReport !== 'done') before.bugtracker = savedReport;
     if ('day_at' in patch) before.day_at = saved.current.day || null;
     if ('due_at' in patch) before.due_at = saved.current.due || null;
     if ('tags' in patch) before.tags = saved.current.tags;
@@ -182,22 +161,17 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
         redo: () => api.updateTask(task.id, patch),
       });
       saved.current = { ...next, changed: true };
-      latest.current = { ...latest.current, ticket: next.ticket, wanted: next.wanted };
-      setValues(latest.current);
       setError(null);
       return true;
     } catch (err) {
-      const f: Field = patch.bugtracker_ticket !== undefined ? 'ticket' : patch.day_at !== undefined ? 'day' : patch.due_at !== undefined ? 'due' : 'title';
+      const f: Field = patch.day_at !== undefined ? 'day' : patch.due_at !== undefined ? 'due' : 'title';
       return fail(f, (err as Error).message);
     }
   };
 
   // Jira : comparaison ouverte (valeurs du ticket lues à l'instant), message.
-  const ticketKey = BUGTRACKER_KEY_RE.test(values.ticket.trim().toUpperCase()) ? values.ticket.trim().toUpperCase() : null;
+  const ticketKey = task.bugtracker_key;
   const blocker = jiraBlocker(ticketKey, jira);
-  // Lien du ticket en lecture, comme le badge de la ligne : clé + URL de base.
-  const { settings } = useActions();
-  const ticketLink = bugtrackerLink({ bugtracker_key: ticketKey }, settings);
   const [compare, setCompare] = useState<{ direction: JiraDirection; key: string; local: JiraFields; remote: JiraFields } | null>(null);
   const [jiraBusy, setJiraBusy] = useState(false);
   const [jiraStatus, setJiraStatus] = useState<{ ok?: string; error?: string }>({});
@@ -275,7 +249,7 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
     await persist();
   };
 
-  // Entrée dans le titre ou le ticket : comme Ctrl+Entrée.
+  // Entrée dans le titre ou une date : comme Ctrl+Entrée.
   const onInputEnter = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter' || e.ctrlKey || e.metaKey) return;
     e.preventDefault();
@@ -311,21 +285,6 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
         {error.message}
       </p>
     );
-  // Case « À reporter », en lecture comme en édition ; cochée d'office avec un identifiant.
-  const wantedCheck = (
-    <span className="flex items-center gap-1.5">
-      <Checkbox
-        id={`${id}-wanted`}
-        className="report-check"
-        checked={values.wanted || Boolean(values.ticket.trim())}
-        onCheckedChange={(v) => setWanted(v === true)}
-        title="À reporter (filtre R) ; avec un identifiant, la tâche est reportée"
-      />
-      <Label htmlFor={`${id}-wanted`} className="font-normal">
-        À reporter
-      </Label>
-    </span>
-  );
   const invalid = (f: Field) => ({
     'aria-invalid': error?.field === f,
     'aria-describedby': error?.field === f ? `${id}-${f}-error` : undefined,
@@ -339,6 +298,8 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
         // Échap : fermer en enregistrant (et rester ouvert en cas d'erreur).
         onEscapeKeyDown={(e) => {
           e.preventDefault();
+          // Échap dans le champ du ticket : abandonne la saisie, la fiche reste ouverte.
+          if ((e.target as HTMLElement).matches('.ticket-input')) return;
           close();
         }}
         onOpenAutoFocus={(e) => {
@@ -402,19 +363,10 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
             {/* Ticket, date prévue et échéance sur une ligne (écran large). */}
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="grid content-start gap-1.5">
-                <Label htmlFor={`${id}-ticket`}>Ticket</Label>
-                <Input
-                  ref={refs.ticket}
-                  id={`${id}-ticket`}
-                  placeholder="PROJ-123"
-                  autoComplete="off"
-                  value={values.ticket}
-                  onChange={set('ticket')}
-                  onKeyDown={onInputEnter}
-                  {...invalid('ticket')}
-                />
-                {errorFor('ticket')}
-                {wantedCheck}
+                <Label>Ticket</Label>
+                <div className="flex h-9 items-center">
+                  <ReportControl task={task} report={report} />
+                </div>
               </div>
               {(['day', 'due'] as const).map((f) => (
                 <div key={f} className="grid content-start gap-1.5">
@@ -468,25 +420,8 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
           >
             <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-sm">
               <dt className="text-muted-foreground">Ticket :</dt>
-              <dd className="flex items-center gap-3">
-                {wantedCheck}
-                {values.ticket && (
-                  <span className="ticket-value font-mono">
-                    {ticketLink ? (
-                      <a
-                        className="ticket-link text-primary underline-offset-2 hover:underline"
-                        href={ticketLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title="Ouvrir le ticket"
-                      >
-                        {values.ticket}
-                      </a>
-                    ) : (
-                      values.ticket
-                    )}
-                  </span>
-                )}
+              <dd className="flex items-center">
+                <ReportControl task={task} report={report} />
               </dd>
               <dt className="text-muted-foreground">Date prévue :</dt>
               <dd className="day-value first-letter:uppercase">{values.day ? formatDay(values.day) : 'aucune'}</dd>
