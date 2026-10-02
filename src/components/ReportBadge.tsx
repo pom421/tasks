@@ -72,14 +72,14 @@ export function ReportBadge({ task }: { task: Task }) {
 
 // Ticket d'un projet (epic…), même pastille qu'une tâche reportée mais rose
 // (à distinguer des tickets des tâches) : la clé, ou « ticket » pour un lien complet.
-export function ProjectTicket({ project }: { project: Project }) {
+export function ProjectTicket({ project, className }: { project: Project; className?: string }) {
   const { settings } = useActions();
   if (!project.bugtracker_key && !project.bugtracker_url) return null;
   return (
     <TicketPill
       href={bugtrackerLink(project, settings)}
       title="Ticket du projet"
-      className="project-ticket self-center"
+      className={cn('project-ticket self-center', className)}
       color="border-pink-300 bg-pink-100 text-pink-800 dark:border-pink-800 dark:bg-pink-950 dark:text-pink-300"
     >
       {project.bugtracker_key ? (

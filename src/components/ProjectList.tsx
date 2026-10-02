@@ -1,5 +1,5 @@
 import { useRef, useState, type FocusEvent, type KeyboardEvent } from 'react';
-import { Archive, ArchiveRestore, Heart, Ticket, Trash2 } from 'lucide-react';
+import { Archive, ArchiveRestore, Heart, Trash2 } from 'lucide-react';
 import { bugtrackerState, type BugtrackerState, type Priority, type Project, type Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
 import { useActions } from '@/lib/actions';
@@ -117,7 +117,6 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
           className={cn('font-semibold', confirmDelete && 'shrink-0')}
           onSave={(name) => change('renommage du projet', { name }, { name: p.name })}
         />
-        {!editTicket && <ProjectTicket project={p} />}
         <span className="count text-xs text-muted-foreground">{p.tasks.length || ''}</span>
         {/* Bouton bascule : nom fixe (« Favori »), état annoncé par aria-pressed. */}
         <Button
@@ -131,17 +130,6 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
         >
           <Heart aria-hidden fill={favorite ? 'currentColor' : 'none'} />
         </Button>
-        {/* Saisie du ticket après le cœur ; la pastille, elle, reste après le nom. */}
-        {editTicket && (
-          <TicketInput
-            defaultValue={ticket}
-            onSave={saveTicket}
-            onClose={() => {
-              focusByKey(navKey);
-              setEditTicket(false);
-            }}
-          />
-        )}
         {/* Suppression en deux temps, au clavier (x x) comme à la souris
             (corbeille, puis corbeille à nouveau) : pas de fenêtre de confirmation. */}
         {confirmDelete && (
@@ -149,24 +137,30 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
             x ou corbeille à nouveau : supprimer le projet et ses tâches (Log compris) · Échap : annuler
           </span>
         )}
+        {/* Ticket (pastille, ou champ sur r) : à droite, juste avant les icônes du
+            survol (qui gardent leur place, invisibles) ; pas d'icône, comme pour
+            le report d'une tâche. Masqué pendant la demande de suppression. */}
+        {!confirmDelete &&
+          (editTicket ? (
+            <TicketInput
+              className="ml-auto self-center"
+              defaultValue={ticket}
+              onSave={saveTicket}
+              onClose={() => {
+                focusByKey(navKey);
+                setEditTicket(false);
+              }}
+            />
+          ) : (
+            <ProjectTicket project={p} className="ml-auto" />
+          ))}
         <span
           className={cn(
             'actions flex gap-0.5 self-center',
-            confirmDelete ? 'visible' : 'invisible ml-auto group-hover:visible group-focus-within:visible',
+            confirmDelete ? 'visible' : 'invisible group-hover:visible group-focus-within:visible',
+            !confirmDelete && !editTicket && !ticket && 'ml-auto',
           )}
         >
-          {!confirmDelete && (
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              className="ticket text-muted-foreground"
-              aria-label="Ticket du projet"
-              title={ticket ? 'Modifier le ticket du projet (r)' : 'Ajouter un ticket au projet (r)'}
-              onClick={() => setEditTicket(true)}
-            >
-              <Ticket aria-hidden />
-            </Button>
-          )}
           {!confirmDelete && (
             <Button
               variant="ghost"

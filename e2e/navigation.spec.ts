@@ -721,6 +721,15 @@ test('r r : ticket saisi dans la ligne, clé + URL du bugtracker = lien cliquabl
   await expect(row(page, data.tasks.une.id).locator('.report-done')).toHaveText('reporté');
 });
 
+// Pastille ou champ du ticket d'un projet : à droite, collé aux icônes du survol
+// (archive, corbeille), qui gardent leur place même invisibles.
+const rightBeforeActions = (el: Locator) =>
+  el.evaluate((e) => {
+    const actions = e.nextElementSibling;
+    if (!actions?.classList.contains('actions')) return false;
+    return actions.getBoundingClientRect().left - e.getBoundingClientRect().right < 12;
+  });
+
 test('r sur un projet : ticket dans la ligne, pastille cliquable après le nom, modifiable, u l’annule', async ({ page, store, data }) => {
   store.updateSettings({ bugtracker_base_url: 'https://entreprise.tickets.fr' });
   await reload(page);
@@ -730,13 +739,7 @@ test('r sur un projet : ticket dans la ligne, pastille cliquable après le nom, 
   const ticket = head.getByRole('textbox', { name: 'Ticket' });
   await expect(ticket).toBeFocused();
   await expect(ticket).toHaveValue('');
-  // Champ après le cœur (favori), pas juste après le nom.
-  const after = await head.evaluate((h) => {
-    const heart = h.querySelector('.favorite')!;
-    const input = h.querySelector('.ticket-input')!;
-    return Boolean(heart.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING);
-  });
-  expect(after).toBe(true);
+  expect(await rightBeforeActions(ticket)).toBe(true);
   await page.keyboard.type('epic-12');
   await page.keyboard.press('Enter');
 
@@ -746,7 +749,8 @@ test('r sur un projet : ticket dans la ligne, pastille cliquable après le nom, 
   await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   await expect(link).toHaveAttribute('title', 'Ticket du projet — ouvrir le ticket');
   await expect(link).toHaveText('ticket · EPIC-12');
-  await expect(link.locator('.report-key')).toHaveText('EPIC-12'); // même pastille qu'une tâche reportée
+  await expect(link.locator('.report-key')).toHaveText('EPIC-12');
+  expect(await rightBeforeActions(link)).toBe(true); // même pastille qu'une tâche reportée
   await expect(link).toHaveClass(/bg-pink-100/); // rose : distincte du bleu des tâches reportées
   await expect(link).not.toHaveClass(/report-done/);
   await expect.poll(() => current(page)).toBe(`project:${data.alpha.id}`);
@@ -767,16 +771,18 @@ test('r sur un projet : ticket dans la ligne, pastille cliquable après le nom, 
   await expect(head.locator('.project-ticket')).toHaveCount(0);
 });
 
-test('ticket du projet : icône au survol ; vidé, il est retiré ; lien complet ; absent des autres onglets', async ({ page, store, data }) => {
+test('ticket du projet : pas d’icône ; vidé, il est retiré ; lien complet ; absent des autres onglets', async ({ page, store, data }) => {
   store.updateProject(data.beta.id, { bugtrackerKey: 'EPIC-3' });
   await reload(page);
   const head = page.locator(`#project-${data.beta.id} .project-head`);
   await expect(head.locator('.project-ticket')).toHaveText('ticket · EPIC-3');
   await expect(head.locator('a.project-ticket')).toHaveCount(0); // sans URL de base : pas de lien
+  // Pas d'icône pour le ticket (comme le report d'une tâche) : r seulement.
   await head.hover();
-  const button = head.getByRole('button', { name: 'Ticket du projet' });
-  await expect(button).toHaveAttribute('title', 'Modifier le ticket du projet (r)');
-  await button.click();
+  await expect(head.getByRole('button', { name: 'Ticket du projet' })).toHaveCount(0);
+  await expect(head.locator('.actions button')).toHaveCount(2); // archive, corbeille
+  await head.locator('.name').focus();
+  await page.keyboard.press('r');
   const ticket = head.getByRole('textbox', { name: 'Ticket' });
   await expect(ticket).toHaveValue('EPIC-3');
   await ticket.fill('');
@@ -785,9 +791,7 @@ test('ticket du projet : icône au survol ; vidé, il est retiré ; lien complet
   expect(store.state().projects[1]).toMatchObject({ bugtracker_key: null, bugtracker_url: null });
 
   // Lien complet (thème, autre outil) : « ticket », qui ouvre le lien.
-  await head.hover();
-  await expect(button).toHaveAttribute('title', 'Ajouter un ticket au projet (r)');
-  await button.click();
+  await page.keyboard.press('r');
   await ticket.fill('https://roadmap.exemple.fr/theme/9');
   await page.keyboard.press('Enter');
   await expect(head.locator('a.project-ticket')).toHaveAttribute('href', 'https://roadmap.exemple.fr/theme/9');

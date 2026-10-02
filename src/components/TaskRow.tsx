@@ -233,10 +233,12 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
 // ailleurs abandonne. Dans tous les cas, le curseur revient sur l'élément.
 export function TicketInput({
   defaultValue = '',
+  className,
   onSave,
   onClose,
 }: {
   defaultValue?: string;
+  className?: string;
   onSave: (ticket: string) => void;
   onClose: () => void;
 }) {
@@ -244,7 +246,10 @@ export function TicketInput({
   const [invalid, setInvalid] = useState(false);
   return (
     <input
-      className="ticket-input w-32 flex-none rounded-full border border-primary/60 bg-transparent px-1.5 font-mono text-[11px] leading-[18px] outline-none placeholder:font-sans placeholder:text-muted-foreground aria-invalid:border-destructive"
+      className={cn(
+        'ticket-input w-32 flex-none rounded-full border border-primary/60 bg-transparent px-1.5 font-mono text-[11px] leading-[18px] outline-none placeholder:font-sans placeholder:text-muted-foreground aria-invalid:border-destructive',
+        className,
+      )}
       aria-label="Ticket"
       title="Identifiant du ticket, ex. PROJ-123, ou lien (Entrée : enregistrer · Échap : plus tard)"
       placeholder="Ticket, ex. PROJ-123"
