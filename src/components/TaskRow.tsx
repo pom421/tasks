@@ -228,10 +228,18 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
   );
 }
 
-// Ticket proposé dans la ligne après r → reporté : Entrée l'enregistre (vide :
-// rien), Échap ou un clic ailleurs passe (à renseigner plus tard dans la fiche).
-// Dans tous les cas, le curseur revient sur la tâche.
-function TicketInput({ onSave, onClose }: { onSave: (ticket: string) => void; onClose: () => void }) {
+// Ticket saisi dans la ligne (tâche après r → reporté, projet sur r) : Entrée
+// l'enregistre s'il a changé (vide : retire celui d'avant), Échap ou un clic
+// ailleurs abandonne. Dans tous les cas, le curseur revient sur l'élément.
+export function TicketInput({
+  defaultValue = '',
+  onSave,
+  onClose,
+}: {
+  defaultValue?: string;
+  onSave: (ticket: string) => void;
+  onClose: () => void;
+}) {
   const { toast } = useActions();
   const [invalid, setInvalid] = useState(false);
   return (
@@ -242,6 +250,7 @@ function TicketInput({ onSave, onClose }: { onSave: (ticket: string) => void; on
       placeholder="Ticket, ex. PROJ-123"
       autoComplete="off"
       autoFocus
+      defaultValue={defaultValue}
       aria-invalid={invalid}
       onBlur={onClose}
       onKeyDown={(e) => {
@@ -257,7 +266,7 @@ function TicketInput({ onSave, onClose }: { onSave: (ticket: string) => void; on
           return toast('Identifiant attendu, ex. PROJ-123');
         }
         onClose();
-        if (ticket) onSave(ticket);
+        if (ticket !== defaultValue) onSave(ticket);
       }}
     />
   );

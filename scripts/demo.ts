@@ -21,7 +21,7 @@ for (const d = new Date(); workdays.length < 8; ) {
 const api = store.createProject('API facturation');
 const site = store.createProject('Site public');
 const ops = store.createProject('Exploitation');
-store.updateProject(api.id, { favorite: true });
+store.updateProject(api.id, { favorite: true, bugtrackerKey: 'FAC-100' });
 
 // [projet, titre, jour (indice dans workdays), notes, ticket]
 const done: [number, string, number, string?, string?][] = [

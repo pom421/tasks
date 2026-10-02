@@ -1,13 +1,14 @@
 import { useRef, useState, type FocusEvent, type KeyboardEvent } from 'react';
-import { Archive, ArchiveRestore, Heart, Trash2 } from 'lucide-react';
+import { Archive, ArchiveRestore, Heart, Ticket, Trash2 } from 'lucide-react';
 import { bugtrackerState, type BugtrackerState, type Priority, type Project, type Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
 import { useActions } from '@/lib/actions';
-import { moveDirection } from '@/lib/nav';
+import { focusByKey, moveDirection } from '@/lib/nav';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { AddInput, EditableName } from './Editable';
-import { TaskRow } from './TaskRow';
+import { ProjectTicket } from './ReportBadge';
+import { TaskRow, TicketInput } from './TaskRow';
 
 type MoveTask = (task: Task, direction: -1 | 1) => void;
 
@@ -18,11 +19,13 @@ interface ProjectCardProps {
 }
 
 // Clavier, sur l'en-tête du projet (hors champ de saisie) : f favori,
-// a archiver / désarchiver, x ou Suppr demande la suppression, un second
+// a archiver / désarchiver, r saisir le ticket (dans la ligne), x ou Suppr demande la suppression, un second
 // appui la confirme ; Alt+↑ / Alt+↓ déplacent le projet. Tout est annulable (u).
 function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
   const { setLastProject, undoable } = useActions();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editTicket, setEditTicket] = useState(false);
+  const ticket = p.bugtracker_key ?? p.bugtracker_url ?? '';
   const archived = Boolean(p.archived_at);
   const favorite = Boolean(p.favorite_at);
   const navKey = `project:${p.id}`;
@@ -33,6 +36,8 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
     undoable({ label, focus: navKey, run: () => api.updateProject(p.id, patch), undo: () => api.updateProject(p.id, before) });
   const toggleFavorite = () => change(favorite ? 'retrait des favoris' : 'ajout aux favoris', { favorite: !favorite }, { favorite });
   const toggleArchived = () => change(archived ? 'désarchivage' : 'archivage', { archived: !archived }, { archived });
+  const saveTicket = (value: string) =>
+    change(value ? 'ticket du projet' : 'retrait du ticket du projet', { bugtracker_ticket: value || null }, { bugtracker_ticket: ticket || null });
   const remove = () => {
     let deleted: Record<string, unknown> | undefined;
     return undoable({
@@ -67,6 +72,10 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
     if (e.key === 'a') {
       e.preventDefault();
       toggleArchived();
+    }
+    if (e.key === 'r') {
+      e.preventDefault();
+      setEditTicket(true);
     }
   };
 
@@ -108,6 +117,18 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
           className={cn('font-semibold', confirmDelete && 'shrink-0')}
           onSave={(name) => change('renommage du projet', { name }, { name: p.name })}
         />
+        {editTicket ? (
+          <TicketInput
+            defaultValue={ticket}
+            onSave={saveTicket}
+            onClose={() => {
+              focusByKey(navKey);
+              setEditTicket(false);
+            }}
+          />
+        ) : (
+          <ProjectTicket project={p} />
+        )}
         <span className="count text-xs text-muted-foreground">{p.tasks.length || ''}</span>
         {/* Bouton bascule : nom fixe (« Favori »), état annoncé par aria-pressed. */}
         <Button
@@ -134,6 +155,18 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
             confirmDelete ? 'visible' : 'invisible ml-auto group-hover:visible group-focus-within:visible',
           )}
         >
+          {!confirmDelete && (
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              className="ticket text-muted-foreground"
+              aria-label="Ticket du projet"
+              title={ticket ? 'Modifier le ticket du projet (r)' : 'Ajouter un ticket au projet (r)'}
+              onClick={() => setEditTicket(true)}
+            >
+              <Ticket aria-hidden />
+            </Button>
+          )}
           {!confirmDelete && (
             <Button
               variant="ghost"

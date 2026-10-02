@@ -81,7 +81,7 @@ export function bugtrackerState(t: Pick<Task, 'bugtracker_wanted_at' | 'bugtrack
   return t.bugtracker_wanted_at ? 'wanted' : 'none';
 }
 
-export interface Project extends Pick<ProjectRow, 'id' | 'name' | 'archived_at' | 'favorite_at'> {
+export interface Project extends Pick<ProjectRow, 'id' | 'name' | 'archived_at' | 'favorite_at' | 'bugtracker_key' | 'bugtracker_url'> {
   tasks: Task[]; // tâches à faire uniquement
 }
 

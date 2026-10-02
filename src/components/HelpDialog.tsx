@@ -48,6 +48,7 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
       [[['Alt+↑', 'Alt+↓']], 'Monter / descendre le projet'],
       [[['f']], 'Favori / plus favori'],
       [[['a']], 'Archiver / désarchiver'],
+      [[['r']], 'Ticket du projet (epic…) : saisir, modifier, vider pour le retirer'],
       [[['x x']], 'Supprimer avec ses tâches (ou Suppr)'],
     ],
   ],

@@ -22,6 +22,8 @@ export const project = sqliteTable('project', {
   archived_at: text(), // archivé depuis
   favorite_at: text(), // favori depuis
   position: integer().notNull().default(0), // ordre d'affichage des projets
+  bugtracker_key: text(), // ticket du projet (epic, PROJ-123), lien construit avec bugtracker_base_url
+  bugtracker_url: text(), // ou lien complet vers le ticket (http/https)
 });
 
 export const task = sqliteTable(

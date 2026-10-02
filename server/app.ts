@@ -143,12 +143,17 @@ function timestamp(v: unknown, label: string): string | null {
   return v;
 }
 
+// Clé de ticket d'une tâche ou d'un projet restauré.
+function bugtrackerKey(v: unknown): string | null {
+  if (v === null || v === undefined) return null;
+  if (typeof v !== 'string' || !BUGTRACKER_KEY_RE.test(v)) throw new HttpError(400, 'Ticket invalide');
+  return v;
+}
+
 // Tâche à restaurer : chaque colonne est revérifiée (le corps vient du client).
 function restoredTask(body: Body): TaskRow {
   const doneAt = body.done_at ?? null;
   if (doneAt !== null && !isDate(doneAt)) throw new HttpError(400, 'Date invalide');
-  const key = body.bugtracker_key ?? null;
-  if (key !== null && (typeof key !== 'string' || !BUGTRACKER_KEY_RE.test(key))) throw new HttpError(400, 'Ticket invalide');
   return {
     id: int(body.id, 'Identifiant'),
     project_id: int(body.project_id, 'Projet'),
@@ -159,7 +164,7 @@ function restoredTask(body: Body): TaskRow {
     notes: optionalText(body.notes, 'Notes', 20_000),
     bugtracker_wanted_at: timestamp(body.bugtracker_wanted_at, 'Date de report'),
     bugtracker_at: timestamp(body.bugtracker_at, 'Date de report'),
-    bugtracker_key: key as string | null,
+    bugtracker_key: bugtrackerKey(body.bugtracker_key),
     bugtracker_url: httpUrl(body.bugtracker_url ?? null),
     time_spent: int(body.time_spent ?? 0, 'Temps passé'),
     timer_started_at: timestamp(body.timer_started_at, 'Début du chrono'),
@@ -181,6 +186,8 @@ function restoredProject(body: Body): DeletedProject {
     archived_at: timestamp(p.archived_at, "Date d'archivage"),
     favorite_at: timestamp(p.favorite_at, 'Date de favori'),
     position: int(p.position ?? 0, 'Position'),
+    bugtracker_key: bugtrackerKey(p.bugtracker_key),
+    bugtracker_url: httpUrl(p.bugtracker_url ?? null),
   };
   const tasks = body.tasks.map((t) => restoredTask((t ?? {}) as Body));
   if (tasks.some((t) => t.project_id !== project.id)) throw new HttpError(400, 'Tâche d’un autre projet');
@@ -332,6 +339,7 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
       if ('name' in body) patch.name = requireText(body.name, 'Nom');
       if ('archived' in body) patch.archived = Boolean(body.archived);
       if ('favorite' in body) patch.favorite = Boolean(body.favorite);
+      if ('bugtracker_ticket' in body) Object.assign(patch, bugtrackerTicket(body.bugtracker_ticket));
       const project = store.updateProject(Number(id), patch);
       if (!project) throw new HttpError(404, 'Projet introuvable');
       send(res, 200, project);

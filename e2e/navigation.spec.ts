@@ -721,6 +721,82 @@ test('r r : ticket saisi dans la ligne, clé + URL du bugtracker = lien cliquabl
   await expect(row(page, data.tasks.une.id).locator('.report-done')).toHaveText('reporté');
 });
 
+test('r sur un projet : ticket dans la ligne, pastille cliquable après le nom, modifiable, u l’annule', async ({ page, store, data }) => {
+  store.updateSettings({ bugtracker_base_url: 'https://entreprise.tickets.fr' });
+  await reload(page);
+  const head = page.locator(`#project-${data.alpha.id} .project-head`);
+  await page.keyboard.press('ArrowDown'); // en-tête d'Alpha
+  await page.keyboard.press('r');
+  const ticket = head.getByRole('textbox', { name: 'Ticket' });
+  await expect(ticket).toBeFocused();
+  await expect(ticket).toHaveValue('');
+  await page.keyboard.type('epic-12');
+  await page.keyboard.press('Enter');
+
+  await expect(ticket).toHaveCount(0);
+  const link = head.locator('a.project-ticket');
+  await expect(link).toHaveAttribute('href', 'https://entreprise.tickets.fr/browse/EPIC-12');
+  await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  await expect(link).toHaveAttribute('title', 'Ticket du projet — ouvrir le ticket');
+  await expect(link).toHaveText('ticket · EPIC-12');
+  await expect(link.locator('.report-key')).toHaveText('EPIC-12'); // même pastille qu'une tâche reportée
+  await expect.poll(() => current(page)).toBe(`project:${data.alpha.id}`);
+  // Seulement sur le projet : ses tâches ne sont pas reportées pour autant.
+  await expect(page.locator('li.task .report')).toHaveCount(0);
+
+  // r à nouveau : le champ reprend le ticket ; Échap abandonne sans rien changer.
+  await page.keyboard.press('r');
+  await expect(ticket).toHaveValue('EPIC-12');
+  await page.keyboard.press('Escape');
+  await expect(ticket).toHaveCount(0);
+  await expect(link).toHaveText('ticket · EPIC-12');
+  await expect.poll(() => current(page)).toBe(`project:${data.alpha.id}`);
+
+  // u retire le ticket.
+  await page.keyboard.press('u');
+  await expect(page.locator('#toast')).toHaveText('Annulé : ticket du projet');
+  await expect(head.locator('.project-ticket')).toHaveCount(0);
+});
+
+test('ticket du projet : icône au survol ; vidé, il est retiré ; lien complet ; absent des autres onglets', async ({ page, store, data }) => {
+  store.updateProject(data.beta.id, { bugtrackerKey: 'EPIC-3' });
+  await reload(page);
+  const head = page.locator(`#project-${data.beta.id} .project-head`);
+  await expect(head.locator('.project-ticket')).toHaveText('ticket · EPIC-3');
+  await expect(head.locator('a.project-ticket')).toHaveCount(0); // sans URL de base : pas de lien
+  await head.hover();
+  const button = head.getByRole('button', { name: 'Ticket du projet' });
+  await expect(button).toHaveAttribute('title', 'Modifier le ticket du projet (r)');
+  await button.click();
+  const ticket = head.getByRole('textbox', { name: 'Ticket' });
+  await expect(ticket).toHaveValue('EPIC-3');
+  await ticket.fill('');
+  await page.keyboard.press('Enter');
+  await expect(head.locator('.project-ticket')).toHaveCount(0);
+  expect(store.state().projects[1]).toMatchObject({ bugtracker_key: null, bugtracker_url: null });
+
+  // Lien complet (thème, autre outil) : « ticket », qui ouvre le lien.
+  await head.hover();
+  await expect(button).toHaveAttribute('title', 'Ajouter un ticket au projet (r)');
+  await button.click();
+  await ticket.fill('https://roadmap.exemple.fr/theme/9');
+  await page.keyboard.press('Enter');
+  await expect(head.locator('a.project-ticket')).toHaveAttribute('href', 'https://roadmap.exemple.fr/theme/9');
+  await expect(head.locator('a.project-ticket')).toHaveText('ticket');
+
+  // Onglet Aujourd'hui : pas de pastille de projet.
+  await page.keyboard.press('T');
+  await expect(page.locator('.project-ticket')).toHaveCount(0);
+});
+
+test('r dans le nom d’un projet en édition : une lettre, pas le champ du ticket', async ({ page }) => {
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('r');
+  await expect(page.locator('input.edit')).toHaveValue(/r$/);
+  await expect(page.getByRole('textbox', { name: 'Ticket' })).toHaveCount(0);
+});
+
 test('r r : identifiant invalide annoncé, le champ reste ouvert ; vide + Entrée = sans ticket', async ({ page, store, data }) => {
   await pressDown(page, 2);
   await page.keyboard.press('r');
