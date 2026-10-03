@@ -1276,6 +1276,26 @@ test('ligne : temps passé (sablier, « 3 min ») au bout du titre, dans les pro
   await expect(page.locator(`#journal li.task:has([data-nav-key="task:${data.tasks.une.id}"]) .time-spent`)).toHaveText('3 min');
 });
 
+test('info-bulles uniformes : rapides, une seule, title rendu après le survol, dans l’écran au bord droit', async ({ page, data }) => {
+  const help = page.getByRole('button', { name: '?' });
+  await help.hover();
+  const tip = page.getByRole('tooltip');
+  await expect(tip).toHaveText('Raccourcis (?)', { timeout: 1000 });
+  await expect(tip).toHaveCount(1);
+  await expect(help).not.toHaveAttribute('title'); // pas d'info-bulle native en plus
+  await page.mouse.move(0, 0);
+  await expect(tip).toHaveCount(0);
+  await expect(help).toHaveAttribute('title', 'Raccourcis (?)');
+
+  // Icône tout à droite d'une ligne : l'info-bulle reste dans l'écran.
+  const une = row(page, data.tasks.une.id);
+  await une.hover();
+  await une.locator('button.priority').hover();
+  await expect(tip).toBeVisible({ timeout: 1000 });
+  const box = (await tip.boundingBox())!;
+  expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+});
+
 test('fiche : ▷ du chrono fixe quand ↻ apparaît ; libellés sans « : » ; contenu vide centré, sans italique', async ({ page }) => {
   await pressDown(page, 2);
   await page.keyboard.press('o');

@@ -41,6 +41,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
+- [x] Info-bulles uniformes : toutes rapides (150 ms) et du même style, par un seul composant (`TitleTooltips`) qui affiche l'attribut `title` à la place de l'info-bulle native
 - [x] Échéance de la ligne : info-bulle de l'app, rapide (150 ms), « Échéance : mardi 6 octobre 2026 » (l'info-bulle native, lente, ne s'affichait pas toujours)
 - [x] Dates de la ligne toujours en jj/mm (« 30/12 », plus de « demain » ni « lun. 6 »), étiquette plus étroite
 - [x] Échéance au-delà de la semaine en jj/mm (sans l'année, date complète au survol) ; rouge « dépassée » plus visible en thème sombre
