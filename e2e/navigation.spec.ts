@@ -802,6 +802,108 @@ test('ticket du projet : pas d’icône ; vidé, il est retiré ; lien complet ;
   await expect(page.locator('.project-ticket')).toHaveCount(0);
 });
 
+test('fiche du projet : o lit, e édite (nom → Tab → ticket → contenu), Ctrl+Entrée lecture puis fermeture, u annule', async ({ page, store, data }) => {
+  store.updateSettings({ bugtracker_base_url: 'https://entreprise.tickets.fr' });
+  await reload(page);
+  const head = page.locator(`#project-${data.alpha.id} .project-head`);
+  await page.keyboard.press('ArrowDown'); // en-tête d'Alpha
+  await page.keyboard.press('o');
+  const dialog = page.getByRole('dialog', { name: 'Alpha' });
+  await expect(dialog.locator('.reader')).toBeFocused();
+  await expect(dialog.getByText('Projet · 2 tâches à faire')).toBeVisible();
+  await expect(dialog.locator('.ticket-value')).toHaveText('aucun');
+  await expect(dialog.locator('.notes-preview')).toHaveText('Aucun contenu.');
+  // Pas de tags ni de dates pour un projet.
+  await expect(dialog.getByText('Tags :')).toHaveCount(0);
+  await expect(dialog.getByText('Échéance :')).toHaveCount(0);
+
+  await page.keyboard.press('e');
+  const name = dialog.getByLabel('Nom');
+  await expect(name).toBeFocused();
+  await expect(name).toHaveValue('Alpha');
+  await name.fill('Alpha 2');
+  await page.keyboard.press('Tab');
+  await expect(dialog.getByLabel('Ticket', { exact: true })).toBeFocused();
+  await page.keyboard.type('epic-7');
+  await page.keyboard.press('Tab');
+  const editor = dialog.getByLabel('Contenu');
+  await expect(editor).toBeFocused();
+  // Les raccourcis de la liste ne s'appliquent pas dans la fiche (x, f, a…).
+  await page.keyboard.type('## Objectif\nLivrer x f a **vite**');
+  await page.keyboard.press('ControlOrMeta+Enter'); // enregistre, repasse en lecture
+  const renamed = page.getByRole('dialog', { name: 'Alpha 2' });
+  await expect(renamed.locator('.reader')).toBeFocused();
+  await expect(renamed.locator('.notes-preview').getByRole('heading', { name: 'Objectif' })).toBeVisible();
+  await expect(renamed.locator('.ticket-link')).toHaveAttribute('href', 'https://entreprise.tickets.fr/browse/EPIC-7');
+  await expect(renamed.locator('.ticket-link')).toHaveText('EPIC-7');
+
+  await page.keyboard.press('ControlOrMeta+Enter'); // fermeture
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(head.locator('.name')).toHaveText('Alpha 2');
+  await expect(head.locator('.project-ticket')).toHaveText('ticket · EPIC-7');
+  // Contenu : icône 🗒 toujours visible, sans survol.
+  await expect(head.getByRole('button', { name: 'Fiche du projet' })).toBeVisible();
+  await expect.poll(() => current(page)).toBe(`project:${data.alpha.id}`);
+  expect(store.state().projects[0]).toMatchObject({ name: 'Alpha 2', bugtracker_key: 'EPIC-7', notes: '## Objectif\nLivrer x f a **vite**' });
+  // Rien d'autre n'a bougé : ni favori, ni archive, tâches intactes.
+  expect(store.state().projects[0]).toMatchObject({ favorite_at: null, archived_at: null });
+  expect(store.state().projects[0].tasks.map((t) => t.title)).toEqual(['Une', 'Deux']);
+
+  // u : tout revient d'un coup.
+  await page.keyboard.press('u');
+  await expect(page.locator('#toast')).toHaveText('Annulé : modification de la fiche du projet');
+  await expect(head.locator('.name')).toHaveText('Alpha');
+  await expect(head.locator('.project-ticket')).toHaveCount(0);
+  expect(store.state().projects[0]).toMatchObject({ name: 'Alpha', bugtracker_key: null, notes: null });
+});
+
+test('fiche du projet : Maj+Entrée et clic sur 🗒 (au survol sans contenu) ; Échap ferme en enregistrant ; ticket invalide refusé', async ({ page, store, data }) => {
+  const head = page.locator(`#project-${data.beta.id} .project-head`);
+  const icon = head.getByRole('button', { name: 'Fiche du projet' });
+  await expect(icon).toBeHidden(); // sans contenu : au survol seulement
+  await head.hover();
+  await expect(icon).toHaveAttribute('title', 'Ouvrir la fiche du projet (o ou Maj+Entrée)');
+  await icon.click();
+  const dialog = page.getByRole('dialog', { name: 'Beta' });
+  await expect(dialog.getByText('Projet · 1 tâche à faire')).toBeVisible();
+  // Double-clic sur le contenu : édition directement dedans.
+  await dialog.locator('.notes-preview').dblclick();
+  await expect(dialog.getByLabel('Contenu')).toBeFocused();
+  await page.keyboard.type('Contexte');
+  await page.keyboard.press('Shift+Tab'); // ticket
+  await page.keyboard.type('pas un ticket');
+  await page.keyboard.press('Enter');
+  await expect(dialog.getByRole('alert')).toHaveText('Identifiant attendu, ex. PROJ-123');
+  await expect(dialog.getByLabel('Ticket', { exact: true })).toHaveAttribute('aria-invalid', 'true');
+  expect(store.state().projects[1].notes).toBeNull(); // rien d'enregistré tant que c'est invalide
+  await dialog.getByLabel('Ticket', { exact: true }).fill('');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  expect(store.state().projects[1]).toMatchObject({ notes: 'Contexte', bugtracker_key: null });
+  await expect.poll(() => current(page)).toBe(`project:${data.beta.id}`);
+
+  // Maj+Entrée sur l'en-tête : lecture ; le contenu s'affiche.
+  await page.keyboard.press('Shift+Enter');
+  await expect(page.getByRole('dialog', { name: 'Beta' }).locator('.notes-preview')).toHaveText('Contexte');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+});
+
+test('non-régression : o / e sur une tâche ouvrent toujours la fiche de la tâche ; dans le nom du projet en édition, o s’écrit', async ({ page, data }) => {
+  await pressDown(page, 2); // « Une »
+  await page.keyboard.press('e');
+  await expect(page.getByRole('dialog', { name: 'Une' }).getByLabel('Titre')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect.poll(() => current(page)).toBe(`task:${data.tasks.une.id}`);
+  await page.keyboard.press('ArrowUp'); // en-tête d'Alpha
+  await expect.poll(() => current(page)).toBe(`project:${data.alpha.id}`);
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('o');
+  await expect(page.locator('input.edit')).toHaveValue(/o$/);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+});
+
 test('r dans le nom d’un projet en édition : une lettre, pas le champ du ticket', async ({ page }) => {
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
@@ -1608,6 +1710,7 @@ test('aide ? : raccourcis groupés, tout visible sur écran courant, liste qui d
   await expect(dialog.getByText('Monter / descendre le projet')).toBeVisible();
   await expect(dialog.getByText('Supprimer avec ses tâches (ou Suppr)')).toBeVisible();
   await expect(dialog.getByText('Enregistrer et lire ; en lecture, fermer')).toBeVisible();
+  await expect(dialog.getByText('Lire (tâche ou projet)')).toBeVisible(); // fiche du projet aussi
   const list = dialog.locator('.overflow-y-auto');
   const fits = () => list.evaluate((e) => e.scrollHeight <= e.clientHeight);
   expect(await fits()).toBe(true);

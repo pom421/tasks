@@ -8,6 +8,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
+- [~] Fiche d'un projet (`o`, `Maj+Entrée`, `e`, icône 🗒) : nom, ticket, contenu Markdown ; pas de tags ni de dates pour l'instant
 - [~] Ticket d'un projet en pastille rose (bleu réservé aux tâches reportées) ; fiche : ticket cliquable en lecture, comme dans la ligne
 
 ## Décisions attendues

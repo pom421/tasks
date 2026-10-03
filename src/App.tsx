@@ -10,6 +10,7 @@ import { ProjectFilters } from '@/components/ProjectFilters';
 import { ProjectList } from '@/components/ProjectList';
 import { Journal, NO_FILTER, journalQuery, type Filter } from '@/components/Journal';
 import { TaskDialog } from '@/components/TaskDialog';
+import { ProjectDialog } from '@/components/ProjectDialog';
 import { SettingsPage } from '@/components/SettingsPage';
 import { DayView } from '@/components/DayView';
 import { UpcomingView } from '@/components/UpcomingView';
@@ -62,6 +63,8 @@ export function App() {
   // Fiche d'une tâche : id, champ focalisé, open à false pendant l'animation de
   // fermeture ; opening numérote les ouvertures (formulaire neuf à chaque fois).
   const [openTask, setOpenTask] = useState<{ id: number; field: TaskField; open: boolean; opening: number } | null>(null);
+  // Fiche d'un projet : mêmes principes.
+  const [openProject, setOpenProject] = useState<{ id: number; field: TaskField; open: boolean; opening: number } | null>(null);
   const [filter, setFilter] = useState<Filter>(NO_FILTER);
   // Filtres de la zone des projets (boutons sous la barre d'outils) : sans effet sur le Log.
   // Filtre report (R) : aucun → à reporter → reportées → aucun.
@@ -157,6 +160,8 @@ export function App() {
       ),
     openTask: (task, field = 'notes') =>
       setOpenTask((o) => ({ id: task.id, field, open: true, opening: (o?.opening ?? 0) + 1 })),
+    openProject: (project, field = 'notes') =>
+      setOpenProject((o) => ({ id: project.id, field, open: true, opening: (o?.opening ?? 0) + 1 })),
     setLastProject: (id) => (lastProject.current = id),
     act: async (fn, { stay = false } = {}) => {
       let result: unknown;
@@ -323,6 +328,7 @@ export function App() {
     ...data.days.flatMap((d) => d.tasks),
   ];
   const current = openTask && allTasks.find((t) => t.id === openTask.id);
+  const currentProject = openProject && data.projects.find((p) => p.id === openProject.id);
   const projectName = (t: Task & { project_name?: string }) =>
     t.project_name ?? data.projects.find((p) => p.id === t.project_id)?.name ?? '';
 
@@ -345,6 +351,18 @@ export function App() {
           onClose={(changed) => {
             setOpenTask({ ...openTask, open: false });
             if (changed) actions.act(async () => ({ focus: `task:${current.id}` }));
+          }}
+        />
+      )}
+      {currentProject && (
+        <ProjectDialog
+          key={openProject.opening}
+          project={currentProject}
+          field={openProject.field}
+          open={openProject.open}
+          onClose={(changed) => {
+            setOpenProject({ ...openProject, open: false });
+            if (changed) actions.act(async () => ({ focus: `project:${currentProject.id}` }));
           }}
         />
       )}

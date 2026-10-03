@@ -52,7 +52,7 @@ export const api = {
     return request<Journal>('GET', `/api/journal?${params}`);
   },
   createProject: (name: string) => request<{ id: number }>('POST', '/api/projects', { name }),
-  updateProject: (id: number, patch: { name?: string; archived?: boolean; favorite?: boolean; bugtracker_ticket?: string | null }) =>
+  updateProject: (id: number, patch: { name?: string; archived?: boolean; favorite?: boolean; bugtracker_ticket?: string | null; notes?: string | null }) =>
     request('PATCH', `/api/projects/${id}`, patch),
   // Renvoie le projet supprimé et ses tâches, à passer à restoreProject pour annuler.
   deleteProject: (id: number) => request<Record<string, unknown>>('DELETE', `/api/projects/${id}`),

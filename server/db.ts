@@ -65,6 +65,7 @@ export interface ProjectPatch {
   favorite?: boolean;
   bugtrackerKey?: string | null; // ticket : clé ou lien complet (l'autre à null)
   bugtrackerUrl?: string | null;
+  notes?: string | null; // contenu (Markdown)
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -153,9 +154,9 @@ export class Store {
   // day : journée de « Plan journée » ('YYYY-MM-DD', celle du navigateur), pour
   // compter les tâches choisies déjà faites.
   state(day?: string): State {
-    const { id, name, archived_at, favorite_at, bugtracker_key, bugtracker_url } = getColumns(project);
+    const { id, name, archived_at, favorite_at, bugtracker_key, bugtracker_url, notes } = getColumns(project);
     const projects = this.orm
-      .select({ id, name, archived_at, favorite_at, bugtracker_key, bugtracker_url })
+      .select({ id, name, archived_at, favorite_at, bugtracker_key, bugtracker_url, notes })
       .from(project)
       .orderBy(project.position, project.id)
       .all();
@@ -253,9 +254,10 @@ export class Store {
     return this.orm.insert(project).values({ name, position: nextProjectPosition() }).returning().get();
   }
 
-  updateProject(id: number, { name, archived, favorite, bugtrackerKey, bugtrackerUrl }: ProjectPatch) {
+  updateProject(id: number, { name, archived, favorite, bugtrackerKey, bugtrackerUrl, notes }: ProjectPatch) {
     const set: SQLiteUpdateSetSource<typeof project> = {};
     if (name !== undefined) set.name = name;
+    if (notes !== undefined) set.notes = notes;
     if (bugtrackerKey !== undefined) set.bugtracker_key = bugtrackerKey;
     if (bugtrackerUrl !== undefined) set.bugtracker_url = bugtrackerUrl;
     if (archived !== undefined) set.archived_at = archived ? NOW : null;

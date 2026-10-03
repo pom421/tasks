@@ -1,5 +1,5 @@
 import { useRef, useState, type FocusEvent, type KeyboardEvent } from 'react';
-import { Archive, ArchiveRestore, Heart, Trash2 } from 'lucide-react';
+import { Archive, ArchiveRestore, Heart, NotebookText, Trash2 } from 'lucide-react';
 import { bugtrackerState, type BugtrackerState, type Priority, type Project, type Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
 import { useActions } from '@/lib/actions';
@@ -19,10 +19,11 @@ interface ProjectCardProps {
 }
 
 // Clavier, sur l'en-tête du projet (hors champ de saisie) : f favori,
-// a archiver / désarchiver, r saisir le ticket (dans la ligne), x ou Suppr demande la suppression, un second
-// appui la confirme ; Alt+↑ / Alt+↓ déplacent le projet. Tout est annulable (u).
+// o ou Maj+Entrée ouvre la fiche (e : directement en édition), a archiver /
+// désarchiver, r saisir le ticket (dans la ligne), x ou Suppr demande la
+// suppression, un second appui la confirme ; Alt+↑ / Alt+↓ déplacent le projet. Tout est annulable (u).
 function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
-  const { setLastProject, undoable } = useActions();
+  const { setLastProject, undoable, openProject } = useActions();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editTicket, setEditTicket] = useState(false);
   const ticket = p.bugtracker_key ?? p.bugtracker_url ?? '';
@@ -77,6 +78,10 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
       e.preventDefault();
       setEditTicket(true);
     }
+    if (e.key === 'o' || e.key === 'e' || (e.key === 'Enter' && e.shiftKey)) {
+      e.preventDefault();
+      openProject(p, e.key === 'e' ? 'edit' : 'notes');
+    }
   };
 
   // Le focus quitte l'en-tête : la demande de suppression est abandonnée.
@@ -130,6 +135,24 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
         >
           <Heart aria-hidden fill={favorite ? 'currentColor' : 'none'} />
         </Button>
+        {/* Fiche du projet, à côté du cœur : icône toujours visible s'il a du
+            contenu, sinon au survol (la souris peut ainsi en ajouter). */}
+        {!confirmDelete && (
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            tabIndex={-1}
+            className={cn(
+              'details self-center text-muted-foreground',
+              !p.notes && 'invisible group-hover:visible group-focus-within:visible',
+            )}
+            aria-label="Fiche du projet"
+            title={p.notes ? 'Voir le contenu (o ou Maj+Entrée)' : 'Ouvrir la fiche du projet (o ou Maj+Entrée)'}
+            onClick={() => openProject(p, 'notes')}
+          >
+            <NotebookText aria-hidden />
+          </Button>
+        )}
         {/* Suppression en deux temps, au clavier (x x) comme à la souris
             (corbeille, puis corbeille à nouveau) : pas de fenêtre de confirmation. */}
         {confirmDelete && (
