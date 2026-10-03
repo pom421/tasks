@@ -57,7 +57,7 @@ test('fiche : date prévue, échéance et tags (e), étiquettes sur la ligne, u 
 
   const une = row(page, 'Une');
   await expect(une.locator('.planned-date')).toHaveCount(0); // date prévue : dans la fiche seulement
-  await expect(une.locator('.due-date')).toHaveText('échéance12/10');
+  await expect(une.locator('.due-date')).toHaveText(/12\/10$/);
   await expect(une.locator('.tags')).toHaveText('#client #urgent');
   expect(taskRow(store, data.une.id)).toEqual({ day_at: '2026-09-28', due_at: '2026-10-12', tags: '["client","urgent"]' });
 
@@ -76,15 +76,20 @@ test('étiquettes : pas de date prévue sur la ligne ; échéance dépassée en 
   await expect(une.locator('.planned-date')).toHaveCount(0);
   await expect(une.getByRole('button', { name: 'Pour aujourd’hui' })).toHaveAttribute('aria-pressed', 'true');
   await expect(une.locator('.due-date')).toHaveClass(/late/);
-  await expect(une.locator('.due-date')).toHaveAttribute('title', 'Échéance dépassée : jeudi 24 septembre 2026');
-  await expect(une.locator('.due-date')).toHaveText('échéance dépassée24/09'); // jj/mm, même tout près
+  await expect(une.locator('.due-date')).toHaveText(/24\/09$/); // jj/mm, même tout près
+  // Survol : info-bulle rapide, date complète avec le jour.
+  await une.locator('.due-date').hover();
+  await expect(page.getByRole('tooltip')).toHaveText('Échéance dépassée : jeudi 24 septembre 2026', { timeout: 1000 });
+  await page.mouse.move(0, 0);
   await expect(row(page, 'Deux').locator('.planned-date')).toHaveCount(0);
   await expect(une.locator('.due-date svg')).toHaveClass(/lucide-alarm-clock/);
   // Même largeur et même place, avec ou sans échéance, avec ou sans temps passé.
   store.updateTask(data.deux.id, { dueAt: '2027-09-12', timeSpent: 600 }); // autre année : jj/mm, sans l'année
   await page.reload();
-  await expect(row(page, 'Deux').locator('.due-date')).toHaveText('échéance12/09');
-  await expect(row(page, 'Deux').locator('.due-date')).toHaveAttribute('title', 'Échéance : dimanche 12 septembre 2027');
+  await expect(row(page, 'Deux').locator('.due-date')).toHaveText(/12\/09$/);
+  await row(page, 'Deux').locator('.due-date').hover();
+  await expect(page.getByRole('tooltip')).toHaveText('Échéance : dimanche 12 septembre 2027', { timeout: 1000 });
+  await page.mouse.move(0, 0);
   await page.reload();
   const box = (name: string, sel: string) => row(page, name).locator(sel).boundingBox();
   const a = (await box('Une', '.due-date'))!;
