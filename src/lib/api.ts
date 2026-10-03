@@ -32,6 +32,7 @@ export interface TaskPatch {
   timer_started_at?: string | null;
   day_at?: string | null; // date prévue (Aujourd’hui si c'est ce jour), null = aucune
   due_at?: string | null; // échéance, null = aucune
+  sprint?: string | null; // nom du sprint, null = aucun
   tags?: string[]; // liste complète
   priority?: Priority | null;
 }
@@ -68,6 +69,8 @@ export const api = {
   // Ticket Jira (clé PROJ-123) : lecture et écriture des champs synchronisés.
   jiraIssue: (key: string) => request<JiraFields>('GET', `/api/jira/${key}`),
   updateJiraIssue: (key: string, fields: JiraFields) => request('PUT', `/api/jira/${key}`, fields),
+  // Noms des sprints actifs puis à venir du projet (PROJ), propositions du champ Sprint.
+  jiraSprints: (project: string) => request<string[]>('GET', `/api/jira/sprints/${project}`),
   importDb: (file: Blob) => request('POST', '/api/import', file),
   importMarkdown: (text: string) => request<ImportResult>('POST', '/api/import-markdown', text),
 };

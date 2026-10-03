@@ -8,7 +8,6 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-- [~] Ligne de tâche moins dense, sur deux lignes (Projets, Aujourd’hui, Suivant) : titre, ticket et icônes en haut ; tags à gauche, date prévue, échéance et temps passé à droite en dessous ; 2e ligne toujours là (chrono ▷ au bout). ☀ et priorité tout à droite de la 1re ligne, 🗒 juste après le titre. Log : une seule ligne, comme avant
 - [~] Ticket d'un projet en pastille rose (bleu réservé aux tâches reportées) ; fiche : ticket cliquable en lecture, comme dans la ligne
 
 ## Décisions attendues
@@ -41,6 +40,9 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
+- [x] Ligne de tâche moins dense, sur deux lignes (Projets, Aujourd’hui, Suivant) : titre, ticket et icônes en haut ; tags à gauche, date prévue, échéance et temps passé à droite en dessous ; 2e ligne toujours là (chrono ▷ au bout). ☀ et priorité tout à droite de la 1re ligne, 🗒 juste après le titre. Log : une seule ligne, comme avant ([PR #8](https://github.com/pom421/tasks/pull/8))
+- [x] Fiche : champ Sprint avec les sprints actifs puis à venir de Jira proposés (API Agile : tableaux Scrum du projet, puis leurs sprints ; 100 premiers par tableau, suffisant : validé) ([PR #9](https://github.com/pom421/tasks/pull/9))
+- [x] Fiche : mêmes champs au pixel près en lecture (bloqués) et en édition ; ligne 1 ticket + sprint (nouveau, synchronisé avec Jira, migration 17), ligne 2 dates + temps passé et chrono, ligne 3 tags ; en lecture, calendrier des dates et ✕ des tags cachés (validé) ([PR #7](https://github.com/pom421/tasks/pull/7))
 - [x] Pastille « reporté » supprimée : reportée = un identifiant ; `r` sur une tâche à reporter demande l'identifiant, saisie abandonnée (Échap, vide, invalide, clic ailleurs) = retour à rien ; fiche : ticket en un seul contrôle (aucun → à reporter → identifiant ; ✕ le retire ; `r` comme sur la ligne), en lecture et en édition ; ticket = identifiant seul (tâche et projet), plus de lien complet ; migrations 15 et 16 ([PR #5](https://github.com/pom421/tasks/pull/5))
 - [x] Info-bulles uniformes : toutes rapides (150 ms) et du même style, par un seul composant (`TitleTooltips`) qui affiche l'attribut `title` à la place de l'info-bulle native
 - [x] Échéance de la ligne : info-bulle de l'app, rapide (150 ms), « Échéance : mardi 6 octobre 2026 » (l'info-bulle native, lente, ne s'affichait pas toujours)

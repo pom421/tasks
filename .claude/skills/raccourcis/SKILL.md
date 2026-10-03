@@ -14,8 +14,9 @@ L'utilisateur choisit les touches : **état des lieux, propositions, puis code**
   ```sh
   grep -n "e.key\|e.code\|^\s*[A-Za-z'!/?]*: () =>" src/App.tsx src/lib/nav.ts src/components/*.tsx
   ```
-  Globaux : `keys` dans `src/App.tsx`. Locaux : `TaskRow`, `ProjectList`,
-  `Timer`, `TaskDialog`, `Editable`. Navigation : `src/lib/nav.ts`.
+  Globaux : `keys` dans `src/App.tsx` ; onglets : `TABS` (`key:`) du même
+  fichier. Locaux : `TaskRow`, `ProjectList`, `Timer`, `TaskDialog`,
+  `Editable`, `Jira`. Navigation : `src/lib/nav.ts`.
 - Pour chaque touche envisagée : libre, prise (par quoi, où), ou prise
   localement seulement (un raccourci global y serait inactif : à éviter).
 
@@ -26,8 +27,8 @@ qu'il faudrait déplacer. Attendre le choix avant de coder.
 
 Convention en place :
 - minuscule = action sur l'élément courant (`f`, `a`, `r`, `t`, `c`, `x x`…) ;
-- majuscule = onglet ou filtre (`P` `T` `L` ; `R` `F` `A`) ;
-- symbole = filtre spécial (`!`) ou champ (`/`) ;
+- majuscule = onglet ou filtre (`P` `T` `S` `L` ; `R` `F` `A`) ;
+- symbole = filtre spécial (`!`, `#` tags) ou champ (`/`) ;
 - `Alt+flèches` = déplacer / changer d'onglet ; `Maj+flèches` = sauter de projet ;
 - une touche = une seule action : pas de double appui qui bascule ailleurs,
   sauf destruction (`x x`) et `n n`.

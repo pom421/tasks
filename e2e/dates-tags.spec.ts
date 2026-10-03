@@ -49,9 +49,11 @@ test('fiche : date prévue, échéance et tags (e), étiquettes sur la 2e ligne,
   await dialog.getByRole('button', { name: 'Retirer le tag site-web' }).click();
   await page.keyboard.type('urgent'); // tapé sans valider : gardé à l'enregistrement
   await page.keyboard.press('ControlOrMeta+Enter');
-  await expect(dialog.locator('.day-value')).toHaveText('lundi 28 septembre 2026');
-  await expect(dialog.locator('.due-value')).toHaveText('lundi 12 octobre 2026');
-  await expect(dialog.locator('.tags-value')).toHaveText('#client #urgent');
+  // En lecture : mêmes champs, bloqués.
+  await expect(dialog.getByLabel('Date prévue')).toHaveAttribute('readonly', '');
+  await expect(dialog.getByLabel('Date prévue')).toHaveValue('2026-09-28');
+  await expect(dialog.getByLabel('Échéance')).toHaveValue('2026-10-12');
+  await expect(dialog.locator('.tag-chip')).toHaveText(['client', 'urgent']);
   await page.keyboard.press('ControlOrMeta+Enter');
   await expect(dialog).toHaveCount(0);
 
@@ -69,6 +71,70 @@ test('fiche : date prévue, échéance et tags (e), étiquettes sur la 2e ligne,
   await page.keyboard.press('u');
   await expect(une.locator('.details-line .tags, .details-line .planned-date, .details-line .due-date')).toHaveCount(0);
   expect(taskRow(store, data.une.id)).toEqual({ day_at: null, due_at: null, tags: '[]' });
+});
+
+test('fiche : mêmes champs au pixel près en lecture et en édition, bloqués en lecture ; sprint enregistré, u annule', async ({ page, store, data }) => {
+  store.updateTask(data.une.id, { dueAt: '2026-10-12', tags: ['client'], timeSpent: 600 });
+  await open(page);
+  await page.locator(`[data-nav-key="task:${data.une.id}"]`).focus();
+  await page.keyboard.press('o');
+  const dialog = page.getByRole('dialog', { name: 'Une' });
+  await expect(dialog.locator('.reader')).toBeFocused();
+  // Fin de l'animation d'ouverture, puis positions des libellés, champs et titre.
+  await page.waitForTimeout(400);
+  // Titre : position et hauteur (le champ s'arrête avant la croix).
+  const boxes = () =>
+    dialog.evaluate((d) =>
+      [...d.querySelectorAll('h2:not(.sr-only), [aria-label="Titre"], label, input[id]:not([aria-label="Titre"]), .tag-input, .notes-preview, textarea')].map((e) => {
+        const r = e.getBoundingClientRect();
+        return e.matches('h2, [aria-label="Titre"]') ? [r.x, r.y, r.height] : [r.x, r.y, r.width, r.height];
+      }),
+    );
+  const reading = await boxes();
+  // Lignes : ticket et sprint, puis dates et temps passé, puis tags.
+  const top = async (label: string) => (await dialog.getByText(label, { exact: true }).boundingBox())!.y;
+  expect(await top('Sprint')).toBe(await top('Ticket'));
+  expect(await top('Échéance')).toBe(await top('Date prévue'));
+  expect(await top('Temps passé')).toBe(await top('Date prévue'));
+  expect(await top('Date prévue')).toBeGreaterThan(await top('Ticket'));
+  expect(await top('Tags')).toBeGreaterThan(await top('Date prévue'));
+  await expect(dialog.locator('.time-spent')).toHaveText('10 min');
+  await expect(dialog.getByRole('button', { name: 'Chrono', exact: true })).toBeVisible();
+
+  // Lecture : champs bloqués, les touches restent à la fiche.
+  const sprint = dialog.getByLabel('Sprint');
+  await expect(sprint).toHaveAttribute('readonly', '');
+  await expect(sprint).toHaveAttribute('placeholder', 'aucun');
+  await expect(dialog.getByRole('combobox', { name: 'Tags' })).toHaveAttribute('readonly', '');
+  await expect(dialog.getByRole('button', { name: 'Retirer le tag client' })).toBeHidden();
+  await sprint.click();
+  await expect(dialog.locator('.reader')).toBeFocused();
+  await page.keyboard.type('xyz');
+  await expect(sprint).toHaveValue('');
+
+  // Édition : rien ne bouge (le titre devient un champ au même endroit).
+  await page.keyboard.press('e');
+  await expect(dialog.getByLabel('Titre')).toBeFocused();
+  await expect(sprint).not.toHaveAttribute('readonly');
+  await page.mouse.move(0, 0);
+  await page.waitForTimeout(200);
+  expect(await boxes()).toEqual(reading);
+
+  // Sprint saisi, Tab depuis le ticket ; Entrée enregistre et repasse en lecture.
+  await page.keyboard.press('Escape'); // ferme (enregistre) ; double-clic sur le sprint : édition dedans
+  await page.locator(`[data-nav-key="task:${data.une.id}"]`).focus();
+  await page.keyboard.press('o');
+  await dialog.getByLabel('Sprint').dblclick();
+  await expect(dialog.getByLabel('Sprint')).toBeFocused();
+  await page.keyboard.type('Sprint 42');
+  await page.keyboard.press('Enter');
+  await expect(dialog.getByLabel('Sprint')).toHaveAttribute('readonly', '');
+  await expect(dialog.getByLabel('Sprint')).toHaveValue('Sprint 42');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  expect(store.db.prepare('SELECT sprint FROM task WHERE id = ?').get(data.une.id)).toEqual({ sprint: 'Sprint 42' });
+  await page.keyboard.press('u');
+  await expect.poll(() => store.db.prepare('SELECT sprint FROM task WHERE id = ?').get(data.une.id)).toEqual({ sprint: null });
 });
 
 test('étiquettes : date prévue (aujourd’hui compris) ; échéance dépassée en rouge, alignée d’une ligne à l’autre ; Log sur une ligne', async ({ page, store, data }) => {

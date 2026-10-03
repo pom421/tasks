@@ -5,7 +5,7 @@ import type { TaskField } from '@/lib/actions';
 import { record } from '@/lib/history';
 import { focusByKey } from '@/lib/nav';
 import { renderMarkdown } from '@/lib/markdown';
-import { formatDay, isComplete } from '@/lib/dates';
+import { isComplete } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
@@ -16,6 +16,7 @@ import { TimeSpent, TimerButtons, useTimer } from './Timer';
 import { PlanButton, usePlan } from './Plan';
 import { PriorityButton, usePriority } from './Priority';
 import { TagInput } from './TagInput';
+import { SprintInput } from './SprintInput';
 import { ReportControl, useReport } from './Report';
 import { JiraButtons, JiraCompare, jiraBlocker, sameJira, type JiraDirection } from './Jira';
 
@@ -30,11 +31,16 @@ interface TaskDialogProps {
   onClose: (changed: boolean) => void;
 }
 
-type Field = 'title' | 'day' | 'due' | 'notes';
+type Field = 'title' | 'sprint' | 'day' | 'due' | 'notes';
+
+// Aspect d'un champ (Input) pour les contrôles qui n'en sont pas : ticket, temps passé.
+const BOX = 'flex h-9 items-center rounded-md border border-input px-3 text-sm shadow-xs';
 
 
 // Fiche d'une tâche, façon GitLab : lecture seule par défaut ; e passe tout en
-// édition (titre, puis Tab : date prévue, échéance, tags, contenu Markdown) ; Ctrl+Entrée
+// édition (titre, puis Tab : ticket, sprint, date prévue, échéance, tags, contenu
+// Markdown). Mêmes champs, à la même place, dans les deux modes : en lecture, ils
+// gardent leur aspect mais sont bloqués (double-clic : édition de ce champ). Ctrl+Entrée
 // enregistre et repasse en lecture ; un second Ctrl+Entrée (ou Échap) ferme.
 // Chrono comme sur la ligne : c lance / met en pause, C remet à zéro.
 // Aujourd’hui comme sur la ligne : t ou ☀.
@@ -56,6 +62,7 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
   const report = useReport(task);
   const [values, setValues] = useState({
     title: task.title,
+    sprint: task.sprint ?? '',
     day: task.day_at ?? '',
     due: task.due_at ?? '',
     tags: task.tags,
@@ -67,6 +74,7 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
   const saved = useRef({ ...values, changed: false });
   const refs = {
     title: useRef<HTMLInputElement>(null),
+    sprint: useRef<HTMLInputElement>(null),
     day: useRef<HTMLInputElement>(null),
     due: useRef<HTMLInputElement>(null),
     notes: useRef<HTMLTextAreaElement>(null),
@@ -130,6 +138,7 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
     const values = latest.current;
     const next = {
       title: values.title.trim(),
+      sprint: values.sprint.trim(),
       day: values.day,
       due: values.due,
       tags: values.tags,
@@ -140,6 +149,7 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
     if (!isComplete(next.due)) return fail('due', 'Date invalide');
     const patch: Parameters<typeof api.updateTask>[1] = {};
     if (next.title !== saved.current.title) patch.title = next.title;
+    if (next.sprint !== saved.current.sprint.trim()) patch.sprint = next.sprint || null;
     if (next.day !== saved.current.day) patch.day_at = next.day || null;
     if (next.due !== saved.current.due) patch.due_at = next.due || null;
     if (next.tags.join() !== saved.current.tags.join()) patch.tags = next.tags;
@@ -148,6 +158,7 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
     // Valeurs d'avant, pour annuler (u) une fois la fiche fermée.
     const before: typeof patch = {};
     if ('title' in patch) before.title = saved.current.title;
+    if ('sprint' in patch) before.sprint = saved.current.sprint.trim() || null;
     if ('day_at' in patch) before.day_at = saved.current.day || null;
     if ('due_at' in patch) before.due_at = saved.current.due || null;
     if ('tags' in patch) before.tags = saved.current.tags;
@@ -164,7 +175,7 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
       setError(null);
       return true;
     } catch (err) {
-      const f: Field = patch.day_at !== undefined ? 'day' : patch.due_at !== undefined ? 'due' : 'title';
+      const f: Field = patch.day_at !== undefined ? 'day' : patch.due_at !== undefined ? 'due' : patch.sprint !== undefined ? 'sprint' : 'title';
       return fail(f, (err as Error).message);
     }
   };
@@ -175,7 +186,21 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
   const [compare, setCompare] = useState<{ direction: JiraDirection; key: string; local: JiraFields; remote: JiraFields } | null>(null);
   const [jiraBusy, setJiraBusy] = useState(false);
   const [jiraStatus, setJiraStatus] = useState<{ ok?: string; error?: string }>({});
-  const localJira = (): JiraFields => ({ title: saved.current.title, notes: saved.current.notes.trim() || null, due_at: saved.current.due || null });
+  // Sprints actifs puis à venir du projet du ticket, lus à la première entrée
+  // dans le champ Sprint ; sans Jira (ou en erreur) : texte libre seul.
+  const [sprints, setSprints] = useState<string[]>([]);
+  const sprintsAsked = useRef(false);
+  const loadSprints = () => {
+    if (blocker || !ticketKey || sprintsAsked.current) return;
+    sprintsAsked.current = true;
+    api.jiraSprints(ticketKey.split('-')[0]).then(setSprints, () => {});
+  };
+  const localJira = (): JiraFields => ({
+    title: saved.current.title,
+    notes: saved.current.notes.trim() || null,
+    due_at: saved.current.due || null,
+    sprint: saved.current.sprint.trim() || null,
+  });
 
   // 1er temps : enregistre la fiche, lit le ticket et ouvre la comparaison.
   const startJira = async (direction: JiraDirection) => {
@@ -211,7 +236,7 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
         });
         setJiraStatus({ ok: `Poussé vers Jira (${key}).` });
       } else {
-        const patch = { title: remote.title, notes: remote.notes, due_at: remote.due_at };
+        const patch = { title: remote.title, notes: remote.notes, due_at: remote.due_at, sprint: remote.sprint };
         await api.updateTask(task.id, patch);
         record({
           label: 'récupération depuis Jira',
@@ -219,7 +244,7 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
           undo: () => api.updateTask(task.id, local),
           redo: () => api.updateTask(task.id, patch),
         });
-        const fields = { title: remote.title, notes: remote.notes ?? '', due: remote.due_at ?? '' };
+        const fields = { title: remote.title, notes: remote.notes ?? '', due: remote.due_at ?? '', sprint: remote.sprint ?? '' };
         saved.current = { ...saved.current, ...fields, changed: true };
         latest.current = { ...latest.current, ...fields };
         setValues(latest.current);
@@ -249,7 +274,7 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
     await persist();
   };
 
-  // Entrée dans le titre ou une date : comme Ctrl+Entrée.
+  // Entrée dans le titre, le sprint ou une date : comme Ctrl+Entrée.
   const onInputEnter = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter' || e.ctrlKey || e.metaKey) return;
     e.preventDefault();
@@ -257,7 +282,8 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    const inField = (e.target as HTMLElement).matches('input, textarea');
+    // Champ bloqué (lecture) : les touches restent celles de la fiche.
+    const inField = (e.target as HTMLElement).matches('input:not([readonly]), textarea');
     if (!inField && !done && !e.ctrlKey && !e.metaKey && !e.altKey && timer.onKey(e)) return;
     if (!inField && !done && !e.ctrlKey && !e.metaKey && !e.altKey && plan.onKey(e)) return;
     if (!inField && !e.ctrlKey && !e.metaKey && !e.altKey && priority.onKey(e)) return;
@@ -293,6 +319,18 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
     'aria-invalid': error?.field === f,
     'aria-describedby': error?.field === f ? `${id}-${f}-error` : undefined,
   });
+  // Champ bloqué en lecture : ni focus ni saisie (les touches restent à la
+  // fiche), double-clic pour le modifier.
+  const locked = (f: Field) =>
+    editing
+      ? {}
+      : {
+          readOnly: true,
+          tabIndex: -1,
+          className: 'cursor-default',
+          onMouseDown: (e: { preventDefault: () => void }) => e.preventDefault(),
+          onDoubleClick: () => startEditing(f),
+        };
 
   return (
     <Dialog open={open} onOpenChange={(value) => !value && close()}>
@@ -304,6 +342,8 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
           e.preventDefault();
           // Échap dans le champ du ticket : abandonne la saisie, la fiche reste ouverte.
           if ((e.target as HTMLElement).matches('.ticket-input')) return;
+          // Échap dans un champ à propositions ouvertes : ferme la liste seulement.
+          if ((e.target as HTMLElement).matches('[aria-expanded="true"]')) return;
           close();
         }}
         onOpenAutoFocus={(e) => {
@@ -319,7 +359,8 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
         {/* Même disposition en lecture et en édition : titre en haut (jusqu'à la
             croix), puis projet et icônes. En édition, le champ prend la place du
             titre, qui reste annoncé par Radix. */}
-        <DialogTitle className={cn('pr-6 leading-snug [overflow-wrap:anywhere]', editing && 'sr-only')}>
+        {/* Bordure invisible : même hauteur que le champ du titre (édition). */}
+        <DialogTitle className={cn('border-b border-transparent pr-6 leading-snug [overflow-wrap:anywhere]', editing && 'sr-only')}>
           {values.title}
         </DialogTitle>
         {editing && (
@@ -345,44 +386,75 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
             {done && ` · faite le ${task.done_at.split('-').reverse().join('/')}`}
           </DialogDescription>
           <span className="flex items-center">
-            {/* Temps passé, à gauche des icônes : aligné à droite, il s'allonge vers
-                la gauche sans déplacer les icônes. Texte normal chrono en marche. */}
-            <TimeSpent timer={timer} className="mr-1 text-sm [&_svg]:size-3.5" />
-            {!done && <TimerButtons timer={timer} />}
             {!done && <PlanButton plan={plan} />}
             <PriorityButton priority={task.priority} onClick={priority.cycle} />
             <JiraButtons blocker={blocker} onClick={startJira} />
           </span>
         </div>
 
-        {editing ? (
-          <>
-            {/* Ticket, date prévue et échéance sur une ligne (écran large). */}
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="grid content-start gap-1.5">
-                <Label>Ticket</Label>
-                <div className="flex h-9 items-center">
-                  <ReportControl task={task} report={report} />
-                </div>
+        {/* Même grille en lecture et en édition, au pixel près : ticket et sprint,
+            puis dates et temps passé, puis tags, puis contenu. */}
+        <div
+          ref={reader}
+          tabIndex={editing ? undefined : -1}
+          className={cn('grid min-h-0 flex-1 grid-rows-[auto_1fr] gap-4 outline-none', !editing && 'reader')}
+          aria-describedby={editing ? undefined : `${id}-hint`}
+        >
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid content-start gap-1.5">
+              <Label>Ticket</Label>
+              <div className={BOX}>
+                <ReportControl task={task} report={report} />
               </div>
-              {(['day', 'due'] as const).map((f) => (
-                <div key={f} className="grid content-start gap-1.5">
-                  <Label htmlFor={`${id}-${f}`}>{f === 'day' ? 'Date prévue' : 'Échéance'}</Label>
-                  <Input
-                    ref={refs[f]}
-                    id={`${id}-${f}`}
-                    type="date"
-                    title={f === 'day' ? 'Quand je compte la faire (aujourd’hui : dans Aujourd’hui)' : 'Date limite, imposée de l’extérieur'}
-                    value={values[f]}
-                    onChange={set(f)}
-                    onKeyDown={onInputEnter}
-                    {...invalid(f)}
-                  />
-                  {errorFor(f)}
-                </div>
-              ))}
             </div>
-            <div className="grid gap-1.5">
+            <div className="grid content-start gap-1.5">
+              <Label htmlFor={`${id}-sprint`}>Sprint</Label>
+              <SprintInput
+                ref={refs.sprint}
+                id={`${id}-sprint`}
+                autoComplete="off"
+                placeholder={editing ? 'ex. Sprint 42' : 'aucun'}
+                title="Sprint du ticket, synchronisé avec Jira (↓ : sprints actifs et à venir)"
+                suggestions={sprints}
+                value={values.sprint}
+                onValue={(value) => set('sprint')({ target: { value } })}
+                onFocusCapture={loadSprints}
+                onKeyDown={onInputEnter}
+                {...invalid('sprint')}
+                {...locked('sprint')}
+              />
+              {errorFor('sprint')}
+            </div>
+            {(['day', 'due'] as const).map((f) => (
+              <div key={f} className={cn('grid content-start gap-1.5', f === 'day' && 'sm:col-start-1')}>
+                <Label htmlFor={`${id}-${f}`}>{f === 'day' ? 'Date prévue' : 'Échéance'}</Label>
+                <Input
+                  ref={refs[f]}
+                  id={`${id}-${f}`}
+                  type="date"
+                  title={f === 'day' ? 'Quand je compte la faire (aujourd’hui : dans Aujourd’hui)' : 'Date limite, imposée de l’extérieur'}
+                  value={values[f]}
+                  onChange={set(f)}
+                  onKeyDown={onInputEnter}
+                  {...invalid(f)}
+                  {...locked(f)}
+                />
+                {errorFor(f)}
+              </div>
+            ))}
+            {/* Temps passé et chrono (c, C), jamais saisi : même aspect dans les deux modes. */}
+            <div className="grid content-start gap-1.5">
+              <Label>Temps passé</Label>
+              <div className={cn(BOX, 'justify-between pr-1')}>
+                {timer.running || timer.seconds ? (
+                  <TimeSpent timer={timer} className="[&_svg]:size-3.5" />
+                ) : (
+                  <span className="text-muted-foreground">aucun</span>
+                )}
+                {!done && <TimerButtons timer={timer} />}
+              </div>
+            </div>
+            <div className="grid content-start gap-1.5 sm:col-span-3">
               <Label htmlFor={`${id}-tags`}>Tags</Label>
               <TagInput
                 id={`${id}-tags`}
@@ -390,14 +462,17 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
                 suggestions={tagSuggestions}
                 onChange={setTags}
                 label="Tags"
-                placeholder="Ajouter un tag…"
+                placeholder={editing ? 'Ajouter un tag…' : 'aucun'}
                 create
+                readOnly={!editing}
                 removeLabel={(tag) => `Retirer le tag ${tag}`}
-                className="min-h-9 px-3 py-1"
+                className={cn('min-h-9 border-input px-3 py-1 shadow-xs', !editing && 'focus-within:ring-0')}
               />
             </div>
-            <div className="grid min-h-0 flex-1 gap-1.5">
-              <Label htmlFor={`${id}-notes`}>Contenu</Label>
+          </div>
+          <div className="grid min-h-0 grid-rows-[auto_1fr] gap-1.5">
+            <Label htmlFor={editing ? `${id}-notes` : undefined}>Contenu</Label>
+            {editing ? (
               <Textarea
                 ref={refs.notes}
                 id={`${id}-notes`}
@@ -406,46 +481,19 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
                 onChange={set('notes')}
                 aria-describedby={`${id}-hint`}
               />
-            </div>
-          </>
-        ) : (
-          <div
-            ref={reader}
-            tabIndex={-1}
-            className="reader grid min-h-0 flex-1 gap-4 outline-none"
-            aria-describedby={`${id}-hint`}
-          >
-            {/* Deux colonnes alignées, une hauteur par ligne (celle de la pastille du
-                ticket) : libellés atténués, valeurs absentes atténuées aussi. */}
-            <dl className="grid grid-cols-[7rem_1fr] gap-x-4 text-sm leading-7">
-              <dt className="text-muted-foreground">Ticket</dt>
-              <dd className="flex min-h-7 items-center">
-                <ReportControl task={task} report={report} />
-              </dd>
-              <dt className="text-muted-foreground">Date prévue</dt>
-              <dd className={cn('day-value first-letter:uppercase', !values.day && 'text-muted-foreground')}>
-                {values.day ? formatDay(values.day) : 'aucune'}
-              </dd>
-              <dt className="text-muted-foreground">Échéance</dt>
-              <dd className={cn('due-value first-letter:uppercase', !values.due && 'text-muted-foreground')}>
-                {values.due ? formatDay(values.due) : 'aucune'}
-              </dd>
-              <dt className="text-muted-foreground">Tags</dt>
-              <dd className={cn('tags-value', !values.tags.length && 'text-muted-foreground')}>
-                {values.tags.length ? values.tags.map((t) => `#${t}`).join(' ') : 'aucun'}
-              </dd>
-            </dl>
-            <div
-              className={cn(
-                'notes-preview markdown min-h-[35vh] overflow-y-auto rounded-md border px-3 py-2 text-sm',
-                // Vide : « Aucun contenu » au centre, un peu plus gros.
-                !values.notes.trim() && 'flex items-center justify-center text-base text-muted-foreground',
-              )}
-              onDoubleClick={() => startEditing('notes')}
-              {...(values.notes.trim() ? { dangerouslySetInnerHTML: { __html: html } } : { children: 'Aucun contenu' })}
-            />
+            ) : (
+              <div
+                className={cn(
+                  'notes-preview markdown min-h-[35vh] overflow-y-auto rounded-md border border-input px-3 py-2 text-sm shadow-xs',
+                  // Vide : « Aucun contenu » au centre, un peu plus gros.
+                  !values.notes.trim() && 'flex items-center justify-center text-base text-muted-foreground',
+                )}
+                onDoubleClick={() => startEditing('notes')}
+                {...(values.notes.trim() ? { dangerouslySetInnerHTML: { __html: html } } : { children: 'Aucun contenu' })}
+              />
+            )}
           </div>
-        )}
+        </div>
 
         {jiraStatus.ok && (
           <p role="status" className="jira-status text-sm text-muted-foreground">
