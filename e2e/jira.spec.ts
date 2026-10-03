@@ -47,20 +47,13 @@ test('boutons désactivés sans identifiant valide, sans URL ou sans PAT ; raiso
   await page.keyboard.press('>');
   await expect(page.getByRole('dialog')).toHaveCount(1);
 
-  // Lien complet au lieu d'un identifiant : toujours désactivés.
-  await page.keyboard.press('e');
-  await page.keyboard.press('Tab');
-  await page.keyboard.type('https://ailleurs.fr/x');
-  await page.keyboard.press('Enter');
-  await expect(push).toBeDisabled();
-
   // Identifiant mais ni URL ni PAT : désactivés, renvoi aux Réglages.
-  await page.keyboard.press('e');
-  await page.keyboard.press('Tab');
-  await page.keyboard.press('ControlOrMeta+a');
+  const control = dialog.locator('.report-control');
+  await control.click(); // à reporter
+  await control.click(); // champ de l'identifiant
   await page.keyboard.type('proj-1');
   await page.keyboard.press('Enter');
-  await expect(dialog.locator('.ticket-value')).toHaveText('PROJ-1');
+  await expect(dialog.locator('.report-key')).toHaveText('PROJ-1');
   await expect(push).toBeDisabled();
   await expect(pull).toHaveAttribute('title', 'Récupérer depuis Jira (<) : renseigner l’URL des tickets et le PAT dans les Réglages');
   await page.keyboard.press('Escape');

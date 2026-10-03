@@ -1,8 +1,9 @@
 import * as React from 'react';
 import { Tooltip as TooltipPrimitive } from 'radix-ui';
 import { cn } from '@/lib/utils';
+import { TOOLTIP_CLASS, TOOLTIP_DELAY } from '@/components/TitleTooltips';
 
-function TooltipProvider({ delayDuration = 300, ...props }: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
+function TooltipProvider({ delayDuration = TOOLTIP_DELAY, ...props }: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
   return <TooltipPrimitive.Provider data-slot="tooltip-provider" delayDuration={delayDuration} {...props} />;
 }
 
@@ -21,7 +22,7 @@ function TooltipContent({ className, sideOffset = 4, children, ...props }: React
         data-slot="tooltip-content"
         sideOffset={sideOffset}
         className={cn(
-          'animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 z-50 max-w-md rounded-md bg-foreground px-3 py-1.5 text-xs text-balance text-background',
+          TOOLTIP_CLASS, // même aspect que les autres info-bulles (TitleTooltips)
           className,
         )}
         {...props}

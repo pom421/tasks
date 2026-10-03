@@ -26,7 +26,7 @@ const open = async (page: Page) => {
 
 const toggle = (page: Page, title: string) => row(page, title).getByRole('button', { name: 'Chrono', exact: true });
 
-test('bouton Chrono : lance (icône pause pleine, toujours visible) puis met en pause ; pas de temps sur la ligne', async ({ page, store, data }) => {
+test('bouton Chrono : lance (icône pause pleine, toujours visible) puis met en pause ; temps passé au bout du titre', async ({ page, store, data }) => {
   await open(page);
   const une = row(page, 'Une');
   await expect(toggle(page, 'Une')).toBeHidden();
@@ -40,10 +40,11 @@ test('bouton Chrono : lance (icône pause pleine, toujours visible) puis met en 
   await expect(chrono).toHaveAttribute('title', '0 min · Pause (c)');
   await expect(chrono.locator('svg')).toHaveAttribute('fill', 'currentColor');
 
-  // En marche : visible même sans survol ; aucun texte ajouté à la ligne.
+  // En marche : visible même sans survol ; temps passé au bout du titre, texte normal.
   await page.mouse.move(0, 0);
   await expect(chrono).toBeVisible();
-  await expect(une.locator('.title')).toHaveText('Une');
+  await expect(une.locator('.title')).toHaveText('Une0 min');
+  await expect(une.locator('.time-spent')).toHaveClass(/text-foreground/);
   expect(store.db.prepare('SELECT timer_started_at FROM task WHERE id = ?').get(data.une.id)).not.toEqual({ timer_started_at: null });
 
   await chrono.click();

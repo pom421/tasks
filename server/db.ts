@@ -28,7 +28,6 @@ export interface TaskPatch {
   doneAt?: string | null;
   bugtracker?: BugtrackerState;
   bugtrackerKey?: string | null;
-  bugtrackerUrl?: string | null;
   notes?: string | null;
   timer?: TimerAction;
   timeSpent?: number; // annulation : valeurs du chrono remises telles quelles
@@ -63,8 +62,7 @@ export interface ProjectPatch {
   name?: string;
   archived?: boolean;
   favorite?: boolean;
-  bugtrackerKey?: string | null; // ticket : clé ou lien complet (l'autre à null)
-  bugtrackerUrl?: string | null;
+  bugtrackerKey?: string | null; // ticket : identifiant (PROJ-123)
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -153,9 +151,9 @@ export class Store {
   // day : journée de « Plan journée » ('YYYY-MM-DD', celle du navigateur), pour
   // compter les tâches choisies déjà faites.
   state(day?: string): State {
-    const { id, name, archived_at, favorite_at, bugtracker_key, bugtracker_url } = getColumns(project);
+    const { id, name, archived_at, favorite_at, bugtracker_key } = getColumns(project);
     const projects = this.orm
-      .select({ id, name, archived_at, favorite_at, bugtracker_key, bugtracker_url })
+      .select({ id, name, archived_at, favorite_at, bugtracker_key })
       .from(project)
       .orderBy(project.position, project.id)
       .all();
@@ -189,7 +187,7 @@ export class Store {
     if (q) {
       // % et _ saisis sont cherchés tels quels, pas comme jokers SQL.
       const pattern = '%' + fold(q).replace(/[\\%_]/g, (c) => '\\' + c) + '%';
-      const cols = [task.title, task.notes, task.bugtracker_key, task.bugtracker_url];
+      const cols = [task.title, task.notes, task.bugtracker_key];
       where.push(or(...cols.map((c) => sql`fold(${c}) LIKE ${pattern} ESCAPE '\\'`)));
     }
     const dates = this.orm
@@ -253,11 +251,10 @@ export class Store {
     return this.orm.insert(project).values({ name, position: nextProjectPosition() }).returning().get();
   }
 
-  updateProject(id: number, { name, archived, favorite, bugtrackerKey, bugtrackerUrl }: ProjectPatch) {
+  updateProject(id: number, { name, archived, favorite, bugtrackerKey }: ProjectPatch) {
     const set: SQLiteUpdateSetSource<typeof project> = {};
     if (name !== undefined) set.name = name;
     if (bugtrackerKey !== undefined) set.bugtracker_key = bugtrackerKey;
-    if (bugtrackerUrl !== undefined) set.bugtracker_url = bugtrackerUrl;
     if (archived !== undefined) set.archived_at = archived ? NOW : null;
     if (favorite !== undefined) set.favorite_at = favorite ? NOW : null;
     if (Object.keys(set).length) this.orm.update(project).set(set).where(eq(project.id, id)).run();
@@ -295,13 +292,14 @@ export class Store {
 
   // doneAt : 'YYYY-MM-DD' pour marquer faite, null pour remettre à faire.
   // bugtracker : état du suivi du bugtracker ('none' efface aussi le ticket) ;
-  // bugtrackerKey / bugtrackerUrl : ticket (clé ou lien complet) ; notes : détails (Markdown).
+  // bugtrackerKey : ticket (PROJ-123) ; reportée = un ticket : 'done' sans ticket
+  // reste « à reporter », un ticket ajouté reporte la tâche ; notes : détails (Markdown).
   // timer : chrono (un seul en marche à la fois ; une tâche faite l'arrête) ;
   // dayAt : date prévue (Aujourd'hui si c'est ce jour), null = aucune ;
   // dueAt : échéance, null = aucune ; tags : liste complète (remplace l'ancienne) ;
   // priority : 1 à 3, null = aucune.
   updateTask(id: number, patch: TaskPatch) {
-    const { title, doneAt, bugtracker, bugtrackerKey, bugtrackerUrl, notes, timer, timeSpent, timerStartedAt, dayAt, dueAt, tags, priority } = patch;
+    const { title, doneAt, bugtracker, bugtrackerKey, notes, timer, timeSpent, timerStartedAt, dayAt, dueAt, tags, priority } = patch;
     const update = (set: SQLiteUpdateSetSource<typeof task>, where: SQL | undefined = undefined) =>
       this.orm.update(task).set(set).where(and(eq(task.id, id), where)).run();
     if (doneAt) update(PAUSE, RUNNING);
@@ -313,23 +311,28 @@ export class Store {
     if (timer === 'pause') update(PAUSE, RUNNING);
     if (timer === 'reset') update({ time_spent: 0, timer_started_at: null });
     // Le reste en une seule écriture ; l'ordre compte : bugtracker 'none' efface le
-    // ticket, bugtrackerKey / bugtrackerUrl le remplacent ensuite.
+    // ticket, bugtrackerKey le remplace ensuite.
     const set: SQLiteUpdateSetSource<typeof task> = {};
     if (title !== undefined) set.title = title;
     if (timeSpent !== undefined) set.time_spent = timeSpent;
     if (timerStartedAt !== undefined) set.timer_started_at = timerStartedAt;
-    if (bugtracker === 'none') Object.assign(set, { bugtracker_wanted_at: null, bugtracker_at: null, bugtracker_key: null, bugtracker_url: null });
+    if (bugtracker === 'none') Object.assign(set, { bugtracker_wanted_at: null, bugtracker_at: null, bugtracker_key: null });
     if (bugtracker === 'wanted' || bugtracker === 'done') set.bugtracker_wanted_at = sql`COALESCE(${task.bugtracker_wanted_at}, ${NOW})`;
     if (bugtracker === 'wanted') set.bugtracker_at = null;
     if (bugtracker === 'done') set.bugtracker_at = sql`COALESCE(${task.bugtracker_at}, ${NOW})`;
     if (bugtrackerKey !== undefined) set.bugtracker_key = bugtrackerKey;
-    if (bugtrackerUrl !== undefined) set.bugtracker_url = bugtrackerUrl;
     if (notes !== undefined) set.notes = notes;
     if (dayAt !== undefined) set.day_at = dayAt;
     if (dueAt !== undefined) set.due_at = dueAt;
     if (tags !== undefined) set.tags = tags;
     if (priority !== undefined) set.priority = priority;
     if (Object.keys(set).length) update(set);
+    // Reportée = un ticket : sans ticket, la tâche revient « à reporter » ; avec, elle est reportée.
+    update({ bugtracker_at: null }, isNull(task.bugtracker_key));
+    update(
+      { bugtracker_wanted_at: sql`COALESCE(${task.bugtracker_wanted_at}, ${NOW})`, bugtracker_at: sql`COALESCE(${task.bugtracker_at}, ${NOW})` },
+      isNotNull(task.bugtracker_key),
+    );
     return this.task(id);
   }
 

@@ -25,7 +25,7 @@ export interface TaskPatch {
   done?: boolean;
   done_at?: string;
   bugtracker?: BugtrackerState;
-  bugtracker_ticket?: string | null; // clé (PROJ-123) ou lien complet
+  bugtracker_ticket?: string | null; // identifiant (PROJ-123)
   notes?: string | null;
   timer?: TimerAction;
   time_spent?: number; // annulation du chrono
