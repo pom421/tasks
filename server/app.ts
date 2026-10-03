@@ -185,6 +185,7 @@ function restoredProject(body: Body): DeletedProject {
     favorite_at: timestamp(p.favorite_at, 'Date de favori'),
     position: int(p.position ?? 0, 'Position'),
     bugtracker_key: bugtrackerKey(p.bugtracker_key),
+    notes: optionalText(p.notes ?? null, 'Contenu', 20_000),
   };
   const tasks = body.tasks.map((t) => restoredTask((t ?? {}) as Body));
   if (tasks.some((t) => t.project_id !== project.id)) throw new HttpError(400, 'Tâche d’un autre projet');
@@ -337,6 +338,7 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
       if ('archived' in body) patch.archived = Boolean(body.archived);
       if ('favorite' in body) patch.favorite = Boolean(body.favorite);
       if ('bugtracker_ticket' in body) Object.assign(patch, bugtrackerTicket(body.bugtracker_ticket));
+      if ('notes' in body) patch.notes = optionalText(body.notes, 'Contenu', 20_000);
       const project = store.updateProject(Number(id), patch);
       if (!project) throw new HttpError(404, 'Projet introuvable');
       send(res, 200, project);

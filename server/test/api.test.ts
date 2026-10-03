@@ -134,6 +134,19 @@ test('ticket du projet : identifiant seul, visible dans les projets, validé, re
   assert.equal(none.bugtracker_key, null);
 });
 
+test('contenu du projet : enregistré, visible dans les projets, vidé, limité', async () => {
+  const { body: p } = await call('POST', '/api/projects', { name: 'Avec contenu' });
+  assert.equal(p.notes, null);
+  const { body: saved } = await call('PATCH', `/api/projects/${p.id}`, { notes: '  ## Objectif\n\nLivrer  ' });
+  assert.equal(saved.notes, '## Objectif\n\nLivrer');
+  const { body: state } = await call('GET', '/api/state');
+  assert.equal(state.projects.find((x: { id: number }) => x.id === p.id).notes, '## Objectif\n\nLivrer');
+  assert.equal((await call('PATCH', `/api/projects/${p.id}`, { notes: 'x'.repeat(20_001) })).status, 400);
+  assert.equal((await call('PATCH', `/api/projects/${p.id}`, { notes: 42 })).status, 400);
+  const { body: empty } = await call('PATCH', `/api/projects/${p.id}`, { notes: '' });
+  assert.equal(empty.notes, null);
+});
+
 test('export puis import restaure la base', async () => {
   const before = (await call('GET', '/api/state')).body;
   const { status, body: file } = await call('GET', '/api/export');
@@ -409,7 +422,7 @@ test('migration 12 : colonnes et réglage du ticket renommés (bugtracker), donn
             PRAGMA user_version = 11;`);
   v11.close();
   const store11 = new Store(file);
-  assert.deepEqual(store11.migration.applied.map((m) => m.version), [12, 13, 14, 15, 16]);
+  assert.deepEqual(store11.migration.applied.map((m) => m.version), [12, 13, 14, 15, 16, 17]);
   const [done] = store11.journal({ limit: 5 }).days[0].tasks;
   assert.deepEqual(
     [done.bugtracker_wanted_at, done.bugtracker_at, done.bugtracker_key],
@@ -450,7 +463,7 @@ test('suppression annulable : DELETE renvoie la tâche, restore la réinsère à
 
 test('suppression de projet annulable : DELETE renvoie projet et tâches, restore les réinsère', async () => {
   const { body: p } = await call('POST', '/api/projects', { name: 'Projet à restaurer' });
-  await call('PATCH', `/api/projects/${p.id}`, { favorite: true, bugtracker_ticket: 'EPIC-1' });
+  await call('PATCH', `/api/projects/${p.id}`, { favorite: true, bugtracker_ticket: 'EPIC-1', notes: '# Contexte' });
   const { body: t1 } = await call('POST', '/api/tasks', { project_id: p.id, title: 'À faire' });
   const { body: t2 } = await call('POST', '/api/tasks', { project_id: p.id, title: 'Faite' });
   await call('PATCH', `/api/tasks/${t2.id}`, { done: true, done_at: '2026-09-02', notes: 'n' });
@@ -465,6 +478,7 @@ test('suppression de projet annulable : DELETE renvoie projet et tâches, restor
   assert.equal(restored, 201);
   assert.deepEqual(back, deleted); // mêmes id, mêmes colonnes (favori, ticket, tâche faite, notes)
   assert.equal(back.project.bugtracker_key, 'EPIC-1');
+  assert.equal(back.project.notes, '# Contexte');
   assert.equal((await call('POST', '/api/projects/restore', deleted)).status, 409);
 
   await call('DELETE', `/api/projects/${p.id}`);
