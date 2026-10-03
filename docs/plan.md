@@ -8,7 +8,6 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-- [~] Pastille « reporté » supprimée : reportée = un identifiant ; `r` sur une tâche à reporter demande l'identifiant, saisie abandonnée (Échap, vide, invalide, clic ailleurs) = retour à rien ; fiche : ticket en un seul contrôle (aucun → à reporter → identifiant ; ✕ le retire ; `r` comme sur la ligne), en lecture et en édition ; ticket = identifiant seul (tâche et projet), plus de lien complet ; migrations 15 et 16 ([PR #5](https://github.com/pom421/tasks/pull/5))
 - [~] Ticket d'un projet en pastille rose (bleu réservé aux tâches reportées) ; fiche : ticket cliquable en lecture, comme dans la ligne
 
 ## Décisions attendues
@@ -41,6 +40,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
+- [x] Pastille « reporté » supprimée : reportée = un identifiant ; `r` sur une tâche à reporter demande l'identifiant, saisie abandonnée (Échap, vide, invalide, clic ailleurs) = retour à rien ; fiche : ticket en un seul contrôle (aucun → à reporter → identifiant ; ✕ le retire ; `r` comme sur la ligne), en lecture et en édition ; ticket = identifiant seul (tâche et projet), plus de lien complet ; migrations 15 et 16 ([PR #5](https://github.com/pom421/tasks/pull/5))
 - [x] Info-bulles uniformes : toutes rapides (150 ms) et du même style, par un seul composant (`TitleTooltips`) qui affiche l'attribut `title` à la place de l'info-bulle native
 - [x] Échéance de la ligne : info-bulle de l'app, rapide (150 ms), « Échéance : mardi 6 octobre 2026 » (l'info-bulle native, lente, ne s'affichait pas toujours)
 - [x] Dates de la ligne toujours en jj/mm (« 30/12 », plus de « demain » ni « lun. 6 »), étiquette plus étroite
@@ -48,6 +48,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 - [x] Ligne : date prévue retirée (fiche seulement) ; échéance de largeur fixe, juste avant le temps passé et les icônes, places gardées même vides (alignées d'une ligne à l'autre)
 - [x] Ligne : temps passé de nouveau affiché (sablier, « 3 min ») au bout du titre, projets et Log, comme dans la fiche
 - [x] Fiche plus soignée : « · à faire » retiré (reste « · faite le … »), ↻ du chrono à gauche de ▷ (▷ ne bouge plus, aussi sur la ligne), libellés sans « : » en colonne alignée (valeurs absentes atténuées), « Aucun contenu » centré, plus gros, sans italique
+- [x] Défilement anticipé au clavier : 5 éléments visibles avant / après l’élément courant, blocs de l’en-tête comptés ([#4](https://github.com/pom421/tasks/pull/4))
 - [x] Projet : pastille et champ du ticket à droite, juste avant l'icône d'archive ; icône ticket retirée (`r` seulement, comme le report d'une tâche) (`49602a1`)
 - [x] Projet : champ du ticket après le cœur (favori), la pastille reste après le nom (`c2e995c`)
 - [x] Livraison par PR (plus de push direct sur `main`) : `CLAUDE.md`, skills `livrer` et `verifier-ci`

@@ -45,7 +45,7 @@ export function ProjectFilters({ projects, bugtrackerFilter, onBugtrackerFilter,
     tags: tags.length > 0 || tagFilter.length > 0,
   };
   return (
-    <div role="group" aria-label="Filtres des projets" className="mt-3 flex min-h-[26px] flex-wrap items-center justify-end gap-1.5">
+    <div data-nav-header role="group" aria-label="Filtres des projets" className="mt-3 flex min-h-[26px] flex-wrap items-center justify-end gap-1.5">
       {/* Tags (#) : autocomplétion parmi les tags des tâches à faire, ✕ pour en retirer un. */}
       {show.tags && (
         <TagInput

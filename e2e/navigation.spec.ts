@@ -1809,3 +1809,62 @@ test('? ouvre l’aide, ? la referme', async ({ page }) => {
   await page.keyboard.press('?');
   await expect(page.getByRole('dialog', { name: 'Raccourcis' })).toBeVisible();
 });
+
+// Défilement anticipé : au clavier, 5 éléments restent visibles après (en
+// descendant) et avant (en remontant) l'élément courant, comme le scrolloff de vim.
+test('↑/↓ : 5 éléments visibles avant et après l’élément courant', async ({ page, store, data }) => {
+  for (let i = 1; i <= 30; i++) store.createTask(data.beta.id, `Tâche ${i}`);
+  await page.setViewportSize({ width: 1000, height: 500 });
+  await reload(page);
+  // Position de l'élément à `offset` du courant : visible entièrement à l'écran ?
+  const visible = (offset: number) =>
+    page.evaluate((offset) => {
+      const items = [...document.querySelectorAll<HTMLElement>('[data-nav]')].filter((el) => el.offsetParent !== null);
+      const i = items.indexOf(document.activeElement as HTMLElement);
+      const r = items[Math.min(Math.max(i + offset, 0), items.length - 1)].getBoundingClientRect();
+      return r.top >= 0 && r.bottom <= window.innerHeight;
+    }, offset);
+  for (let i = 0; i < 25; i++) {
+    await page.keyboard.press('j');
+    expect(await visible(5)).toBe(true);
+  }
+  // La page a bien défilé avant le bas de l'écran.
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  for (let i = 0; i < 15; i++) {
+    await page.keyboard.press('k');
+    expect(await visible(-5)).toBe(true);
+  }
+  // Les 3 blocs de l'en-tête (barre, onglets, filtres) comptent dans la marge :
+  // ils réapparaissent un par un, haut de page atteint au premier.
+  const state = () =>
+    page.evaluate(() => {
+      const visible = (el: Element) => el.getBoundingClientRect().top >= 0;
+      const header = [...document.querySelectorAll('[data-nav-header]')];
+      const items = [...document.querySelectorAll('[data-nav]')];
+      const index = items.indexOf(document.activeElement as Element);
+      const j = index + header.length - 5;
+      return { index, headers: header.length, top: window.scrollY, ok: j <= 0 ? window.scrollY === 0 : window.scrollY > 0 && visible([...header, ...items][j]) };
+    });
+  const seen = new Set<number>();
+  for (let s = await state(); s.index > 0; s = await state()) {
+    expect(s.headers).toBe(3);
+    expect(s.ok).toBe(true);
+    seen.add(s.top);
+    await page.keyboard.press('k');
+  }
+  // Remontée progressive : plusieurs positions distinctes près du haut, pas un saut.
+  expect(seen.size).toBeGreaterThan(3);
+});
+
+test('clic sur une tâche : pas de défilement anticipé', async ({ page, store, data }) => {
+  for (let i = 1; i <= 30; i++) store.createTask(data.beta.id, `Tâche ${i}`);
+  await page.setViewportSize({ width: 1000, height: 500 });
+  await reload(page);
+  // Dernière tâche entièrement visible en bas de l'écran.
+  const last = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll<HTMLElement>('[data-nav-key^="task:"]')];
+    return rows.filter((el) => el.getBoundingClientRect().bottom <= window.innerHeight).at(-1)!.textContent;
+  });
+  await page.getByText(last!, { exact: true }).click();
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+});

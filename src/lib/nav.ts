@@ -14,12 +14,28 @@ export function navItems(): HTMLElement[] {
   return [...document.querySelectorAll<HTMLElement>('[data-nav]')].filter((el) => el.offsetParent !== null);
 }
 
-function focusItem(el: HTMLElement | undefined) {
+// Navigation au clavier : éléments gardés visibles avant et après l'élément
+// courant (comme le scrolloff de vim), pour voir ce qui vient.
+const MARGIN = 5;
+
+function focusItem(el: HTMLElement | undefined, { margin = false } = {}) {
   if (!el) return;
   el.focus({ preventScroll: true });
+  const items = navItems();
+  const i = items.indexOf(el);
   // Premier élément : haut de page, pour garder l'en-tête (titre, filtres) visible.
-  if (el === navItems()[0]) window.scrollTo({ top: 0 });
-  else el.scrollIntoView({ block: 'nearest' });
+  if (i === 0) return window.scrollTo({ top: 0 });
+  if (margin) {
+    items[Math.min(i + MARGIN, items.length - 1)].scrollIntoView({ block: 'nearest' });
+    // Les blocs de l'en-tête (barre, onglets, filtres) comptent comme des
+    // éléments avant le premier : il réapparaît bloc par bloc, sans saut.
+    const header = [...document.querySelectorAll<HTMLElement>('[data-nav-header]')].filter((h) => h.offsetParent !== null);
+    const j = i + header.length - MARGIN;
+    if (j <= 0) window.scrollTo({ top: 0 });
+    else [...header, ...items][j].scrollIntoView({ block: 'nearest' });
+  }
+  // En dernier : l'élément courant reste visible même sur un petit écran.
+  el.scrollIntoView({ block: 'nearest' });
 }
 
 // false si l'élément n'est pas affiché (ex. tâche dont la création est annulée).
@@ -45,7 +61,7 @@ export function move(delta: number) {
   else if (i === -1) next = delta > 0 ? 0 : items.length - 1;
   else next = Math.min(Math.max(i + delta, 0), items.length - 1);
   byNav = true;
-  focusItem(items[next]);
+  focusItem(items[next], { margin: true });
   byNav = false;
 }
 
@@ -90,7 +106,7 @@ function moveProject(delta: -1 | 1) {
   const heads = navItems().filter((item) => item.dataset.navKey?.startsWith('project:'));
   const here = document.activeElement?.closest('.project')?.querySelector<HTMLElement>('[data-nav-key^="project:"]');
   const i = here ? heads.indexOf(here) : delta > 0 ? -1 : heads.length;
-  focusItem(heads[Math.min(Math.max(i + delta, 0), heads.length - 1)]);
+  focusItem(heads[Math.min(Math.max(i + delta, 0), heads.length - 1)], { margin: true });
 }
 
 export function handleNavKey(e: KeyboardEvent) {
