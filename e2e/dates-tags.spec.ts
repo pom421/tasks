@@ -71,13 +71,13 @@ test('fiche : date prévue, échéance et tags (e), étiquettes sur la 2e ligne,
   expect(taskRow(store, data.une.id)).toEqual({ day_at: null, due_at: null, tags: '[]' });
 });
 
-test('étiquettes : date prévue sauf aujourd’hui ; échéance dépassée en rouge, alignée d’une ligne à l’autre ; Log sur une ligne', async ({ page, store, data }) => {
+test('étiquettes : date prévue (aujourd’hui compris) ; échéance dépassée en rouge, alignée d’une ligne à l’autre ; Log sur une ligne', async ({ page, store, data }) => {
   store.updateTask(data.une.id, { dayAt: TODAY, dueAt: '2026-09-24' });
   store.updateTask(data.deux.id, { dayAt: '2026-09-23' });
   store.updateTask(data.trois.id, { dueAt: '2026-09-26', doneAt: TODAY, tags: ['client'] });
   await open(page);
   const une = row(page, 'Une');
-  await expect(une.locator('.planned-date')).toHaveCount(0);
+  await expect(une.locator('.planned-date')).toHaveText(/25\/09$/); // ☀ = date prévue aujourd'hui
   await expect(une.getByRole('button', { name: 'Pour aujourd’hui' })).toHaveAttribute('aria-pressed', 'true');
   await expect(une.locator('.due-date')).toHaveClass(/late/);
   await expect(une.locator('.due-date')).toHaveText(/24\/09$/); // jj/mm, même tout près

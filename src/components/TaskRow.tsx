@@ -110,7 +110,7 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
   // Ligne 2 (tags à gauche ; dates et temps passé à droite), seulement si elle a quelque chose à montrer.
   // Tâche faite (Log) : une seule ligne, tags et temps passé au bout du titre.
   const secondLine =
-    !done && (task.tags.length > 0 || Boolean(task.due_at) || Boolean(task.day_at && task.day_at !== localToday()) || timer.running || timer.seconds > 0);
+    !done && (task.tags.length > 0 || Boolean(task.due_at) || Boolean(task.day_at) || timer.running || timer.seconds > 0);
 
   // Le focus quitte la ligne : la demande de suppression est abandonnée.
   const onBlur = (e: FocusEvent<HTMLLIElement>) => {
@@ -181,15 +181,16 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
             <NotebookText aria-hidden />
           </Button>
         )}
-        {/* Chrono : visible au survol, toujours visible en marche (icône pause pleine). */}
+        {!done && !confirmDelete && <PlanButton plan={plan} hidden />}
+        {!confirmDelete && <PriorityButton priority={task.priority} onClick={priority.cycle} hidden />}
+        {/* Chrono, tout à droite (▷ au-dessus du temps passé de la 2e ligne) : visible
+            au survol, toujours visible en marche (icône pause pleine). */}
         {!done && !confirmDelete && (
           <TimerButtons
             timer={timer}
             className={timer.running ? undefined : 'invisible group-hover:visible group-focus-within:visible'}
           />
         )}
-        {!done && !confirmDelete && <PlanButton plan={plan} hidden />}
-        {!confirmDelete && <PriorityButton priority={task.priority} onClick={priority.cycle} hidden />}
         {confirmDelete ? (
           <span className="confirm-delete flex-none text-xs text-destructive" role="alert">
             x pour supprimer · Échap pour annuler

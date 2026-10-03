@@ -253,15 +253,15 @@ test('ligne de tâche : icônes alignées à droite, clic n’importe où sur la
   const une = page.locator('#projects li.task').first();
   const box = async (sel: string) => (await une.locator(sel).boundingBox())!;
   const rowBox = (await une.boundingBox())!;
-  // Icônes (report, détails, chrono, ☀ Aujourd’hui, puis priorité) collées au bord droit de la ligne.
+  // Icônes (report, détails, ☀ Aujourd’hui, priorité, puis chrono) collées au bord droit de la ligne.
   const details = await box('.details');
   const timer = await box('.timer');
   const sun = await box('.day-toggle');
   const priority = await box('button.priority');
-  expect(rowBox.x + rowBox.width - (priority.x + priority.width)).toBeLessThan(10);
+  expect(rowBox.x + rowBox.width - (timer.x + timer.width)).toBeLessThan(10);
+  expect(timer.x - (priority.x + priority.width)).toBeLessThan(10);
   expect(priority.x - (sun.x + sun.width)).toBeLessThan(10);
-  expect(sun.x - (timer.x + timer.width)).toBeLessThan(10);
-  expect(timer.x - (details.x + details.width)).toBeLessThan(10);
+  expect(sun.x - (details.x + details.width)).toBeLessThan(10);
   // Report juste avant les icônes (échéance et temps passé : sur la 2e ligne).
   const report = await box('.report');
   expect(details.x - (report.x + report.width)).toBeLessThan(10);
@@ -1268,6 +1268,11 @@ test('ligne : temps passé (sablier, « 3 min ») au bout du titre, dans les pro
   // Icônes à la même place qu'une ligne sans temps passé.
   const x = async (id: number) => (await row(page, id).locator('.timer').boundingBox())!.x;
   expect(await x(data.tasks.une.id)).toBe(await x(data.tasks.deux.id));
+  // ▷, tout à droite, au-dessus du temps passé : bords droits alignés.
+  await une.hover();
+  const play = (await une.locator('.timer-toggle').boundingBox())!;
+  const time = (await une.locator('.time-spent').boundingBox())!;
+  expect(Math.abs(play.x + play.width - (time.x + time.width))).toBeLessThan(8);
 
   // Tâche faite : le temps reste affiché dans le Log.
   await pressDown(page, 2);

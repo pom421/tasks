@@ -27,10 +27,10 @@ export function DueDate({ due }: { due: string | null }) {
   );
 }
 
-// Date prévue (hors aujourd'hui : la ☀ pleine le dit déjà) : « 30/12 », texte
+// Date prévue (aussi celle d'Aujourd’hui, posée par t ou ☀) : « 30/12 », texte
 // atténué, sans fond, date complète en info-bulle.
 export function PlannedDate({ day }: { day: string | null }) {
-  if (!day || day === localToday()) return null;
+  if (!day) return null;
   const label = `Prévue le ${formatDay(day)}`;
   return (
     <span className="planned-date flex flex-none items-center gap-0.5 text-[11px] whitespace-nowrap text-muted-foreground [&_svg]:size-3" title={label}>
