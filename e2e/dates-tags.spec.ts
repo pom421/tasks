@@ -77,6 +77,7 @@ test('étiquettes : pas de date prévue sur la ligne ; échéance dépassée en 
   await expect(une.getByRole('button', { name: 'Pour aujourd’hui' })).toHaveAttribute('aria-pressed', 'true');
   await expect(une.locator('.due-date')).toHaveClass(/late/);
   await expect(une.locator('.due-date')).toHaveAttribute('title', 'Échéance dépassée : jeudi 24 septembre 2026');
+  await expect(une.locator('.due-date')).toHaveText('échéance dépassée24/09'); // jj/mm, même tout près
   await expect(row(page, 'Deux').locator('.planned-date')).toHaveCount(0);
   await expect(une.locator('.due-date svg')).toHaveClass(/lucide-alarm-clock/);
   // Même largeur et même place, avec ou sans échéance, avec ou sans temps passé.

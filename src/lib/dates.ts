@@ -19,24 +19,5 @@ export function formatDay(iso: string): string {
 // On attend une année à 4 chiffres avant d'agir.
 export const isComplete = (value: string) => value === '' || Number(value.slice(0, 4)) >= 1000;
 
-// Jour décalé de n jours ('YYYY-MM-DD').
-export function addDays(iso: string, n: number): string {
-  const d = new Date(`${iso}T00:00:00`);
-  d.setDate(d.getDate() + n);
-  const pad = (x: number) => String(x).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
-// Format court et relatif : « auj. », « demain », « hier », « lun. 29 » dans la
-// semaine autour d'aujourd'hui, sinon « 12/10 » (sans l'année).
-export function shortDay(iso: string, today = localToday()): string {
-  if (iso === today) return 'auj.';
-  if (iso === addDays(today, 1)) return 'demain';
-  if (iso === addDays(today, -1)) return 'hier';
-  const d = new Date(`${iso}T00:00:00`);
-  if (iso > addDays(today, -7) && iso < addDays(today, 7)) {
-    return `${d.toLocaleDateString('fr-FR', { weekday: 'short' })} ${d.getDate()}`;
-  }
-  // Plus loin : jj/mm, sans l'année (date complète en info-bulle), largeur fixe.
-  return `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
-}
+// Format court : « 30/12 » (jour/mois, sans l'année ; date complète en info-bulle).
+export const shortDay = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;

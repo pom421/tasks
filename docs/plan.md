@@ -41,6 +41,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
+- [x] Dates de la ligne toujours en jj/mm (« 30/12 », plus de « demain » ni « lun. 6 »), étiquette plus étroite
 - [x] Échéance au-delà de la semaine en jj/mm (sans l'année, date complète au survol) ; rouge « dépassée » plus visible en thème sombre
 - [x] Ligne : date prévue retirée (fiche seulement) ; échéance de largeur fixe, juste avant le temps passé et les icônes, places gardées même vides (alignées d'une ligne à l'autre)
 - [x] Ligne : temps passé de nouveau affiché (sablier, « 3 min ») au bout du titre, projets et Log, comme dans la fiche
