@@ -8,7 +8,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-- [~] Ligne de tâche moins dense, sur deux lignes (Projets, Aujourd’hui, Suivant) : titre, ticket et icônes en haut ; tags à gauche, date prévue, échéance et temps passé à droite en dessous ; 2e ligne masquée si vide. Log : une seule ligne, comme avant
+- [~] Ligne de tâche moins dense, sur deux lignes (Projets, Aujourd’hui, Suivant) : titre, ticket et icônes en haut ; tags à gauche, date prévue, échéance et temps passé à droite en dessous ; 2e ligne toujours là (chrono ▷ au bout). ☀ et priorité tout à droite de la 1re ligne, 🗒 juste après le titre. Log : une seule ligne, comme avant
 - [~] Ticket d'un projet en pastille rose (bleu réservé aux tâches reportées) ; fiche : ticket cliquable en lecture, comme dans la ligne
 
 ## Décisions attendues

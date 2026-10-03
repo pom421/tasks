@@ -67,7 +67,7 @@ test('fiche : date prévue, échéance et tags (e), étiquettes sur la 2e ligne,
 
   // Annulable d'un coup (modification de la fiche).
   await page.keyboard.press('u');
-  await expect(une.locator('.details-line')).toHaveCount(0); // plus rien à montrer : une seule ligne
+  await expect(une.locator('.details-line .tags, .details-line .planned-date, .details-line .due-date')).toHaveCount(0);
   expect(taskRow(store, data.une.id)).toEqual({ day_at: null, due_at: null, tags: '[]' });
 });
 
@@ -257,7 +257,7 @@ test('icônes toujours à la même place : étiquettes (tags, dates, report) ava
   store.updateTask(data.trois.id, { priority: 2 });
   await open(page);
   const x = async (title: string, selector: string) => (await row(page, title).locator(selector).boundingBox())!.x;
-  for (const selector of ['.details', '.timer-toggle', '.timer-reset', '.day-toggle']) {
+  for (const selector of ['.timer-toggle', '.timer-reset', '.day-toggle', 'button.priority']) {
     const xs = await Promise.all(['Une', 'Deux', 'Trois'].map((t) => x(t, selector)));
     expect(new Set(xs.map(Math.round)).size, selector).toBe(1);
   }
@@ -266,4 +266,15 @@ test('icônes toujours à la même place : étiquettes (tags, dates, report) ava
   // Icône 🗒 : visible seulement s'il y a du contenu.
   await expect(row(page, 'Une').getByRole('button', { name: 'Voir les détails' })).toBeVisible();
   await expect(row(page, 'Deux').getByRole('button', { name: 'Voir les détails' })).toHaveCount(0);
+  // 🗒 juste après le titre, visible même quand le titre est coupé.
+  const name = (await row(page, 'Une').locator('.name').boundingBox())!;
+  expect((await x('Une', '.details')) - (name.x + name.width)).toBeLessThan(10);
+  store.updateTask(data.une.id, { title: 'Un titre très long '.repeat(12) });
+  await page.reload();
+  const long = page.locator('#projects li.task').first();
+  await expect(long.locator('.details')).toBeInViewport();
+  const nameBox = (await long.locator('.name').boundingBox())!;
+  const details = (await long.locator('.details').boundingBox())!;
+  expect(details.x).toBeGreaterThanOrEqual(nameBox.x + nameBox.width - 1);
+  expect(details.x + details.width).toBeLessThanOrEqual((await long.locator('.day-toggle').boundingBox())!.x);
 });

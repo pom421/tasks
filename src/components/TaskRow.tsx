@@ -107,11 +107,6 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
     }
   };
 
-  // Ligne 2 (tags à gauche ; dates et temps passé à droite), seulement si elle a quelque chose à montrer.
-  // Tâche faite (Log) : une seule ligne, tags et temps passé au bout du titre.
-  const secondLine =
-    !done && (task.tags.length > 0 || Boolean(task.due_at) || Boolean(task.day_at) || timer.running || timer.seconds > 0);
-
   // Le focus quitte la ligne : la demande de suppression est abandonnée.
   const onBlur = (e: FocusEvent<HTMLLIElement>) => {
     if (!e.currentTarget.contains(e.relatedTarget)) setConfirmDelete(false);
@@ -128,7 +123,14 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
     >
       <div className="flex min-w-0 items-center gap-2">
         <Checkbox checked={done} onCheckedChange={toggleDone} title={done ? 'Remettre à faire' : 'Marquer comme faite'} />
-        <span className="title flex min-w-0 flex-1 items-center gap-1.5">
+        {/* Clic sur la place libre après le titre : le titre passe en édition
+            (et donne le curseur clavier à la tâche). */}
+        <span
+          className="title flex min-w-0 flex-1 cursor-text items-center gap-1.5 self-stretch"
+          onClick={(e) => {
+            if (!(e.target as Element).closest('button, a, input, .name')) e.currentTarget.querySelector<HTMLElement>('.name')?.click();
+          }}
+        >
           <EditableName
             value={task.title}
             display={splitMatches(task.title, highlight).map((part, i) =>
@@ -141,12 +143,25 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
               ),
             )}
             navKey={navKey}
-            // Toute la largeur jusqu'aux icônes : un clic n'importe où sur la ligne
-            // passe le titre en édition (et donne le curseur clavier à la tâche).
-            className={cn('flex-1', done && 'text-muted-foreground line-through')}
+            className={cn(done && 'text-muted-foreground line-through')}
             truncate
             onSave={rename}
           />
+          {/* Contenu : juste après le titre, toujours visible même si le titre est coupé. */}
+          {hasDetails(task) && (
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              tabIndex={-1}
+              className="details flex-none text-muted-foreground"
+              title="Voir le contenu (o ou Maj+Entrée)"
+              aria-label="Voir les détails"
+              onClick={() => openTask(task, 'notes')}
+            >
+              <NotebookText aria-hidden />
+            </Button>
+          )}
+          <span className="flex-1" />
           {report.asking ? (
             <TicketInput
               onSave={report.save}
@@ -165,32 +180,9 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
             </>
           )}
         </span>
-        {/* Icônes : emplacements fixes, toujours à la même place d'une ligne à
-            l'autre (une icône sans objet garde sa place, invisible). */}
-        {!confirmDelete && (
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            tabIndex={-1}
-            className={cn('details flex-none text-muted-foreground', !hasDetails(task) && 'invisible')}
-            title="Voir le contenu (o ou Maj+Entrée)"
-            aria-label="Voir les détails"
-            aria-hidden={!hasDetails(task) || undefined}
-            onClick={() => openTask(task, 'notes')}
-          >
-            <NotebookText aria-hidden />
-          </Button>
-        )}
+        {/* Icônes colorées quand actives (☀, priorité) : tout à droite, à place fixe. */}
         {!done && !confirmDelete && <PlanButton plan={plan} hidden />}
         {!confirmDelete && <PriorityButton priority={task.priority} onClick={priority.cycle} hidden />}
-        {/* Chrono, tout à droite (▷ au-dessus du temps passé de la 2e ligne) : visible
-            au survol, toujours visible en marche (icône pause pleine). */}
-        {!done && !confirmDelete && (
-          <TimerButtons
-            timer={timer}
-            className={timer.running ? undefined : 'invisible group-hover:visible group-focus-within:visible'}
-          />
-        )}
         {confirmDelete ? (
           <span className="confirm-delete flex-none text-xs text-destructive" role="alert">
             x pour supprimer · Échap pour annuler
@@ -217,11 +209,13 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
           )
         )}
       </div>
-      {/* Ligne 2, sous le titre (décalée de la case) : tags, puis à droite date
-          prévue, échéance et temps passé. Échéance et temps : emplacements
-          de largeur fixe, gardés vides, alignés d'une ligne à l'autre. */}
-      {secondLine && (
-        <div className="details-line flex min-w-0 items-center gap-2 pl-6 leading-[18px]">
+      {/* Ligne 2 d'une tâche à faire (toujours là : ▷ à place fixe), sous le titre
+          (décalée de la case) : tags, puis à droite date prévue, échéance, temps
+          passé et chrono. Échéance et temps : emplacements de largeur fixe, gardés
+          vides, alignés d'une ligne à l'autre. Tâche faite (Log) : une seule ligne,
+          tags et temps passé au bout du titre. */}
+      {!done && (
+        <div className="details-line flex h-5 min-w-0 items-center gap-2 pl-6">
           <TaskTags tags={task.tags} />
           <span className="ml-auto flex flex-none items-center gap-2">
             <PlannedDate day={task.day_at} />
@@ -229,6 +223,13 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
             <span className="flex w-[3.75rem] flex-none justify-end">
               <TimeSpent timer={timer} className="text-[11px] [&_svg]:size-3" />
             </span>
+            {/* Chrono : visible au survol, toujours visible en marche (icône pause pleine). */}
+            {!confirmDelete && (
+              <TimerButtons
+                timer={timer}
+                className={cn('-my-0.5', !timer.running && 'invisible group-hover:visible group-focus-within:visible')}
+              />
+            )}
           </span>
         </div>
       )}
