@@ -15,7 +15,7 @@ import { focusByKey, moveDirection } from '@/lib/nav';
 import { TimeSpent, TimerButtons, useTimer } from './Timer';
 import { PlanButton, usePlan } from './Plan';
 import { PriorityButton, usePriority } from './Priority';
-import { DoneDate, DueDate, PlannedDate, TaskTags } from './TaskDates';
+import { DueDate, PlannedDate, TaskTags } from './TaskDates';
 
 // Ligne de tâche, à faire (liste des projets) ou faite (journal).
 // Clavier, où que soit le focus dans la ligne (hors champ de saisie) :
@@ -108,8 +108,9 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
   };
 
   // Ligne 2 (tags à gauche ; dates et temps passé à droite), seulement si elle a quelque chose à montrer.
+  // Tâche faite (Log) : une seule ligne, tags et temps passé au bout du titre.
   const secondLine =
-    done || task.tags.length > 0 || Boolean(task.due_at) || Boolean(task.day_at && task.day_at !== localToday()) || timer.running || timer.seconds > 0;
+    !done && (task.tags.length > 0 || Boolean(task.due_at) || Boolean(task.day_at && task.day_at !== localToday()) || timer.running || timer.seconds > 0);
 
   // Le focus quitte la ligne : la demande de suppression est abandonnée.
   const onBlur = (e: FocusEvent<HTMLLIElement>) => {
@@ -156,6 +157,12 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
             />
           ) : (
             <ReportBadge task={task} />
+          )}
+          {done && (
+            <>
+              <TaskTags tags={task.tags} className="max-w-[35%] flex-none" />
+              <TimeSpent timer={timer} className="text-[11px] [&_svg]:size-3" />
+            </>
           )}
         </span>
         {/* Icônes : emplacements fixes, toujours à la même place d'une ligne à
@@ -210,14 +217,14 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
         )}
       </div>
       {/* Ligne 2, sous le titre (décalée de la case) : tags, puis à droite date
-          prévue ou de fin, échéance et temps passé. Échéance et temps : emplacements
+          prévue, échéance et temps passé. Échéance et temps : emplacements
           de largeur fixe, gardés vides, alignés d'une ligne à l'autre. */}
       {secondLine && (
         <div className="details-line flex min-w-0 items-center gap-2 pl-6 leading-[18px]">
           <TaskTags tags={task.tags} />
           <span className="ml-auto flex flex-none items-center gap-2">
-            {done ? <DoneDate day={task.done_at} /> : <PlannedDate day={task.day_at} />}
-            {!done && <DueDate due={task.due_at} />}
+            <PlannedDate day={task.day_at} />
+            <DueDate due={task.due_at} />
             <span className="flex w-[3.75rem] flex-none justify-end">
               <TimeSpent timer={timer} className="text-[11px] [&_svg]:size-3" />
             </span>

@@ -71,10 +71,10 @@ test('fiche : date prévue, échéance et tags (e), étiquettes sur la 2e ligne,
   expect(taskRow(store, data.une.id)).toEqual({ day_at: null, due_at: null, tags: '[]' });
 });
 
-test('étiquettes : date prévue sauf aujourd’hui ; échéance dépassée en rouge, alignée d’une ligne à l’autre ; date de fin sur une tâche faite', async ({ page, store, data }) => {
+test('étiquettes : date prévue sauf aujourd’hui ; échéance dépassée en rouge, alignée d’une ligne à l’autre ; Log sur une ligne', async ({ page, store, data }) => {
   store.updateTask(data.une.id, { dayAt: TODAY, dueAt: '2026-09-24' });
   store.updateTask(data.deux.id, { dayAt: '2026-09-23' });
-  store.updateTask(data.trois.id, { dueAt: '2026-09-26', doneAt: TODAY });
+  store.updateTask(data.trois.id, { dueAt: '2026-09-26', doneAt: TODAY, tags: ['client'] });
   await open(page);
   const une = row(page, 'Une');
   await expect(une.locator('.planned-date')).toHaveCount(0);
@@ -108,8 +108,8 @@ test('étiquettes : date prévue sauf aujourd’hui ; échéance dépassée en r
   await page.keyboard.press('L');
   const trois = page.locator('#journal li.task', { hasText: 'Trois' });
   await expect(trois.locator('.due-date')).toHaveCount(0);
-  await expect(trois.locator('.done-date')).toHaveText(/25\/09$/);
-  await expect(trois.locator('.done-date')).toHaveAttribute('title', 'Faite le vendredi 25 septembre 2026');
+  await expect(trois.locator('.details-line')).toHaveCount(0); // date : celle du cadre
+  await expect(trois.locator('.title')).toHaveText('Trois#client'); // tags au bout du titre
 });
 
 test('Aujourd’hui : ☀ sur une tâche en retard la ramène au jour', async ({ page, store, data }) => {

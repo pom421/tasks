@@ -1,5 +1,4 @@
-import type { ReactNode } from 'react';
-import { AlarmClock, CalendarCheck, CalendarDays } from 'lucide-react';
+import { AlarmClock, CalendarDays } from 'lucide-react';
 import { formatDay, localToday, shortDay } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 
@@ -28,21 +27,14 @@ export function DueDate({ due }: { due: string | null }) {
   );
 }
 
-// Date prévue (hors aujourd'hui : la ☀ pleine le dit déjà) et date de fin
-// d'une tâche faite : « 30/12 », texte atténué, sans fond, date complète en info-bulle.
+// Date prévue (hors aujourd'hui : la ☀ pleine le dit déjà) : « 30/12 », texte
+// atténué, sans fond, date complète en info-bulle.
 export function PlannedDate({ day }: { day: string | null }) {
   if (!day || day === localToday()) return null;
-  return <ShortDate className="planned-date" label={`Prévue le ${formatDay(day)}`} day={day} icon={<CalendarDays aria-hidden />} />;
-}
-
-export function DoneDate({ day }: { day: string }) {
-  return <ShortDate className="done-date" label={`Faite le ${formatDay(day)}`} day={day} icon={<CalendarCheck aria-hidden />} />;
-}
-
-function ShortDate({ className, label, day, icon }: { className: string; label: string; day: string; icon: ReactNode }) {
+  const label = `Prévue le ${formatDay(day)}`;
   return (
-    <span className={cn(className, 'flex flex-none items-center gap-0.5 text-[11px] whitespace-nowrap text-muted-foreground [&_svg]:size-3')} title={label}>
-      {icon}
+    <span className="planned-date flex flex-none items-center gap-0.5 text-[11px] whitespace-nowrap text-muted-foreground [&_svg]:size-3" title={label}>
+      <CalendarDays aria-hidden />
       <span className="sr-only">{label}</span>
       <span aria-hidden>{shortDay(day)}</span>
     </span>
@@ -50,10 +42,10 @@ function ShortDate({ className, label, day, icon }: { className: string; label: 
 }
 
 // Tags d'une tâche : « #client #urgent », en petit texte atténué, sans fond.
-export function TaskTags({ tags }: { tags: string[] }) {
+export function TaskTags({ tags, className }: { tags: string[]; className?: string }) {
   if (!tags.length) return null;
   return (
-    <span className="tags min-w-0 truncate text-[11px] text-muted-foreground" title={`Tags : ${tags.map((t) => `#${t}`).join(' ')}`}>
+    <span className={cn('tags min-w-0 truncate text-[11px] text-muted-foreground', className)} title={`Tags : ${tags.map((t) => `#${t}`).join(' ')}`}>
       {tags.map((t) => `#${t}`).join(' ')}
     </span>
   );
