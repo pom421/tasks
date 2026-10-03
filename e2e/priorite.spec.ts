@@ -33,14 +33,14 @@ test('clavier : 1 / 2 / 3 donnent la priorité, le même chiffre la retire, u an
   await expect(icon(page, 'Une')).toHaveAttribute('aria-label', 'Priorité 3');
   expect(store.db.prepare('SELECT priority FROM task WHERE id = ?').get(une.id)).toEqual({ priority: 3 });
 
-  // À droite, visible sans survol quand elle est donnée ; sinon au survol seulement.
+  // À droite, juste avant le chrono, visible sans survol quand elle est donnée ; sinon au survol seulement.
   await page.mouse.move(0, 0);
   await page.locator('#new-project').focus();
   await expect(icon(page, 'Une')).toBeVisible();
   await expect(icon(page, 'Deux')).toBeHidden();
-  const rowBox = (await row(page, 'Une').boundingBox())!;
   const box = (await icon(page, 'Une').boundingBox())!;
-  expect(rowBox.x + rowBox.width - (box.x + box.width)).toBeLessThan(10);
+  const timer = (await row(page, 'Une').locator('.timer').boundingBox())!;
+  expect(timer.x - (box.x + box.width)).toBeLessThan(10);
   await expect(row(page, 'Une').locator('.name')).toHaveText('Une');
 });
 
