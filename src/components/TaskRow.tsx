@@ -15,7 +15,7 @@ import { focusByKey, moveDirection } from '@/lib/nav';
 import { TimeSpent, TimerButtons, useTimer } from './Timer';
 import { PlanButton, usePlan } from './Plan';
 import { PriorityButton, usePriority } from './Priority';
-import { DueDate, TaskTags } from './TaskDates';
+import { DueDate, PlannedDate, TaskTags } from './TaskDates';
 
 // Ligne de tâche, à faire (liste des projets) ou faite (journal).
 // Clavier, où que soit le focus dans la ligne (hors champ de saisie) :
@@ -115,100 +115,123 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
   return (
     <li
       className={cn(
-        'task group flex min-w-0 items-center gap-2 rounded px-1 py-0.5 text-sm hover:bg-accent has-[.name:focus]:bg-accent has-[.name:focus]:shadow-[inset_3px_0_var(--color-primary)]',
+        'task group flex min-w-0 flex-col rounded px-1 py-0.5 text-sm hover:bg-accent has-[.name:focus]:bg-accent has-[.name:focus]:shadow-[inset_3px_0_var(--color-primary)]',
         confirmDelete && 'bg-destructive/10 has-[.name:focus]:bg-destructive/10 has-[.name:focus]:shadow-[inset_3px_0_var(--color-destructive)]',
       )}
       onKeyDown={onKeyDown}
       onBlur={onBlur}
     >
-      <Checkbox checked={done} onCheckedChange={toggleDone} title={done ? 'Remettre à faire' : 'Marquer comme faite'} />
-      <span className="title flex min-w-0 flex-1 items-center gap-1.5">
-        <EditableName
-          value={task.title}
-          display={splitMatches(task.title, highlight).map((part, i) =>
-            part.match ? (
-              <mark key={i} className="search-match bg-transparent text-foreground underline decoration-search-mark decoration-[3px] underline-offset-2 [text-decoration-skip-ink:none]">
-                {part.text}
-              </mark>
-            ) : (
-              part.text
-            ),
-          )}
-          navKey={navKey}
-          // Toute la largeur jusqu'aux icônes : un clic n'importe où sur la ligne
-          // passe le titre en édition (et donne le curseur clavier à la tâche).
-          className={cn('flex-1', done && 'text-muted-foreground line-through')}
-          truncate
-          onSave={rename}
-        />
-        <TaskTags tags={task.tags} />
-        {report.asking ? (
-          <TicketInput
-            onSave={report.save}
-            onClose={(saved) => {
-              focusByKey(navKey);
-              report.stopAsking(saved);
-            }}
-          />
-        ) : (
-          <ReportBadge task={task} />
-        )}
-        {/* Échéance puis temps passé, juste avant les icônes : emplacements de
-            largeur fixe, gardés vides, pour qu'ils s'alignent d'une ligne à l'autre. */}
-        {!done && <DueDate due={task.due_at} />}
-        <span className="flex w-[3.75rem] flex-none justify-end">
-          <TimeSpent timer={timer} className="text-xs [&_svg]:size-3" />
-        </span>
-      </span>
-      {/* Icônes : emplacements fixes, toujours à la même place d'une ligne à
-          l'autre (une icône sans objet garde sa place, invisible). */}
-      {!confirmDelete && (
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          tabIndex={-1}
-          className={cn('details flex-none text-muted-foreground', !hasDetails(task) && 'invisible')}
-          title="Voir le contenu (o ou Maj+Entrée)"
-          aria-label="Voir les détails"
-          aria-hidden={!hasDetails(task) || undefined}
-          onClick={() => openTask(task, 'notes')}
+      <div className="flex min-w-0 items-center gap-2">
+        <Checkbox checked={done} onCheckedChange={toggleDone} title={done ? 'Remettre à faire' : 'Marquer comme faite'} />
+        {/* Clic sur la place libre après le titre : le titre passe en édition
+            (et donne le curseur clavier à la tâche). */}
+        <span
+          className="title flex min-w-0 flex-1 cursor-text items-center gap-1.5 self-stretch"
+          onClick={(e) => {
+            if (!(e.target as Element).closest('button, a, input, .name')) e.currentTarget.querySelector<HTMLElement>('.name')?.click();
+          }}
         >
-          <NotebookText aria-hidden />
-        </Button>
-      )}
-      {/* Chrono : visible au survol, toujours visible en marche (icône pause pleine). */}
-      {!done && !confirmDelete && (
-        <TimerButtons
-          timer={timer}
-          className={timer.running ? undefined : 'invisible group-hover:visible group-focus-within:visible'}
-        />
-      )}
-      {!done && !confirmDelete && <PlanButton plan={plan} hidden />}
-      {!confirmDelete && <PriorityButton priority={task.priority} onClick={priority.cycle} hidden />}
-      {confirmDelete ? (
-        <span className="confirm-delete flex-none text-xs text-destructive" role="alert">
-          x pour supprimer · Échap pour annuler
+          <EditableName
+            value={task.title}
+            display={splitMatches(task.title, highlight).map((part, i) =>
+              part.match ? (
+                <mark key={i} className="search-match bg-transparent text-foreground underline decoration-search-mark decoration-[3px] underline-offset-2 [text-decoration-skip-ink:none]">
+                  {part.text}
+                </mark>
+              ) : (
+                part.text
+              ),
+            )}
+            navKey={navKey}
+            className={cn(done && 'text-muted-foreground line-through')}
+            truncate
+            onSave={rename}
+          />
+          {/* Contenu : juste après le titre, toujours visible même si le titre est coupé. */}
+          {hasDetails(task) && (
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              tabIndex={-1}
+              className="details flex-none text-muted-foreground"
+              title="Voir le contenu (o ou Maj+Entrée)"
+              aria-label="Voir les détails"
+              onClick={() => openTask(task, 'notes')}
+            >
+              <NotebookText aria-hidden />
+            </Button>
+          )}
+          <span className="flex-1" />
+          {report.asking ? (
+            <TicketInput
+              onSave={report.save}
+              onClose={(saved) => {
+                focusByKey(navKey);
+                report.stopAsking(saved);
+              }}
+            />
+          ) : (
+            <ReportBadge task={task} />
+          )}
+          {done && (
+            <>
+              <TaskTags tags={task.tags} className="max-w-[35%] flex-none" />
+              <TimeSpent timer={timer} className="text-[11px] [&_svg]:size-3" />
+            </>
+          )}
         </span>
-      ) : (
-        done && (
-          <span className="actions invisible flex flex-none gap-0.5 group-hover:visible group-focus-within:visible">
-            {editingDate ? (
-              <input
-                type="date"
-                className="text-xs"
-                defaultValue={task.done_at}
-                autoFocus
-                onChange={(e) => e.target.value && change('date changée', { done_at: e.target.value }, { done_at: task.done_at })}
-                onKeyDown={(e) => e.key === 'Escape' && setEditingDate(false)}
-                onBlur={() => setEditingDate(false)}
+        {/* Icônes colorées quand actives (☀, priorité) : tout à droite, à place fixe. */}
+        {!done && !confirmDelete && <PlanButton plan={plan} hidden />}
+        {!confirmDelete && <PriorityButton priority={task.priority} onClick={priority.cycle} hidden />}
+        {confirmDelete ? (
+          <span className="confirm-delete flex-none text-xs text-destructive" role="alert">
+            x pour supprimer · Échap pour annuler
+          </span>
+        ) : (
+          done && (
+            <span className="actions invisible flex flex-none gap-0.5 group-hover:visible group-focus-within:visible">
+              {editingDate ? (
+                <input
+                  type="date"
+                  className="text-xs"
+                  defaultValue={task.done_at}
+                  autoFocus
+                  onChange={(e) => e.target.value && change('date changée', { done_at: e.target.value }, { done_at: task.done_at })}
+                  onKeyDown={(e) => e.key === 'Escape' && setEditingDate(false)}
+                  onBlur={() => setEditingDate(false)}
+                />
+              ) : (
+                <Button variant="ghost" size="xs" className="text-muted-foreground" title="Changer la date" onClick={() => setEditingDate(true)}>
+                  date
+                </Button>
+              )}
+            </span>
+          )
+        )}
+      </div>
+      {/* Ligne 2 d'une tâche à faire (toujours là : ▷ à place fixe), sous le titre
+          (décalée de la case) : tags, puis à droite date prévue, échéance, temps
+          passé et chrono. Échéance et temps : emplacements de largeur fixe, gardés
+          vides, alignés d'une ligne à l'autre. Tâche faite (Log) : une seule ligne,
+          tags et temps passé au bout du titre. */}
+      {!done && (
+        <div className="details-line flex h-5 min-w-0 items-center gap-2 pl-6">
+          <TaskTags tags={task.tags} />
+          <span className="ml-auto flex flex-none items-center gap-2">
+            <PlannedDate day={task.day_at} />
+            <DueDate due={task.due_at} />
+            <span className="flex w-[3.75rem] flex-none justify-end">
+              <TimeSpent timer={timer} className="text-[11px] [&_svg]:size-3" />
+            </span>
+            {/* Chrono : visible au survol, toujours visible en marche (icône pause pleine). */}
+            {!confirmDelete && (
+              <TimerButtons
+                timer={timer}
+                className={cn('-my-0.5', !timer.running && 'invisible group-hover:visible group-focus-within:visible')}
               />
-            ) : (
-              <Button variant="ghost" size="xs" className="text-muted-foreground" title="Changer la date" onClick={() => setEditingDate(true)}>
-                date
-              </Button>
             )}
           </span>
-        )
+        </div>
       )}
     </li>
   );

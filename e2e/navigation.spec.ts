@@ -253,18 +253,21 @@ test('ligne de tâche : icônes alignées à droite, clic n’importe où sur la
   const une = page.locator('#projects li.task').first();
   const box = async (sel: string) => (await une.locator(sel).boundingBox())!;
   const rowBox = (await une.boundingBox())!;
-  // Icônes (report, détails, chrono, ☀ Aujourd’hui, puis priorité) collées au bord droit de la ligne.
-  const details = await box('.details');
-  const timer = await box('.timer');
+  // ☀ Aujourd’hui puis priorité collées au bord droit de la 1re ligne ; report juste avant.
   const sun = await box('.day-toggle');
   const priority = await box('button.priority');
+  const report = await box('.report');
   expect(rowBox.x + rowBox.width - (priority.x + priority.width)).toBeLessThan(10);
   expect(priority.x - (sun.x + sun.width)).toBeLessThan(10);
-  expect(sun.x - (timer.x + timer.width)).toBeLessThan(10);
-  expect(timer.x - (details.x + details.width)).toBeLessThan(10);
-  // Report juste avant les emplacements fixes de l'échéance et du temps passé.
-  const report = await box('.report');
-  expect((await box('.due-slot')).x - (report.x + report.width)).toBeLessThan(10);
+  expect(sun.x - (report.x + report.width)).toBeLessThan(10);
+  // 🗒 juste après le titre.
+  const name = await box('.name');
+  expect((await box('.details')).x - (name.x + name.width)).toBeLessThan(10);
+  // Chrono (▷) au bord droit de la 2e ligne, sous la priorité.
+  await une.hover();
+  const play = await box('.timer-toggle');
+  expect(play.y).toBeGreaterThan(priority.y + priority.height - 4);
+  expect(Math.abs(play.x + play.width - (priority.x + priority.width))).toBeLessThan(4);
 
   // Clic à droite du texte, juste avant les icônes : le titre passe en édition.
   await page.mouse.click(report.x - 20, report.y + report.height / 2);
@@ -1207,7 +1210,7 @@ test('titre long : « … » sur une ligne, titre complet au survol ou au focus 
   // Une seule ligne, coupée : le badge reste visible.
   expect(await name.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
   await expect(row(page, data.tasks.une.id).locator('.report-done')).toBeInViewport();
-  expect(await row(page, data.tasks.une.id).evaluate((el) => el.getBoundingClientRect().height)).toBeLessThan(40);
+  expect(await name.evaluate((el) => el.getBoundingClientRect().height)).toBeLessThan(30);
 
   await name.hover();
   await expect(page.locator('.full-title')).toHaveText(long);
@@ -1258,7 +1261,7 @@ test('ligne épurée et fiche ordonnée : titre, ticket et sprint, dates et temp
   expect(labels).toEqual(['Ticket', 'Sprint', 'Date prévue', 'Échéance', 'Temps passé', 'Tags', 'Contenu']);
 });
 
-test('ligne : temps passé (sablier, « 3 min ») au bout du titre, dans les projets et le Log ; rien sans temps', async ({ page, store, data }) => {
+test('ligne : temps passé (sablier, « 3 min ») sur la 2e ligne (au bout du titre dans le Log) ; rien sans temps', async ({ page, store, data }) => {
   store.updateTask(data.tasks.une.id, { timeSpent: 180 });
   await reload(page);
   const une = row(page, data.tasks.une.id);
@@ -1268,6 +1271,11 @@ test('ligne : temps passé (sablier, « 3 min ») au bout du titre, dans les pro
   // Icônes à la même place qu'une ligne sans temps passé.
   const x = async (id: number) => (await row(page, id).locator('.timer').boundingBox())!.x;
   expect(await x(data.tasks.une.id)).toBe(await x(data.tasks.deux.id));
+  // Chrono juste après le temps passé, sur la même ligne.
+  const timer = (await une.locator('.timer').boundingBox())!;
+  const time = (await une.locator('.time-spent').boundingBox())!;
+  expect(timer.x - (time.x + time.width)).toBeLessThan(10);
+  expect(Math.abs(timer.y + timer.height / 2 - (time.y + time.height / 2))).toBeLessThan(3);
 
   // Tâche faite : le temps reste affiché dans le Log.
   await pressDown(page, 2);
