@@ -29,7 +29,7 @@ const open = async (page: Page, path = '/') => {
 };
 const taskRow = (store: Store, id: number) => store.db.prepare('SELECT day_at, due_at, tags FROM task WHERE id = ?').get(id);
 
-test('fiche : date prévue, échéance et tags (e), étiquettes sur la ligne, u annule', async ({ page, store, data }) => {
+test('fiche : date prévue, échéance et tags (e), étiquettes sur la 2e ligne, u annule', async ({ page, store, data }) => {
   store.updateTask(data.trois.id, { tags: ['client'] }); // tag existant, proposé
   await open(page);
   await page.locator(`[data-nav-key="task:${data.une.id}"]`).focus();
@@ -56,18 +56,22 @@ test('fiche : date prévue, échéance et tags (e), étiquettes sur la ligne, u 
   await expect(dialog).toHaveCount(0);
 
   const une = row(page, 'Une');
-  await expect(une.locator('.planned-date')).toHaveCount(0); // date prévue : dans la fiche seulement
-  await expect(une.locator('.due-date')).toHaveText(/12\/10$/);
-  await expect(une.locator('.tags')).toHaveText('#client #urgent');
+  // 2e ligne : tags à gauche ; date prévue, échéance à droite (titre seul sur la 1re).
+  await expect(une.locator('.title')).toHaveText('Une');
+  await expect(une.locator('.details-line .tags')).toHaveText('#client #urgent');
+  await expect(une.locator('.details-line .planned-date')).toHaveText(/28\/09$/);
+  await expect(une.locator('.details-line .due-date')).toHaveText(/12\/10$/);
+  const tagsBox = (await une.locator('.tags').boundingBox())!;
+  expect(tagsBox.x).toBe((await une.locator('.name').boundingBox())!.x); // sous le titre
   expect(taskRow(store, data.une.id)).toEqual({ day_at: '2026-09-28', due_at: '2026-10-12', tags: '["client","urgent"]' });
 
   // Annulable d'un coup (modification de la fiche).
   await page.keyboard.press('u');
-  await expect(une.locator('.due-date, .tags')).toHaveCount(0);
+  await expect(une.locator('.details-line')).toHaveCount(0); // plus rien à montrer : une seule ligne
   expect(taskRow(store, data.une.id)).toEqual({ day_at: null, due_at: null, tags: '[]' });
 });
 
-test('étiquettes : pas de date prévue sur la ligne ; échéance dépassée en rouge, alignée d’une ligne à l’autre ; rien sur une tâche faite', async ({ page, store, data }) => {
+test('étiquettes : date prévue sauf aujourd’hui ; échéance dépassée en rouge, alignée d’une ligne à l’autre ; date de fin sur une tâche faite', async ({ page, store, data }) => {
   store.updateTask(data.une.id, { dayAt: TODAY, dueAt: '2026-09-24' });
   store.updateTask(data.deux.id, { dayAt: '2026-09-23' });
   store.updateTask(data.trois.id, { dueAt: '2026-09-26', doneAt: TODAY });
@@ -81,7 +85,10 @@ test('étiquettes : pas de date prévue sur la ligne ; échéance dépassée en 
   await une.locator('.due-date').hover();
   await expect(page.getByRole('tooltip')).toHaveText('Échéance dépassée : jeudi 24 septembre 2026', { timeout: 1000 });
   await page.mouse.move(0, 0);
-  await expect(row(page, 'Deux').locator('.planned-date')).toHaveCount(0);
+  await expect(row(page, 'Deux').locator('.planned-date')).toHaveText(/23\/09$/);
+  await row(page, 'Deux').locator('.planned-date').hover();
+  await expect(page.getByRole('tooltip')).toHaveText('Prévue le mercredi 23 septembre 2026', { timeout: 1000 });
+  await page.mouse.move(0, 0);
   await expect(une.locator('.due-date svg')).toHaveClass(/lucide-alarm-clock/);
   // Même largeur et même place, avec ou sans échéance, avec ou sans temps passé.
   store.updateTask(data.deux.id, { dueAt: '2027-09-12', timeSpent: 600 }); // autre année : jj/mm, sans l'année
@@ -99,7 +106,10 @@ test('étiquettes : pas de date prévue sur la ligne ; échéance dépassée en 
   await page.reload();
   expect((await box('Deux', '.due-slot'))!.x).toBe(a.x);
   await page.keyboard.press('L');
-  await expect(page.locator('#journal li.task', { hasText: 'Trois' }).locator('.due-date')).toHaveCount(0);
+  const trois = page.locator('#journal li.task', { hasText: 'Trois' });
+  await expect(trois.locator('.due-date')).toHaveCount(0);
+  await expect(trois.locator('.done-date')).toHaveText(/25\/09$/);
+  await expect(trois.locator('.done-date')).toHaveAttribute('title', 'Faite le vendredi 25 septembre 2026');
 });
 
 test('Aujourd’hui : ☀ sur une tâche en retard la ramène au jour', async ({ page, store, data }) => {

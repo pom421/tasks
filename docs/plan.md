@@ -8,6 +8,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
+- [~] Ligne de tâche moins dense, sur deux lignes (toutes les vues) : titre, ticket et icônes en haut ; tags à gauche, date prévue (ou de fin), échéance et temps passé à droite en dessous ; 2e ligne masquée si vide
 - [~] Ticket d'un projet en pastille rose (bleu réservé aux tâches reportées) ; fiche : ticket cliquable en lecture, comme dans la ligne
 
 ## Décisions attendues
@@ -25,6 +26,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 - [?] Plan journée : compteur rouge seulement **au-delà** du maximum (6/5), pas à 5/5. Orange à 5/5 ?
 - [?] Jira : contenu envoyé tel quel (Markdown) dans la description, qui est en wiki Jira (`##` ne devient pas un titre). Convertir Markdown ↔ wiki ?
 - [?] Jira : créer le ticket depuis la tâche quand il n'y a pas encore d'identifiant ?
+- [?] Ligne sur deux lignes : dans le Log, la date de fin répète le titre du jour (chaque tâche faite a donc toujours une 2e ligne). La retirer du Log ?
 - [?] Priorité : trier les tâches par priorité (en plus du filtre `P`) ?
 
 ## Idées / plus tard
