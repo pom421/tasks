@@ -12,7 +12,7 @@ import { EditableName } from './Editable';
 import { ReportBadge } from './ReportBadge';
 import { TicketInput, useReport } from './Report';
 import { focusByKey, moveDirection } from '@/lib/nav';
-import { TimerButtons, useTimer } from './Timer';
+import { TimeSpent, TimerButtons, useTimer } from './Timer';
 import { PlanButton, usePlan } from './Plan';
 import { PriorityButton, usePriority } from './Priority';
 import { TaskDates, TaskTags } from './TaskDates';
@@ -154,6 +154,8 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
         ) : (
           <ReportBadge task={task} />
         )}
+        {/* Temps passé : au bout du titre, les icônes gardent leur place. */}
+        <TimeSpent timer={timer} className="text-xs [&_svg]:size-3" />
       </span>
       {/* Icônes : emplacements fixes, toujours à la même place d'une ligne à
           l'autre (une icône sans objet garde sa place, invisible). */}

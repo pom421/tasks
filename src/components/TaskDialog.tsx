@@ -1,5 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { formatDuration, type DoneTask, type JiraFields, type Task } from '../../shared/types.ts';
+import type { DoneTask, JiraFields, Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
 import type { TaskField } from '@/lib/actions';
 import { record } from '@/lib/history';
@@ -7,13 +7,12 @@ import { focusByKey } from '@/lib/nav';
 import { renderMarkdown } from '@/lib/markdown';
 import { formatDay, isComplete } from '@/lib/dates';
 import { cn } from '@/lib/utils';
-import { Hourglass } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { TimerButtons, useTimer } from './Timer';
+import { TimeSpent, TimerButtons, useTimer } from './Timer';
 import { PlanButton, usePlan } from './Plan';
 import { PriorityButton, usePriority } from './Priority';
 import { TagInput } from './TagInput';
@@ -348,15 +347,7 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
           <span className="flex items-center">
             {/* Temps passé, à gauche des icônes : aligné à droite, il s'allonge vers
                 la gauche sans déplacer les icônes. Texte normal chrono en marche. */}
-            {(timer.running || timer.seconds > 0) && (
-              <span
-                className={cn('time-spent mr-1 flex items-center gap-0.5 text-sm tabular-nums', timer.running ? 'text-foreground' : 'text-muted-foreground')}
-                title={timer.running ? 'Temps passé, chrono en marche' : 'Temps passé'}
-              >
-                <Hourglass aria-hidden className="size-3.5" />
-                {formatDuration(timer.seconds)}
-              </span>
-            )}
+            <TimeSpent timer={timer} className="mr-1 text-sm [&_svg]:size-3.5" />
             {!done && <TimerButtons timer={timer} />}
             {!done && <PlanButton plan={plan} />}
             <PriorityButton priority={task.priority} onClick={priority.cycle} />

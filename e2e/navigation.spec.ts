@@ -1257,6 +1257,24 @@ test('ligne épurée et fiche ordonnée : titre, ticket, dates, tags, contenu', 
   expect(labels).toEqual(['Ticket', 'Date prévue', 'Échéance', 'Tags', 'Contenu']);
 });
 
+test('ligne : temps passé (sablier, « 3 min ») au bout du titre, dans les projets et le Log ; rien sans temps', async ({ page, store, data }) => {
+  store.updateTask(data.tasks.une.id, { timeSpent: 180 });
+  await reload(page);
+  const une = row(page, data.tasks.une.id);
+  await expect(une.locator('.time-spent')).toHaveText('3 min');
+  await expect(une.locator('.time-spent')).toHaveClass(/text-muted-foreground/);
+  await expect(row(page, data.tasks.deux.id).locator('.time-spent')).toHaveCount(0);
+  // Icônes à la même place qu'une ligne sans temps passé.
+  const x = async (id: number) => (await row(page, id).locator('.timer').boundingBox())!.x;
+  expect(await x(data.tasks.une.id)).toBe(await x(data.tasks.deux.id));
+
+  // Tâche faite : le temps reste affiché dans le Log.
+  await pressDown(page, 2);
+  await page.keyboard.press(' ');
+  await page.keyboard.press('L');
+  await expect(page.locator(`#journal li.task:has([data-nav-key="task:${data.tasks.une.id}"]) .time-spent`)).toHaveText('3 min');
+});
+
 test('fiche : ▷ du chrono fixe quand ↻ apparaît ; libellés sans « : » ; contenu vide centré, sans italique', async ({ page }) => {
   await pressDown(page, 2);
   await page.keyboard.press('o');

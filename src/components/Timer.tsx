@@ -1,5 +1,5 @@
 import { useEffect, useState, type KeyboardEvent } from 'react';
-import { Pause, Play, RotateCcw } from 'lucide-react';
+import { Hourglass, Pause, Play, RotateCcw } from 'lucide-react';
 import { formatDuration, timeSpent, type Task, type TimerAction } from '../../shared/types.ts';
 import { api } from '@/lib/api';
 import { useActions } from '@/lib/actions';
@@ -52,6 +52,25 @@ export function useTimer(task: Task) {
 }
 
 export type TimerState = ReturnType<typeof useTimer>;
+
+// Temps passé (ligne et fiche), s'il y en a : sablier et durée, texte normal
+// chrono en marche, atténué sinon.
+export function TimeSpent({ timer, className }: { timer: TimerState; className?: string }) {
+  if (!timer.running && !timer.seconds) return null;
+  return (
+    <span
+      className={cn(
+        'time-spent flex flex-none items-center gap-0.5 tabular-nums whitespace-nowrap',
+        timer.running ? 'text-foreground' : 'text-muted-foreground',
+        className,
+      )}
+      title={timer.running ? 'Temps passé, chrono en marche' : 'Temps passé'}
+    >
+      <Hourglass aria-hidden />
+      {formatDuration(timer.seconds)}
+    </span>
+  );
+}
 
 // Icônes du chrono : remise à zéro s'il y a du temps, puis lancer / pause
 // (pleine en marche, temps passé en info-bulle).
