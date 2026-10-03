@@ -168,6 +168,7 @@ function restoredTask(body: Body): TaskRow {
     timer_started_at: timestamp(body.timer_started_at, 'Début du chrono'),
     day_at: dayAt(body.day_at),
     due_at: dayAt(body.due_at),
+    sprint: optionalText(body.sprint ?? null, 'Sprint', 100),
     tags: tags(body.tags),
     priority: priority(body.priority),
   };
@@ -320,6 +321,7 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
         title: requireText(body.title, 'Titre'),
         notes: optionalText(body.notes, 'Contenu', 100_000),
         due_at: dayAt(body.due_at),
+        sprint: optionalText(body.sprint ?? null, 'Sprint', 100),
       };
       await jira((config) => writeIssue(config, key, fields));
       send(res, 200, { ok: true });
@@ -402,6 +404,7 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
       if ('timer_started_at' in body) patch.timerStartedAt = timestamp(body.timer_started_at, 'Début du chrono');
       if ('day_at' in body) patch.dayAt = dayAt(body.day_at);
       if ('due_at' in body) patch.dueAt = dayAt(body.due_at);
+      if ('sprint' in body) patch.sprint = optionalText(body.sprint, 'Sprint', 100);
       if ('tags' in body) patch.tags = tags(body.tags);
       if ('priority' in body) patch.priority = priority(body.priority);
       const task = store.updateTask(Number(id), patch);

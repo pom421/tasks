@@ -34,6 +34,7 @@ export interface TaskPatch {
   timerStartedAt?: string | null;
   dayAt?: string | null;
   dueAt?: string | null;
+  sprint?: string | null;
   tags?: string[];
   priority?: Priority | null;
 }
@@ -296,10 +297,10 @@ export class Store {
   // reste « à reporter », un ticket ajouté reporte la tâche ; notes : détails (Markdown).
   // timer : chrono (un seul en marche à la fois ; une tâche faite l'arrête) ;
   // dayAt : date prévue (Aujourd'hui si c'est ce jour), null = aucune ;
-  // dueAt : échéance, null = aucune ; tags : liste complète (remplace l'ancienne) ;
+  // dueAt : échéance, null = aucune ; sprint : nom du sprint, null = aucun ; tags : liste complète (remplace l'ancienne) ;
   // priority : 1 à 3, null = aucune.
   updateTask(id: number, patch: TaskPatch) {
-    const { title, doneAt, bugtracker, bugtrackerKey, notes, timer, timeSpent, timerStartedAt, dayAt, dueAt, tags, priority } = patch;
+    const { title, doneAt, bugtracker, bugtrackerKey, notes, timer, timeSpent, timerStartedAt, dayAt, dueAt, sprint, tags, priority } = patch;
     const update = (set: SQLiteUpdateSetSource<typeof task>, where: SQL | undefined = undefined) =>
       this.orm.update(task).set(set).where(and(eq(task.id, id), where)).run();
     if (doneAt) update(PAUSE, RUNNING);
@@ -324,6 +325,7 @@ export class Store {
     if (notes !== undefined) set.notes = notes;
     if (dayAt !== undefined) set.day_at = dayAt;
     if (dueAt !== undefined) set.due_at = dueAt;
+    if (sprint !== undefined) set.sprint = sprint;
     if (tags !== undefined) set.tags = tags;
     if (priority !== undefined) set.priority = priority;
     if (Object.keys(set).length) update(set);

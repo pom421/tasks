@@ -42,6 +42,7 @@ export const task = sqliteTable(
     // et celles passées de tâches pas faites (en retard).
     day_at: text(),
     due_at: text(), // échéance (contrainte extérieure) : 'YYYY-MM-DD'
+    sprint: text(), // nom du sprint (Jira), NULL = aucun
     tags: text({ mode: 'json' }).$type<string[]>().notNull().default(sql`'[]'`), // tags, JSON : ["client", "urgent"]
     // Report : à reporter = bugtracker_wanted_at sans bugtracker_at, reportée = bugtracker_at
     // (toujours avec un ticket : bugtracker_key).
