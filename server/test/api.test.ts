@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { Store } from '../db.ts';
 import { createApp } from '../app.ts';
+import { fakeJira, type FakeIssue } from './fake-jira.ts';
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tasks-test-'));
 const store = new Store(path.join(dir, 'tasks.db'));
@@ -247,7 +248,7 @@ test('migration : une base v1 (sans colonne de report) est mise à niveau à l�
            PRAGMA user_version = 1;`);
   v1.close();
   const old = new Store(file);
-  assert.deepEqual(old.state().projects[0].tasks[0], { id: 1, project_id: 1, title: 'Tâche v1', bugtracker_wanted_at: null, bugtracker_at: null, bugtracker_key: null, notes: null, time_spent: 0, timer_started_at: null, day_at: null, due_at: null, tags: [], priority: null });
+  assert.deepEqual(old.state().projects[0].tasks[0], { id: 1, project_id: 1, title: 'Tâche v1', bugtracker_wanted_at: null, bugtracker_at: null, bugtracker_key: null, notes: null, time_spent: 0, timer_started_at: null, day_at: null, due_at: null, sprint: null, tags: [], priority: null });
   assert.ok(old.updateTask(1, { bugtracker: 'done', bugtrackerKey: 'PROJ-1' })?.bugtracker_at);
   old.close();
 });
@@ -409,7 +410,7 @@ test('migration 12 : colonnes et réglage du ticket renommés (bugtracker), donn
             PRAGMA user_version = 11;`);
   v11.close();
   const store11 = new Store(file);
-  assert.deepEqual(store11.migration.applied.map((m) => m.version), [12, 13, 14, 15, 16]);
+  assert.deepEqual(store11.migration.applied.map((m) => m.version), [12, 13, 14, 15, 16, 17]);
   const [done] = store11.journal({ limit: 5 }).days[0].tasks;
   assert.deepEqual(
     [done.bugtracker_wanted_at, done.bugtracker_at, done.bugtracker_key],
@@ -574,7 +575,7 @@ test('versions du schéma : base v2 → dernière version (3, 4, 5, 6…), sauve
   // Données conservées et transformées par les migrations.
   assert.deepEqual(store2.state().projects[0].tasks[0], {
     id: 1, project_id: 1, title: 'Reportée en v2', bugtracker_wanted_at: '2026-01-01 09:00:00',
-    bugtracker_at: null, bugtracker_key: null, notes: null, time_spent: 0, timer_started_at: null, day_at: null, due_at: null, tags: [], priority: null,
+    bugtracker_at: null, bugtracker_key: null, notes: null, time_spent: 0, timer_started_at: null, day_at: null, due_at: null, sprint: null, tags: [], priority: null,
   });
   store2.close();
 
@@ -735,13 +736,16 @@ test('Plan journée : une tâche prévue avant et faite ce jour compte dans ce j
   assert.equal((await call('GET', '/api/state?day=2026-05-01')).body.dayDone, 0);
 });
 
-test('échéance et tags : écriture, validation, filtre du Log, restauration', async () => {
+test('échéance, sprint et tags : écriture, validation, filtre du Log, restauration', async () => {
   const { body: p } = await call('POST', '/api/projects', { name: 'Échéances' });
   const { body: a } = await call('POST', '/api/tasks', { project_id: p.id, title: 'A' });
   const { body: b } = await call('POST', '/api/tasks', { project_id: p.id, title: 'B' });
   assert.deepEqual([a.due_at, a.tags], [null, []]);
   assert.equal((await call('PATCH', `/api/tasks/${a.id}`, { due_at: '2026-10-15' })).body.due_at, '2026-10-15');
   assert.equal((await call('PATCH', `/api/tasks/${a.id}`, { due_at: '15/10' })).status, 400);
+  // Sprint : texte libre, vide = aucun.
+  assert.equal((await call('PATCH', `/api/tasks/${a.id}`, { sprint: ' Sprint 42 ' })).body.sprint, 'Sprint 42');
+  assert.equal((await call('PATCH', `/api/tasks/${a.id}`, { sprint: 42 })).status, 400);
   // Tags normalisés (# retiré, minuscules, espaces → -), sans doublon.
   const { body: t } = await call('PATCH', `/api/tasks/${a.id}`, { tags: ['#Client', 'client', 'Site Web'] });
   assert.deepEqual(t.tags, ['client', 'site-web']);
@@ -763,7 +767,7 @@ test('échéance et tags : écriture, validation, filtre du Log, restauration', 
   // Suppression puis restauration : échéance et tags conservés.
   const { body: deleted } = await call('DELETE', `/api/tasks/${a.id}`);
   const { body: restored } = await call('POST', '/api/tasks/restore', deleted);
-  assert.deepEqual([restored.due_at, restored.tags], ['2026-10-15', ['client', 'site-web']]);
+  assert.deepEqual([restored.due_at, restored.sprint, restored.tags], ['2026-10-15', 'Sprint 42', ['client', 'site-web']]);
 });
 
 test('priorité : P1 à P3, aucune, validation, conservée à la restauration', async () => {
@@ -786,26 +790,10 @@ test('priorité : P1 à P3, aucune, validation, conservée à la restauration', 
 });
 
 test('Jira : PAT jamais relu ni exporté, lecture et écriture d’un ticket', async () => {
-  // Faux Jira Data Center : un ticket, PAT attendu en Bearer.
-  const issues: Record<string, { summary: string; description: string | null; duedate: string | null }> = {
-    'JIRA-1': { summary: 'Dans Jira', description: 'Texte\r\nJira', duedate: '2026-10-12' },
+  const issues: Record<string, FakeIssue> = {
+    'JIRA-1': { summary: 'Dans Jira', description: 'Texte\r\nJira', duedate: '2026-10-12', sprint: 'Sprint 42' },
   };
-  const jira = http.createServer(async (req, res) => {
-    const key = req.url!.match(/\/rest\/api\/2\/issue\/([^?]+)/)?.[1] ?? '';
-    if (req.headers.authorization !== 'Bearer secret') return res.writeHead(401).end();
-    if (!issues[key]) return res.writeHead(404).end();
-    if (req.method === 'PUT') {
-      const chunks: Buffer[] = [];
-      for await (const c of req) chunks.push(c as Buffer);
-      const { fields } = JSON.parse(Buffer.concat(chunks).toString());
-      if (!fields.summary) return res.writeHead(400, { 'Content-Type': 'application/json' }).end(JSON.stringify({ errors: { summary: 'obligatoire' } }));
-      issues[key] = fields;
-      return res.writeHead(204).end();
-    }
-    res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ key, fields: issues[key] }));
-  });
-  await new Promise<void>((r) => jira.listen(0, '127.0.0.1', r));
-  const jiraUrl = `http://127.0.0.1:${(jira.address() as { port: number }).port}`;
+  const { server: jira, url: jiraUrl } = await fakeJira(issues);
   try {
     // Sans URL ni PAT : refusé, avec la marche à suivre.
     await call('PUT', '/api/settings', { bugtracker_base_url: null, jira_pat: null });
@@ -819,11 +807,20 @@ test('Jira : PAT jamais relu ni exporté, lecture et écriture d’un ticket', a
     assert.ok(!JSON.stringify(saved).includes('secret'));
     assert.ok(!JSON.stringify((await call('GET', '/api/state')).body).includes('secret'));
 
-    // Lecture : description sans \r, date seule.
-    assert.deepEqual((await call('GET', '/api/jira/JIRA-1')).body, { title: 'Dans Jira', notes: 'Texte\nJira', due_at: '2026-10-12' });
-    // Écriture : summary, description, duedate.
-    assert.equal((await call('PUT', '/api/jira/JIRA-1', { title: 'Depuis Tasks', notes: null, due_at: null })).status, 200);
-    assert.deepEqual(issues['JIRA-1'], { summary: 'Depuis Tasks', description: '', duedate: null });
+    // Lecture : description sans \r, date seule, sprint actif (pas le fermé d'avant).
+    assert.deepEqual((await call('GET', '/api/jira/JIRA-1')).body, { title: 'Dans Jira', notes: 'Texte\nJira', due_at: '2026-10-12', sprint: 'Sprint 42' });
+    // Écriture : summary, description, duedate ; sprint inchangé, pas réécrit.
+    assert.equal((await call('PUT', '/api/jira/JIRA-1', { title: 'Depuis Tasks', notes: null, due_at: null, sprint: 'Sprint 42' })).status, 200);
+    assert.deepEqual(issues['JIRA-1'], { summary: 'Depuis Tasks', description: '', duedate: null, sprint: 'Sprint 42' });
+    // Sprint changé : trouvé par son nom parmi les sprints actifs ou à venir du projet ; null le retire.
+    assert.equal((await call('PUT', '/api/jira/JIRA-1', { title: 'Depuis Tasks', notes: null, due_at: null, sprint: 'Sprint 43' })).status, 200);
+    assert.equal(issues['JIRA-1'].sprint, 'Sprint 43');
+    assert.equal((await call('PUT', '/api/jira/JIRA-1', { title: 'Depuis Tasks', notes: null, due_at: null, sprint: null })).status, 200);
+    assert.equal(issues['JIRA-1'].sprint, null);
+    assert.equal((await call('GET', '/api/jira/JIRA-1')).body.sprint, null);
+    const closed = await call('PUT', '/api/jira/JIRA-1', { title: 'Depuis Tasks', notes: null, due_at: null, sprint: 'Sprint 41' });
+    assert.equal(closed.status, 502);
+    assert.match(closed.body.error, /Sprint « Sprint 41 » introuvable/);
     assert.equal((await call('PUT', '/api/jira/JIRA-1', { title: '', notes: null, due_at: null })).status, 400);
     assert.equal((await call('PUT', '/api/jira/JIRA-1', { title: 'x', due_at: '12/10' })).status, 400);
     // Clé invalide : route inconnue.

@@ -8,6 +8,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
+- [~] Fiche : mêmes champs au pixel près en lecture (bloqués) et en édition ; ligne 1 ticket + sprint (nouveau, synchronisé avec Jira, migration 17), ligne 2 dates + temps passé et chrono, ligne 3 tags ; en lecture, calendrier des dates et ✕ des tags cachés (validé)
 - [~] Ticket d'un projet en pastille rose (bleu réservé aux tâches reportées) ; fiche : ticket cliquable en lecture, comme dans la ligne
 
 ## Décisions attendues
@@ -24,6 +25,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 - [?] Fiche : dans un champ date, `Tab` parcourt jour / mois / année (natif du navigateur) avant le champ suivant. Acceptable ?
 - [?] Plan journée : compteur rouge seulement **au-delà** du maximum (6/5), pas à 5/5. Orange à 5/5 ?
 - [?] Jira : contenu envoyé tel quel (Markdown) dans la description, qui est en wiki Jira (`##` ne devient pas un titre). Convertir Markdown ↔ wiki ?
+- [?] Sprint : texte libre ; proposer la liste des sprints actifs / à venir de Jira (autocomplétion) ?
 - [?] Jira : créer le ticket depuis la tâche quand il n'y a pas encore d'identifiant ?
 - [?] Priorité : trier les tâches par priorité (en plus du filtre `P`) ?
 

@@ -21,7 +21,7 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
     'Fiche',
     [
       [[['Maj+Entrée'], ['o']], 'Ouvrir en lecture'],
-      [[['e']], 'Ouvrir en édition (titre, Tab : ticket, dates, tags, contenu)'],
+      [[['e']], 'Ouvrir en édition (titre, Tab : ticket, sprint, dates…)'],
       [[['Ctrl+Entrée']], 'Enregistrer et lire ; en lecture, fermer'],
       [[['r', 'c', 'C', 't', '1', '2', '3']], 'Comme sur la tâche'],
       [[['>'], ['<']], 'Pousser vers Jira / récupérer depuis Jira (comparaison, puis confirmer)'],

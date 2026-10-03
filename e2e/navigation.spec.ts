@@ -1241,7 +1241,7 @@ test('titre long au clavier : info-bulle après un court délai, rien si on pass
   await expect(page.locator('.full-title')).toHaveText(long);
 });
 
-test('ligne épurée et fiche ordonnée : titre, ticket, dates, tags, contenu', async ({ page, data }) => {
+test('ligne épurée et fiche ordonnée : titre, ticket et sprint, dates et temps passé, tags, contenu', async ({ page, data }) => {
   await expect(page.locator(`[data-nav-key="add:${data.alpha.id}"]`)).toHaveAttribute('placeholder', '+ Ajouter une tâche (n)');
   const une = row(page, data.tasks.une.id);
   await une.hover();
@@ -1255,7 +1255,7 @@ test('ligne épurée et fiche ordonnée : titre, ticket, dates, tags, contenu', 
   // Titre en haut (champ nommé « Titre », sans libellé visible), puis ticket et contenu.
   await expect(dialog.getByLabel('Titre')).toBeFocused();
   const labels = await dialog.locator('label').allTextContents();
-  expect(labels).toEqual(['Ticket', 'Date prévue', 'Échéance', 'Tags', 'Contenu']);
+  expect(labels).toEqual(['Ticket', 'Sprint', 'Date prévue', 'Échéance', 'Temps passé', 'Tags', 'Contenu']);
 });
 
 test('ligne : temps passé (sablier, « 3 min ») au bout du titre, dans les projets et le Log ; rien sans temps', async ({ page, store, data }) => {
@@ -1312,7 +1312,8 @@ test('fiche : ▷ du chrono fixe quand ↻ apparaît ; libellés sans « : » ; 
   expect((await toggle.boundingBox())!.x).toBe(before);
   await page.keyboard.press('c');
 
-  await expect(dialog.locator('dt')).toHaveText(['Ticket', 'Date prévue', 'Échéance', 'Tags']);
+  // Mêmes libellés qu'en édition.
+  await expect(dialog.locator('label')).toHaveText(['Ticket', 'Sprint', 'Date prévue', 'Échéance', 'Temps passé', 'Tags', 'Contenu']);
   const preview = dialog.locator('.notes-preview');
   await expect(preview).toHaveText('Aucun contenu');
   await expect(preview).toHaveCSS('justify-content', 'center');
