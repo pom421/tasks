@@ -16,6 +16,7 @@ import { TimeSpent, TimerButtons, useTimer } from './Timer';
 import { PlanButton, usePlan } from './Plan';
 import { PriorityButton, usePriority } from './Priority';
 import { TagInput } from './TagInput';
+import { SprintInput } from './SprintInput';
 import { ReportControl, useReport } from './Report';
 import { JiraButtons, JiraCompare, jiraBlocker, sameJira, type JiraDirection } from './Jira';
 
@@ -185,6 +186,15 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
   const [compare, setCompare] = useState<{ direction: JiraDirection; key: string; local: JiraFields; remote: JiraFields } | null>(null);
   const [jiraBusy, setJiraBusy] = useState(false);
   const [jiraStatus, setJiraStatus] = useState<{ ok?: string; error?: string }>({});
+  // Sprints actifs puis à venir du projet du ticket, lus à la première entrée
+  // dans le champ Sprint ; sans Jira (ou en erreur) : texte libre seul.
+  const [sprints, setSprints] = useState<string[]>([]);
+  const sprintsAsked = useRef(false);
+  const loadSprints = () => {
+    if (blocker || !ticketKey || sprintsAsked.current) return;
+    sprintsAsked.current = true;
+    api.jiraSprints(ticketKey.split('-')[0]).then(setSprints, () => {});
+  };
   const localJira = (): JiraFields => ({
     title: saved.current.title,
     notes: saved.current.notes.trim() || null,
@@ -332,6 +342,8 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
           e.preventDefault();
           // Échap dans le champ du ticket : abandonne la saisie, la fiche reste ouverte.
           if ((e.target as HTMLElement).matches('.ticket-input')) return;
+          // Échap dans un champ à propositions ouvertes : ferme la liste seulement.
+          if ((e.target as HTMLElement).matches('[aria-expanded="true"]')) return;
           close();
         }}
         onOpenAutoFocus={(e) => {
@@ -397,14 +409,16 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
             </div>
             <div className="grid content-start gap-1.5">
               <Label htmlFor={`${id}-sprint`}>Sprint</Label>
-              <Input
+              <SprintInput
                 ref={refs.sprint}
                 id={`${id}-sprint`}
                 autoComplete="off"
                 placeholder={editing ? 'ex. Sprint 42' : 'aucun'}
-                title="Sprint du ticket, synchronisé avec Jira"
+                title="Sprint du ticket, synchronisé avec Jira (↓ : sprints actifs et à venir)"
+                suggestions={sprints}
                 value={values.sprint}
-                onChange={set('sprint')}
+                onValue={(value) => set('sprint')({ target: { value } })}
+                onFocusCapture={loadSprints}
                 onKeyDown={onInputEnter}
                 {...invalid('sprint')}
                 {...locked('sprint')}

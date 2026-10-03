@@ -6,7 +6,7 @@ import crypto from 'node:crypto';
 import { type DeletedProject, type ProjectPatch, type Store, type TaskPatch, isDate, today } from './db.ts';
 import type { ProjectRow, TaskRow } from './schema.ts';
 import { BUGTRACKER_KEY_RE, PRIORITIES, normalizeTag, type BugtrackerState, type JiraFields, type Priority, type SettingsPatch, type TimerAction } from '../shared/types.ts';
-import { JiraError, readIssue, writeIssue, type JiraConfig } from './jira.ts';
+import { JiraError, listSprints, readIssue, writeIssue, type JiraConfig } from './jira.ts';
 import { parseMarkdown } from './markdown.ts';
 
 type Req = IncomingMessage;
@@ -313,6 +313,11 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
     // Ticket Jira : lecture (aperçu avant de pousser ou de récupérer) et écriture.
     ['GET', /^\/api\/jira\/([A-Z][A-Z0-9_]*-\d+)$/, async (_req, res, _url, key) => {
       send(res, 200, await jira((config) => readIssue(config, key)));
+    }],
+
+    // Noms des sprints actifs puis à venir d'un projet (PROJ) : propositions du champ Sprint.
+    ['GET', /^\/api\/jira\/sprints\/([A-Z][A-Z0-9_]*)$/, async (_req, res, _url, project) => {
+      send(res, 200, (await jira((config) => listSprints(config, project))).map((s) => s.name));
     }],
 
     ['PUT', /^\/api\/jira\/([A-Z][A-Z0-9_]*-\d+)$/, async (req, res, _url, key) => {

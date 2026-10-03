@@ -8,7 +8,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-- [~] Fiche : mêmes champs au pixel près en lecture (bloqués) et en édition ; ligne 1 ticket + sprint (nouveau, synchronisé avec Jira, migration 17), ligne 2 dates + temps passé et chrono, ligne 3 tags ; en lecture, calendrier des dates et ✕ des tags cachés (validé)
+- [~] Fiche : champ Sprint avec les sprints actifs puis à venir de Jira proposés (API Agile : tableaux Scrum du projet, puis leurs sprints)
 - [~] Ticket d'un projet en pastille rose (bleu réservé aux tâches reportées) ; fiche : ticket cliquable en lecture, comme dans la ligne
 
 ## Décisions attendues
@@ -25,7 +25,6 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 - [?] Fiche : dans un champ date, `Tab` parcourt jour / mois / année (natif du navigateur) avant le champ suivant. Acceptable ?
 - [?] Plan journée : compteur rouge seulement **au-delà** du maximum (6/5), pas à 5/5. Orange à 5/5 ?
 - [?] Jira : contenu envoyé tel quel (Markdown) dans la description, qui est en wiki Jira (`##` ne devient pas un titre). Convertir Markdown ↔ wiki ?
-- [?] Sprint : texte libre ; proposer la liste des sprints actifs / à venir de Jira (autocomplétion) ?
 - [?] Jira : créer le ticket depuis la tâche quand il n'y a pas encore d'identifiant ?
 - [?] Priorité : trier les tâches par priorité (en plus du filtre `P`) ?
 
@@ -42,6 +41,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
+- [x] Fiche : mêmes champs au pixel près en lecture (bloqués) et en édition ; ligne 1 ticket + sprint (nouveau, synchronisé avec Jira, migration 17), ligne 2 dates + temps passé et chrono, ligne 3 tags ; en lecture, calendrier des dates et ✕ des tags cachés (validé) ([PR #7](https://github.com/pom421/tasks/pull/7))
 - [x] Pastille « reporté » supprimée : reportée = un identifiant ; `r` sur une tâche à reporter demande l'identifiant, saisie abandonnée (Échap, vide, invalide, clic ailleurs) = retour à rien ; fiche : ticket en un seul contrôle (aucun → à reporter → identifiant ; ✕ le retire ; `r` comme sur la ligne), en lecture et en édition ; ticket = identifiant seul (tâche et projet), plus de lien complet ; migrations 15 et 16 ([PR #5](https://github.com/pom421/tasks/pull/5))
 - [x] Info-bulles uniformes : toutes rapides (150 ms) et du même style, par un seul composant (`TitleTooltips`) qui affiche l'attribut `title` à la place de l'info-bulle native
 - [x] Échéance de la ligne : info-bulle de l'app, rapide (150 ms), « Échéance : mardi 6 octobre 2026 » (l'info-bulle native, lente, ne s'affichait pas toujours)

@@ -25,8 +25,13 @@ export async function fakeJira(issues: Record<string, FakeIssue>) {
     if (req.headers.authorization !== 'Bearer secret') return res.writeHead(401).end();
     const url = req.url!;
     if (url === '/rest/api/2/field') return json(res, [{ id: 'summary' }, { id: SPRINT_FIELD, schema: { custom: 'com.pyxis.greenhopper.jira:gh-sprint' } }]);
-    if (url.startsWith('/rest/agile/1.0/board?')) return json(res, { values: [{ id: 1 }] });
-    if (url.startsWith('/rest/agile/1.0/board/1/sprint?')) return json(res, { values: SPRINTS.filter((s) => s.state !== 'CLOSED').map(({ id, name }) => ({ id, name })) });
+    // Deux tableaux Scrum (le sprint actif est sur les deux) ; fermés jamais demandés.
+    if (url.startsWith('/rest/agile/1.0/board?')) return json(res, { values: url.includes('type=scrum') ? [{ id: 1 }, { id: 2 }] : [] });
+    const board = url.match(/^\/rest\/agile\/1\.0\/board\/(\d)\/sprint\?state=active,future/)?.[1];
+    if (board) {
+      const open = SPRINTS.filter((s) => s.state !== 'CLOSED').reverse(); // à venir d'abord : le tri est au serveur
+      return json(res, { values: (board === '1' ? open : open.slice(-1)).map(({ id, name, state }) => ({ id, name, state: state.toLowerCase() })) });
+    }
     const key = url.match(/\/rest\/api\/2\/issue\/([^?]+)/)?.[1] ?? '';
     const issue = issues[key];
     if (!issue) return res.writeHead(404).end();
