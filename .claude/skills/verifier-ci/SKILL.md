@@ -9,9 +9,8 @@ description: Vérifier le résultat de la CI GitHub Actions de pom421/tasks pour
    (`head_sha`) parmi les derniers (`gh run list --limit 5`).
 2. **En cours** : app de bureau (PR suivie par l'app) → rien à programmer ;
    sinon revérifier dans 3 minutes, sans rien dire.
-3. **Vert** : tâche en « Fait » (avec le lien de la PR) dans `docs/plan.md`,
-   commit `docs:` sur la **branche de la PR** (pas de PR à part) ; réponse en
-   puces avec les liens de la PR et du run.
+3. **Vert** : réponse en puces avec les liens de la PR et du run
+   (`docs/plan.md` est déjà à jour : skill `livrer`).
 4. **Rouge** :
    - lire les logs du job en échec (~120 lignes), reproduire en local ;
    - trouver la **cause** : jamais relancer « pour voir », désactiver un test ni

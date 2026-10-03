@@ -11,8 +11,9 @@ description: Vérifier, documenter, commiter, pousser et ouvrir une PR vers main
 2. **Relire `git diff`** : code mort, commentaires périmés, anglais, cas oublié
    (filtres combinés, liste vide…).
 3. **Docs** : `README.md` (usage, raccourcis, modèle de données), aide `?`
-   (`SECTIONS` de `HelpDialog.tsx`), `docs/plan.md` (« En cours » jusqu'à la CI
-   verte, questions dans « Décisions attendues »).
+   (`SECTIONS` de `HelpDialog.tsx`), `docs/plan.md` (tâche directement dans
+   « Fait », questions dans « Décisions attendues » ; une tâche d'une PR déjà
+   fusionnée encore « En cours » passe aussi en « Fait »).
 4. **Commit** en français (`feat:` / `fix:` / `style:` / `test:` / `docs:`),
    titre court, corps en puces, lignes d'attribution de la session.
 5. **Pousser et ouvrir la PR** : jamais de push direct sur `main`, sauf pour
@@ -23,6 +24,8 @@ description: Vérifier, documenter, commiter, pousser et ouvrir une PR vers main
    2, 4, 8, 16 s), puis `gh pr create --base main` (titre = celui du commit,
    corps en puces, ligne d'attribution de la session). Une nouvelle demande sur
    la même branche, PR encore ouverte : nouveau commit, même PR.
+   PR créée : lien de la PR ajouté à sa ligne de `docs/plan.md`, commit `docs:`
+   poussé sur la même branche (pas de PR à part).
 6. **CI** : app de bureau, PR suivie par l'app → elle prévient d'un échec, ne
    rien programmer. Sinon : vérification dans 4 minutes, consigne « skill
    verifier-ci pour la PR <numéro> ».
