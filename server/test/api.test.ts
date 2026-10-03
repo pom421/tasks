@@ -821,6 +821,9 @@ test('Jira : PAT jamais relu ni exporté, lecture et écriture d’un ticket', a
     const closed = await call('PUT', '/api/jira/JIRA-1', { title: 'Depuis Tasks', notes: null, due_at: null, sprint: 'Sprint 41' });
     assert.equal(closed.status, 502);
     assert.match(closed.body.error, /Sprint « Sprint 41 » introuvable/);
+    // Propositions du champ Sprint : actifs puis à venir, sans doublon ni sprint fermé.
+    assert.deepEqual((await call('GET', '/api/jira/sprints/JIRA')).body, ['Sprint 42', 'Sprint 43']);
+    assert.equal((await call('GET', '/api/jira/sprints/jira')).status, 404);
     assert.equal((await call('PUT', '/api/jira/JIRA-1', { title: '', notes: null, due_at: null })).status, 400);
     assert.equal((await call('PUT', '/api/jira/JIRA-1', { title: 'x', due_at: '12/10' })).status, 400);
     // Clé invalide : route inconnue.

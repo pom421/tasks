@@ -135,6 +135,56 @@ test('récupérer : comparaison, Entrée confirme, la fiche et la ligne suivent,
   }
 });
 
+test('sprint : sprints actifs puis à venir de Jira proposés (↓, Entrée, clic) ; Échap ferme la liste ; sans Jira, texte libre', async ({ page, store }) => {
+  const jira = await fakeJira(store, { 'PROJ-1': { summary: 'Une', description: null, duedate: null } });
+  const alpha = store.createProject('Alpha');
+  const une = store.createTask(alpha.id, 'Une');
+  store.updateTask(une.id, { bugtrackerKey: 'PROJ-1' });
+  try {
+    const dialog = await openDialog(page);
+    await page.keyboard.press('e');
+    const sprint = dialog.getByRole('combobox', { name: 'Sprint' });
+    await sprint.focus();
+    const options = dialog.getByRole('listbox', { name: 'Sprints' }).getByRole('option');
+    await expect(options).toHaveText(['Sprint 42', 'Sprint 43']); // actif d'abord, ni fermé ni doublon
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await expect(options.nth(1)).toHaveAttribute('aria-selected', 'true');
+    await page.keyboard.press('Enter'); // choisit, sans enregistrer
+    await expect(sprint).toHaveValue('Sprint 43');
+    await expect(dialog.getByRole('listbox')).toHaveCount(0);
+    await expect(sprint).not.toHaveAttribute('readonly');
+
+    // Filtre par le texte ; Échap ferme la liste, la fiche reste ouverte.
+    await sprint.fill('');
+    await page.keyboard.type('42');
+    await expect(options).toHaveText(['Sprint 42']);
+    await page.keyboard.press('Escape');
+    await expect(dialog.getByRole('listbox')).toHaveCount(0);
+    await expect(dialog).toBeVisible();
+    // Clic sur une proposition, puis Entrée : enregistré, retour en lecture.
+    await page.keyboard.press('ArrowDown');
+    await options.first().click();
+    await expect(sprint).toHaveValue('Sprint 42');
+    await page.keyboard.press('Enter');
+    await expect(sprint).toHaveAttribute('readonly', '');
+    await expect.poll(() => store.db.prepare('SELECT sprint FROM task WHERE id = ?').get(une.id)).toEqual({ sprint: 'Sprint 42' });
+    // Lecture : pas de liste.
+    await sprint.click();
+    await expect(dialog.getByRole('listbox')).toHaveCount(0);
+  } finally {
+    jira.close();
+  }
+
+  // Sans URL ni PAT : texte libre, aucune proposition.
+  store.updateSettings({ bugtracker_base_url: null, jira_pat: null });
+  const dialog = await openDialog(page);
+  await page.keyboard.press('e');
+  await dialog.getByRole('combobox', { name: 'Sprint' }).focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(dialog.getByRole('listbox')).toHaveCount(0);
+});
+
 test('erreur de Jira affichée dans la fiche, sans comparaison', async ({ page, store }) => {
   const jira = await fakeJira(store, {});
   const alpha = store.createProject('Alpha');

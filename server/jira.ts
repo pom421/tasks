@@ -94,18 +94,27 @@ export async function readIssue(config: JiraConfig, key: string): Promise<JiraFi
   };
 }
 
-// Sprint actif ou à venir des tableaux du projet du ticket, par son nom.
-async function findSprint(config: JiraConfig, key: string, name: string): Promise<number> {
-  const project = key.split('-')[0];
-  const boards = await get<{ values: { id: number }[] }>(config, `/rest/agile/1.0/board?projectKeyOrId=${encodeURIComponent(project)}`);
+// Sprints actifs puis à venir des tableaux Scrum d'un projet (PROJ), sans
+// doublon (un sprint peut être sur plusieurs tableaux). Jira n'a pas d'appel
+// « sprints d'un projet » : on passe par ses tableaux.
+export async function listSprints(config: JiraConfig, project: string): Promise<{ id: number; name: string }[]> {
+  const boards = await get<{ values: { id: number }[] }>(config, `/rest/agile/1.0/board?type=scrum&projectKeyOrId=${encodeURIComponent(project)}`);
+  const found = new Map<number, { id: number; name: string; active: boolean }>();
   for (const board of boards.values) {
-    const sprints = await get<{ values: { id: number; name: string }[] }>(
+    const sprints = await get<{ values: { id: number; name: string; state: string }[] }>(
       config,
       `/rest/agile/1.0/board/${board.id}/sprint?state=active,future&maxResults=100`,
-    ).catch(() => ({ values: [] })); // tableau Kanban : pas de sprint
-    const found = sprints.values.find((s) => s.name === name);
-    if (found) return found.id;
+    );
+    for (const s of sprints.values) found.set(s.id, { id: s.id, name: s.name, active: s.state.toLowerCase() === 'active' });
   }
+  return [...found.values()].sort((a, b) => Number(b.active) - Number(a.active)).map(({ id, name }) => ({ id, name }));
+}
+
+// Sprint actif ou à venir du projet du ticket, par son nom.
+async function findSprint(config: JiraConfig, key: string, name: string): Promise<number> {
+  const project = key.split('-')[0];
+  const found = (await listSprints(config, project)).find((s) => s.name === name);
+  if (found) return found.id;
   throw new JiraError(`Sprint « ${name} » introuvable dans Jira (actif ou à venir, projet ${project})`);
 }
 
