@@ -15,7 +15,7 @@ import { focusByKey, moveDirection } from '@/lib/nav';
 import { TimeSpent, TimerButtons, useTimer } from './Timer';
 import { PlanButton, usePlan } from './Plan';
 import { PriorityButton, usePriority } from './Priority';
-import { TaskDates, TaskTags } from './TaskDates';
+import { DueDate, TaskTags } from './TaskDates';
 
 // Ligne de tâche, à faire (liste des projets) ou faite (journal).
 // Clavier, où que soit le focus dans la ligne (hors champ de saisie) :
@@ -142,7 +142,6 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
           onSave={rename}
         />
         <TaskTags tags={task.tags} />
-        {!done && <TaskDates task={task} />}
         {report.asking ? (
           <TicketInput
             onSave={report.save}
@@ -154,8 +153,12 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
         ) : (
           <ReportBadge task={task} />
         )}
-        {/* Temps passé : au bout du titre, les icônes gardent leur place. */}
-        <TimeSpent timer={timer} className="text-xs [&_svg]:size-3" />
+        {/* Échéance puis temps passé, juste avant les icônes : emplacements de
+            largeur fixe, gardés vides, pour qu'ils s'alignent d'une ligne à l'autre. */}
+        {!done && <DueDate due={task.due_at} />}
+        <span className="flex w-[3.75rem] flex-none justify-end">
+          <TimeSpent timer={timer} className="text-xs [&_svg]:size-3" />
+        </span>
       </span>
       {/* Icônes : emplacements fixes, toujours à la même place d'une ligne à
           l'autre (une icône sans objet garde sa place, invisible). */}

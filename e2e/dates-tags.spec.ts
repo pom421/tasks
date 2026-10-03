@@ -56,19 +56,18 @@ test('fiche : date prévue, échéance et tags (e), étiquettes sur la ligne, u 
   await expect(dialog).toHaveCount(0);
 
   const une = row(page, 'Une');
-  await expect(une.locator('.planned-date')).toHaveText('prévuelun. 28');
-  await expect(une.locator('.planned-date')).toHaveAttribute('title', 'Prévue le lundi 28 septembre 2026');
+  await expect(une.locator('.planned-date')).toHaveCount(0); // date prévue : dans la fiche seulement
   await expect(une.locator('.due-date')).toHaveText('échéance12 oct.');
   await expect(une.locator('.tags')).toHaveText('#client #urgent');
   expect(taskRow(store, data.une.id)).toEqual({ day_at: '2026-09-28', due_at: '2026-10-12', tags: '["client","urgent"]' });
 
   // Annulable d'un coup (modification de la fiche).
   await page.keyboard.press('u');
-  await expect(une.locator('.planned-date, .due-date, .tags')).toHaveCount(0);
+  await expect(une.locator('.due-date, .tags')).toHaveCount(0);
   expect(taskRow(store, data.une.id)).toEqual({ day_at: null, due_at: null, tags: '[]' });
 });
 
-test('étiquettes : date prévue du jour masquée (☀), en retard et échéance dépassée en rouge ; rien sur une tâche faite', async ({ page, store, data }) => {
+test('étiquettes : pas de date prévue sur la ligne ; échéance dépassée en rouge, alignée d’une ligne à l’autre ; rien sur une tâche faite', async ({ page, store, data }) => {
   store.updateTask(data.une.id, { dayAt: TODAY, dueAt: '2026-09-24' });
   store.updateTask(data.deux.id, { dayAt: '2026-09-23' });
   store.updateTask(data.trois.id, { dueAt: '2026-09-26', doneAt: TODAY });
@@ -78,11 +77,18 @@ test('étiquettes : date prévue du jour masquée (☀), en retard et échéance
   await expect(une.getByRole('button', { name: 'Pour aujourd’hui' })).toHaveAttribute('aria-pressed', 'true');
   await expect(une.locator('.due-date')).toHaveClass(/late/);
   await expect(une.locator('.due-date')).toHaveAttribute('title', 'Échéance dépassée : jeudi 24 septembre 2026');
-  await expect(row(page, 'Deux').locator('.planned-date')).toHaveText('en retard, prévuemer. 23');
-  await expect(row(page, 'Deux').locator('.planned-date')).toHaveClass(/late/);
-  // Icônes distinctes : calendrier (prévue), réveil (échéance) ; sablier pour la durée (fiche).
-  await expect(row(page, 'Deux').locator('.planned-date svg')).toHaveClass(/lucide-calendar-days/);
+  await expect(row(page, 'Deux').locator('.planned-date')).toHaveCount(0);
   await expect(une.locator('.due-date svg')).toHaveClass(/lucide-alarm-clock/);
+  // Même largeur et même place, avec ou sans échéance, avec ou sans temps passé.
+  store.updateTask(data.deux.id, { dueAt: '2026-10-30', timeSpent: 600 });
+  await page.reload();
+  const box = (name: string, sel: string) => row(page, name).locator(sel).boundingBox();
+  const a = (await box('Une', '.due-date'))!;
+  const b = (await box('Deux', '.due-date'))!;
+  expect([a.x, a.width]).toEqual([b.x, b.width]);
+  store.updateTask(data.deux.id, { dueAt: null });
+  await page.reload();
+  expect((await box('Deux', '.due-slot'))!.x).toBe(a.x);
   await page.keyboard.press('L');
   await expect(page.locator('#journal li.task', { hasText: 'Trois' }).locator('.due-date')).toHaveCount(0);
 });

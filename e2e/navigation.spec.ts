@@ -262,10 +262,11 @@ test('ligne de tâche : icônes alignées à droite, clic n’importe où sur la
   expect(priority.x - (sun.x + sun.width)).toBeLessThan(10);
   expect(sun.x - (timer.x + timer.width)).toBeLessThan(10);
   expect(timer.x - (details.x + details.width)).toBeLessThan(10);
-  expect((await box('.report')).x).toBeGreaterThan(rowBox.x + rowBox.width / 2);
+  // Report juste avant les emplacements fixes de l'échéance et du temps passé.
+  const report = await box('.report');
+  expect((await box('.due-slot')).x - (report.x + report.width)).toBeLessThan(10);
 
   // Clic à droite du texte, juste avant les icônes : le titre passe en édition.
-  const report = await box('.report');
   await page.mouse.click(report.x - 20, report.y + report.height / 2);
   await expect(une.locator('input.edit')).toBeFocused();
   await page.keyboard.press('Escape'); // retour au titre, curseur sur la tâche

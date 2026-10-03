@@ -1,47 +1,28 @@
-import { AlarmClock, CalendarDays } from 'lucide-react';
-import type { Task } from '../../shared/types.ts';
+import { AlarmClock } from 'lucide-react';
 import { formatDay, localToday, shortDay } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 
-const badge = 'flex flex-none items-center gap-0.5 rounded px-1 text-[11px] leading-[18px] whitespace-nowrap [&_svg]:size-3';
-
-// Dates d'une tâche à faire, en étiquettes courtes (« demain », « lun. 29 »),
-// date complète en info-bulle. Icônes distinctes : calendrier (prévue),
-// réveil (échéance), sablier (durée, dans la fiche). Date prévue : fond gris ; masquée si c'est
-// aujourd'hui (le ☀ plein le dit déjà) ; en retard : texte rouge.
-// Échéance : fond ambré ; dépassée : fond rouge.
-export function TaskDates({ task }: { task: Pick<Task, 'day_at' | 'due_at'> }) {
+// Échéance d'une tâche à faire, en étiquette courte (« demain », « lun. 29 »),
+// date complète en info-bulle : fond ambré ; dépassée : fond rouge. Emplacement
+// de largeur fixe, gardé même sans échéance : les échéances s'alignent d'une
+// ligne à l'autre. La date prévue n'est que dans la fiche.
+export function DueDate({ due }: { due: string | null }) {
   const today = localToday();
-  const { day_at: day, due_at: due } = task;
+  if (!due) return <span className="due-slot w-[4.5rem] flex-none" aria-hidden />;
   return (
-    <>
-      {day && day !== today && (
-        <span
-          className={cn('planned-date', badge, 'bg-muted', day < today ? 'late font-medium text-destructive' : 'text-muted-foreground')}
-          title={`${day < today ? 'En retard : prévue' : 'Prévue'} le ${formatDay(day)}`}
-        >
-          <CalendarDays aria-hidden />
-          <span className="sr-only">{day < today ? 'en retard, prévue' : 'prévue'}</span>
-          {shortDay(day, today)}
-        </span>
+    <span
+      className={cn(
+        'due-date flex w-[4.5rem] flex-none items-center justify-center gap-0.5 truncate rounded px-1 text-[11px] leading-[18px] whitespace-nowrap [&_svg]:size-3 [&_svg]:flex-none',
+        due < today
+          ? 'late bg-red-100 font-medium text-red-700 dark:bg-red-950 dark:text-red-300'
+          : 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200',
       )}
-      {due && (
-        <span
-          className={cn(
-            'due-date',
-            badge,
-            due < today
-              ? 'late bg-red-100 font-medium text-red-700 dark:bg-red-950 dark:text-red-300'
-              : 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200',
-          )}
-          title={`${due < today ? 'Échéance dépassée' : 'Échéance'} : ${formatDay(due)}`}
-        >
-          <AlarmClock aria-hidden />
-          <span className="sr-only">{due < today ? 'échéance dépassée' : 'échéance'}</span>
-          {shortDay(due, today)}
-        </span>
-      )}
-    </>
+      title={`${due < today ? 'Échéance dépassée' : 'Échéance'} : ${formatDay(due)}`}
+    >
+      <AlarmClock aria-hidden />
+      <span className="sr-only">{due < today ? 'échéance dépassée' : 'échéance'}</span>
+      {shortDay(due, today)}
+    </span>
   );
 }
 

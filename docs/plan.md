@@ -41,6 +41,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
+- [x] Ligne : date prévue retirée (fiche seulement) ; échéance de largeur fixe, juste avant le temps passé et les icônes, places gardées même vides (alignées d'une ligne à l'autre)
 - [x] Ligne : temps passé de nouveau affiché (sablier, « 3 min ») au bout du titre, projets et Log, comme dans la fiche
 - [x] Fiche plus soignée : « · à faire » retiré (reste « · faite le … »), ↻ du chrono à gauche de ▷ (▷ ne bouge plus, aussi sur la ligne), libellés sans « : » en colonne alignée (valeurs absentes atténuées), « Aucun contenu » centré, plus gros, sans italique
 - [x] Projet : pastille et champ du ticket à droite, juste avant l'icône d'archive ; icône ticket retirée (`r` seulement, comme le report d'une tâche) (`49602a1`)
