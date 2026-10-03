@@ -1,5 +1,5 @@
-import { useRef, useState, type FocusEvent, type KeyboardEvent } from 'react';
-import { hasDetails, isValidTicket, bugtrackerState, type DoneTask, type BugtrackerState, type Task } from '../../shared/types.ts';
+import { useState, type FocusEvent, type KeyboardEvent } from 'react';
+import { hasDetails, type DoneTask, type Task } from '../../shared/types.ts';
 import { NotebookText } from 'lucide-react';
 import { api, type TaskPatch } from '@/lib/api';
 import { useActions } from '@/lib/actions';
@@ -10,16 +10,17 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { EditableName } from './Editable';
 import { ReportBadge } from './ReportBadge';
+import { TicketInput, useReport } from './Report';
 import { focusByKey, moveDirection } from '@/lib/nav';
-import { TimerButtons, useTimer } from './Timer';
+import { TimeSpent, TimerButtons, useTimer } from './Timer';
 import { PlanButton, usePlan } from './Plan';
 import { PriorityButton, usePriority } from './Priority';
-import { TaskDates, TaskTags } from './TaskDates';
+import { DueDate, TaskTags } from './TaskDates';
 
 // Ligne de tâche, à faire (liste des projets) ou faite (journal).
 // Clavier, où que soit le focus dans la ligne (hors champ de saisie) :
 // Espace coche / décoche, r fait tourner le suivi du report
-// (rien -> à reporter -> reporté -> rien), o ou Maj+Entrée ouvre la fiche,
+// (rien -> à reporter -> ticket demandé : reporté -> rien), o ou Maj+Entrée ouvre la fiche,
 // e l'ouvre directement en édition,
 // c lance / met en pause le chrono, C l'arrête et le remet à zéro (tâches à faire),
 // t l'ajoute à Aujourd’hui ou l'en retire (tâches à faire),
@@ -32,12 +33,12 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
   const done = 'done_at' in task;
   const [editingDate, setEditingDate] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  // Champ du ticket proposé dans la ligne, juste après r → reporté.
-  const [askTicket, setAskTicket] = useState(false);
   const navKey = `task:${task.id}`;
   const timer = useTimer(task);
   const plan = usePlan(task);
   const priority = usePriority(task);
+  // Report : r ; sur une tâche à reporter, l'identifiant est demandé dans la ligne.
+  const report = useReport(task);
 
   // Modification annulable (u) et rejouable (U) : before = valeurs d'avant.
   const change = (label: string, patch: TaskPatch, before: TaskPatch, stay = false) =>
@@ -53,26 +54,6 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
       ? change('tâche décochée', { done: false }, { done_at: task.done_at }, true)
       : change('tâche cochée', { done: true, done_at: localToday() }, { done: false }, true);
   const rename = (title: string) => change('renommage', { title }, { title: task.title });
-  const NEXT: Record<BugtrackerState, BugtrackerState> = { none: 'wanted', wanted: 'done', done: 'none' };
-  const BUGTRACKER_LABEL: Record<BugtrackerState, string> = { none: 'retrait du report', wanted: 'à reporter', done: 'reportée' };
-  // r tapé plusieurs fois vite : chaque appui part du dernier état demandé
-  // (pas de celui encore affiché) et les requêtes s'enchaînent dans l'ordre.
-  const bugtracker = useRef({ state: bugtrackerState(task), pending: 0, queue: Promise.resolve() });
-  if (!bugtracker.current.pending) bugtracker.current.state = bugtrackerState(task);
-  const cycleBugtracker = () => {
-    const j = bugtracker.current;
-    const before = j.state;
-    const next = NEXT[before];
-    j.state = next;
-    j.pending++;
-    j.queue = j.queue.then(async () => {
-      await change(BUGTRACKER_LABEL[next], { bugtracker: next }, { bugtracker: before });
-      j.pending--;
-      // Tout juste reportée (dernier appui) : on propose le ticket dans la ligne.
-      if (next === 'done' && !j.pending && !task.bugtracker_key && !task.bugtracker_url) setAskTicket(true);
-    });
-  };
-
   const remove = () => {
     let deleted: Record<string, unknown> | undefined;
     return undoable({
@@ -118,7 +99,7 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
     if (!done && plan.onKey(e)) return;
     if (e.key === 'r') {
       e.preventDefault();
-      cycleBugtracker();
+      report.cycle();
     }
     if (e.key === 'o' || e.key === 'e' || (e.key === 'Enter' && e.shiftKey)) {
       e.preventDefault();
@@ -161,18 +142,23 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
           onSave={rename}
         />
         <TaskTags tags={task.tags} />
-        {!done && <TaskDates task={task} />}
-        {askTicket ? (
+        {report.asking ? (
           <TicketInput
-            onSave={(ticket) => change('ticket ajouté', { bugtracker_ticket: ticket }, { bugtracker_ticket: null })}
-            onClose={() => {
+            onSave={report.save}
+            onClose={(saved) => {
               focusByKey(navKey);
-              setAskTicket(false);
+              report.stopAsking(saved);
             }}
           />
         ) : (
           <ReportBadge task={task} />
         )}
+        {/* Échéance puis temps passé, juste avant les icônes : emplacements de
+            largeur fixe, gardés vides, pour qu'ils s'alignent d'une ligne à l'autre. */}
+        {!done && <DueDate due={task.due_at} />}
+        <span className="flex w-[3.75rem] flex-none justify-end">
+          <TimeSpent timer={timer} className="text-xs [&_svg]:size-3" />
+        </span>
       </span>
       {/* Icônes : emplacements fixes, toujours à la même place d'une ligne à
           l'autre (une icône sans objet garde sa place, invisible). */}
@@ -225,54 +211,5 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
         )
       )}
     </li>
-  );
-}
-
-// Ticket saisi dans la ligne (tâche après r → reporté, projet sur r) : Entrée
-// l'enregistre s'il a changé (vide : retire celui d'avant), Échap ou un clic
-// ailleurs abandonne. Dans tous les cas, le curseur revient sur l'élément.
-export function TicketInput({
-  defaultValue = '',
-  className,
-  onSave,
-  onClose,
-}: {
-  defaultValue?: string;
-  className?: string;
-  onSave: (ticket: string) => void;
-  onClose: () => void;
-}) {
-  const { toast } = useActions();
-  const [invalid, setInvalid] = useState(false);
-  return (
-    <input
-      className={cn(
-        'ticket-input w-32 flex-none rounded-full border border-primary/60 bg-transparent px-1.5 font-mono text-[11px] leading-[18px] outline-none placeholder:font-sans placeholder:text-muted-foreground aria-invalid:border-destructive',
-        className,
-      )}
-      aria-label="Ticket"
-      title="Identifiant du ticket, ex. PROJ-123, ou lien (Entrée : enregistrer · Échap : plus tard)"
-      placeholder="Ticket, ex. PROJ-123"
-      autoComplete="off"
-      autoFocus
-      defaultValue={defaultValue}
-      aria-invalid={invalid}
-      onBlur={onClose}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape') {
-          e.stopPropagation(); // pas de réinitialisation des filtres
-          onClose();
-        }
-        if (e.key !== 'Enter') return;
-        e.preventDefault();
-        const ticket = e.currentTarget.value.trim();
-        if (!isValidTicket(ticket)) {
-          setInvalid(true);
-          return toast('Identifiant attendu, ex. PROJ-123');
-        }
-        onClose();
-        if (ticket !== defaultValue) onSave(ticket);
-      }}
-    />
   );
 }

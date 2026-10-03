@@ -6,7 +6,7 @@ test('aucune erreur console ni violation CSP', async ({ page, store }) => {
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
   page.on('pageerror', (e) => errors.push(e.message));
   const p = store.createProject('Alpha');
-  store.updateTask(store.createTask(p.id, 'Faite').id, { doneAt: '2026-09-25', bugtracker: 'done' });
+  store.updateTask(store.createTask(p.id, 'Faite').id, { doneAt: '2026-09-25', bugtracker: 'done', bugtrackerKey: 'PROJ-1' });
   store.createTask(p.id, 'À faire');
 
   await page.goto('/');

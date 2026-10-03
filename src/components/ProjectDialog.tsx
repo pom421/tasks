@@ -31,7 +31,7 @@ export function ProjectDialog({ project, field, open, onClose }: ProjectDialogPr
   const { settings } = useActions();
   const [values, setValues] = useState({
     name: project.name,
-    ticket: project.bugtracker_key ?? project.bugtracker_url ?? '',
+    ticket: project.bugtracker_key ?? '',
     notes: project.notes ?? '',
   });
   const [editing, setEditing] = useState(field === 'edit');
@@ -78,10 +78,9 @@ export function ProjectDialog({ project, field, open, onClose }: ProjectDialogPr
   // Enregistre ce qui a changé. false en cas d'erreur (la fiche reste ouverte).
   const save = async (): Promise<boolean> => {
     const values = latest.current;
-    const ticket = values.ticket.trim();
     const next = {
       name: values.name.trim(),
-      ticket: BUGTRACKER_KEY_RE.test(ticket.toUpperCase()) ? ticket.toUpperCase() : ticket,
+      ticket: values.ticket.trim().toUpperCase(), // normalisé comme côté serveur (proj-5 → PROJ-5)
       notes: values.notes.trim(),
     };
     if (!next.name) return fail('name', 'Le nom est obligatoire');
@@ -147,10 +146,8 @@ export function ProjectDialog({ project, field, open, onClose }: ProjectDialogPr
     }
   };
 
-  const ticketKey = BUGTRACKER_KEY_RE.test(values.ticket.trim().toUpperCase()) ? values.ticket.trim().toUpperCase() : null;
-  const ticketLink = values.ticket
-    ? bugtrackerLink({ bugtracker_key: ticketKey, bugtracker_url: ticketKey ? null : values.ticket.trim() }, settings)
-    : null;
+  const ticketKey = values.ticket.trim().toUpperCase();
+  const ticketLink = BUGTRACKER_KEY_RE.test(ticketKey) ? bugtrackerLink({ bugtracker_key: ticketKey }, settings) : null;
   const count = project.tasks.length;
   const state = [project.archived_at && 'archivé', `${count} tâche${count > 1 ? 's' : ''} à faire`].filter(Boolean).join(' · ');
   const errorFor = (f: Field) =>
@@ -235,9 +232,10 @@ export function ProjectDialog({ project, field, open, onClose }: ProjectDialogPr
           </>
         ) : (
           <div ref={reader} tabIndex={-1} className="reader grid min-h-0 flex-1 gap-4 outline-none" aria-describedby={`${id}-hint`}>
-            <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-sm">
-              <dt className="text-muted-foreground">Ticket :</dt>
-              <dd className="ticket-value font-mono">
+            {/* Comme la fiche d'une tâche : libellés atténués, valeur absente aussi. */}
+            <dl className="grid grid-cols-[7rem_1fr] gap-x-4 text-sm leading-7">
+              <dt className="text-muted-foreground">Ticket</dt>
+              <dd className={cn('ticket-value font-mono', !values.ticket && 'font-sans text-muted-foreground')}>
                 {ticketLink ? (
                   <a
                     className="ticket-link text-primary underline-offset-2 hover:underline"
@@ -256,10 +254,10 @@ export function ProjectDialog({ project, field, open, onClose }: ProjectDialogPr
             <div
               className={cn(
                 'notes-preview markdown min-h-[35vh] overflow-y-auto rounded-md border px-3 py-2 text-sm',
-                !values.notes.trim() && 'text-muted-foreground italic',
+                !values.notes.trim() && 'flex items-center justify-center text-base text-muted-foreground',
               )}
               onDoubleClick={() => startEditing('notes')}
-              {...(values.notes.trim() ? { dangerouslySetInnerHTML: { __html: html } } : { children: 'Aucun contenu.' })}
+              {...(values.notes.trim() ? { dangerouslySetInnerHTML: { __html: html } } : { children: 'Aucun contenu' })}
             />
           </div>
         )}

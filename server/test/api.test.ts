@@ -120,21 +120,18 @@ test('projet favori', async () => {
   assert.equal(off.favorite_at, null);
 });
 
-test('ticket du projet : clé ou lien, visible dans les projets, validé, retiré', async () => {
+test('ticket du projet : identifiant seul, visible dans les projets, validé, retiré', async () => {
   const { body: p } = await call('POST', '/api/projects', { name: 'Avec epic' });
   const { body: key } = await call('PATCH', `/api/projects/${p.id}`, { bugtracker_ticket: 'proj-42' });
-  assert.deepEqual([key.bugtracker_key, key.bugtracker_url], ['PROJ-42', null]);
+  assert.equal(key.bugtracker_key, 'PROJ-42');
   const { body: state } = await call('GET', '/api/state');
   assert.equal(state.projects.find((x: { id: number }) => x.id === p.id).bugtracker_key, 'PROJ-42');
 
-  const url = 'https://exemple.tickets.fr/browse/PROJ-7';
-  const { body: link } = await call('PATCH', `/api/projects/${p.id}`, { bugtracker_ticket: url });
-  assert.deepEqual([link.bugtracker_key, link.bugtracker_url], [null, url]); // le lien remplace la clé
-  for (const bad of ['javascript:alert(1)', 'pas un ticket', 42]) {
+  for (const bad of ['https://exemple.tickets.fr/browse/PROJ-7', 'javascript:alert(1)', 'pas un ticket', 42]) {
     assert.equal((await call('PATCH', `/api/projects/${p.id}`, { bugtracker_ticket: bad })).status, 400, String(bad));
   }
   const { body: none } = await call('PATCH', `/api/projects/${p.id}`, { bugtracker_ticket: null });
-  assert.deepEqual([none.bugtracker_key, none.bugtracker_url], [null, null]);
+  assert.equal(none.bugtracker_key, null);
 });
 
 test('contenu du projet : enregistré, visible dans les projets, vidé, limité', async () => {
@@ -233,7 +230,11 @@ test('report vers le bugtracker : bascule, visible dans les projets et le journa
   const { body: t } = await call('POST', '/api/tasks', { project_id: p.id, title: 'Ticket' });
   assert.equal(t.bugtracker_at, null);
 
-  const { body: on } = await call('PATCH', `/api/tasks/${t.id}`, { bugtracker: 'done' });
+  // Reportée = un ticket : « done » sans ticket reste à reporter.
+  const { body: noTicket } = await call('PATCH', `/api/tasks/${t.id}`, { bugtracker: 'done' });
+  assert.equal(noTicket.bugtracker_at, null);
+  assert.ok(noTicket.bugtracker_wanted_at);
+  const { body: on } = await call('PATCH', `/api/tasks/${t.id}`, { bugtracker_ticket: 'PROJ-1' });
   assert.ok(on.bugtracker_at);
   let { body: state } = await call('GET', '/api/state');
   assert.ok(state.projects.find((x: any) => x.id === p.id).tasks[0].bugtracker_at);
@@ -259,8 +260,8 @@ test('migration : une base v1 (sans colonne de report) est mise à niveau à l�
            PRAGMA user_version = 1;`);
   v1.close();
   const old = new Store(file);
-  assert.deepEqual(old.state().projects[0].tasks[0], { id: 1, project_id: 1, title: 'Tâche v1', bugtracker_wanted_at: null, bugtracker_at: null, bugtracker_key: null, bugtracker_url: null, notes: null, time_spent: 0, timer_started_at: null, day_at: null, due_at: null, tags: [], priority: null });
-  assert.ok(old.updateTask(1, { bugtracker: 'done' })?.bugtracker_at);
+  assert.deepEqual(old.state().projects[0].tasks[0], { id: 1, project_id: 1, title: 'Tâche v1', bugtracker_wanted_at: null, bugtracker_at: null, bugtracker_key: null, notes: null, time_spent: 0, timer_started_at: null, day_at: null, due_at: null, tags: [], priority: null });
+  assert.ok(old.updateTask(1, { bugtracker: 'done', bugtrackerKey: 'PROJ-1' })?.bugtracker_at);
   old.close();
 });
 
@@ -313,30 +314,31 @@ test('bugtracker : à reporter puis reportée, lien, compteur et filtre du journ
   assert.ok(j.days.some((d: any) => d.tasks.some((x: any) => x.id === t.id)));
 
   const { body: done } = await call('PATCH', `/api/tasks/${t.id}`, {
-    bugtracker: 'done',
-    bugtracker_ticket: 'https://exemple.tickets.fr/browse/PROJ-123',
+    bugtracker_ticket: 'proj-123',
   });
   assert.ok(done.bugtracker_at);
   assert.equal(done.bugtracker_wanted_at, wanted.bugtracker_wanted_at); // date de demande conservée
-  assert.equal(done.bugtracker_url, 'https://exemple.tickets.fr/browse/PROJ-123');
+  assert.equal(done.bugtracker_key, 'PROJ-123');
   assert.equal(await pending(), before);
   const { body: j2 } = await call('GET', '/api/journal?bugtracker=pending');
   assert.ok(!j2.days.some((d: any) => d.tasks.some((x: any) => x.id === t.id)));
 
-  // Liens refusés : autre protocole (XSS via javascript:), texte libre.
-  for (const bad of ['javascript:alert(1)', 'data:text/html,x', 'pas un ticket', 42]) {
+  // Identifiant seul : liens et texte libre refusés.
+  for (const bad of ['https://exemple.tickets.fr/browse/PROJ-1', 'javascript:alert(1)', 'pas un ticket', 42]) {
     assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { bugtracker_ticket: bad })).status, 400, String(bad));
   }
   assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { bugtracker: 'oui' })).status, 400);
 
-  // Lien vidé ; retour à « rien » efface tout.
-  assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { bugtracker_ticket: '' })).body.bugtracker_url, null);
+  // Identifiant vidé : de nouveau à reporter ; retour à « rien » efface tout.
+  const { body: emptied } = await call('PATCH', `/api/tasks/${t.id}`, { bugtracker_ticket: '' });
+  assert.deepEqual([emptied.bugtracker_key, emptied.bugtracker_at], [null, null]);
+  assert.equal(emptied.bugtracker_wanted_at, wanted.bugtracker_wanted_at);
   await call('PATCH', `/api/tasks/${t.id}`, { bugtracker_ticket: 'proj-9' });
   const { body: none } = await call('PATCH', `/api/tasks/${t.id}`, { bugtracker: 'none' });
-  assert.deepEqual([none.bugtracker_wanted_at, none.bugtracker_at, none.bugtracker_key, none.bugtracker_url], [null, null, null, null]);
+  assert.deepEqual([none.bugtracker_wanted_at, none.bugtracker_at, none.bugtracker_key], [null, null, null]);
 });
 
-test('migration 4 : une tâche déjà « reportée » (v3) garde son état', async () => {
+test('migrations 4 et 15 : une tâche « reportée » (v3) sans ticket redevient à reporter', async () => {
   const { DatabaseSync } = await import('node:sqlite');
   const file = path.join(dir, 'v3.sqlite');
   const v3 = new DatabaseSync(file);
@@ -351,7 +353,7 @@ test('migration 4 : une tâche déjà « reportée » (v3) garde son état', asy
   v3.close();
   const store3 = new Store(file);
   const task = store3.state().projects[0].tasks[0];
-  assert.equal(task.bugtracker_at, '2026-09-01 10:00:00');
+  assert.equal(task.bugtracker_at, null);
   assert.equal(task.bugtracker_wanted_at, '2026-09-01 10:00:00');
   store3.close();
 });
@@ -377,7 +379,6 @@ test('détails de la tâche : notes (Markdown), ticket par sa clé', async () =>
   });
   assert.equal(d.notes, 'Contexte : voir [la spec](https://docs.exemple.fr/specs).');
   assert.equal(d.bugtracker_key, 'ABC-42'); // clé normalisée en majuscules
-  assert.equal(d.bugtracker_url, null);
   assert.ok(d.bugtracker_at); // un ticket renseigné vaut « reportée »
 
   assert.equal((await call('PATCH', `/api/tasks/${t.id}`, { notes: 'x'.repeat(20_001) })).status, 400);
@@ -421,11 +422,11 @@ test('migration 12 : colonnes et réglage du ticket renommés (bugtracker), donn
             PRAGMA user_version = 11;`);
   v11.close();
   const store11 = new Store(file);
-  assert.deepEqual(store11.migration.applied.map((m) => m.version), [12, 13, 14, 15]);
+  assert.deepEqual(store11.migration.applied.map((m) => m.version), [12, 13, 14, 15, 16, 17]);
   const [done] = store11.journal({ limit: 5 }).days[0].tasks;
   assert.deepEqual(
-    [done.bugtracker_wanted_at, done.bugtracker_at, done.bugtracker_key, done.bugtracker_url],
-    ['2026-09-01 10:00:00', '2026-09-02 11:00:00', 'PROJ-7', 'https://t.fr/7'],
+    [done.bugtracker_wanted_at, done.bugtracker_at, done.bugtracker_key],
+    ['2026-09-01 10:00:00', '2026-09-02 11:00:00', 'PROJ-7'],
   );
   // Migration 13 : ni échéance ni tag sur les tâches existantes.
   assert.deepEqual([done.due_at, done.tags], [null, []]);
@@ -450,7 +451,6 @@ test('suppression annulable : DELETE renvoie la tâche, restore la réinsère à
   assert.equal((await call('POST', '/api/tasks/restore', deleted)).status, 409);
   await call('DELETE', `/api/tasks/${t.id}`);
   for (const bad of [
-    { ...deleted, bugtracker_url: 'javascript:alert(1)' },
     { ...deleted, bugtracker_key: 'pas une clé' },
     { ...deleted, done_at: 'hier' },
     { ...deleted, title: '' },
@@ -485,8 +485,7 @@ test('suppression de projet annulable : DELETE renvoie projet et tâches, restor
   for (const bad of [
     { ...deleted, project: { ...deleted.project, name: '' } },
     { ...deleted, tasks: [{ ...deleted.tasks[0], project_id: p.id + 1 }] },
-    { ...deleted, tasks: [{ ...deleted.tasks[0], bugtracker_url: 'javascript:alert(1)' }] },
-    { ...deleted, project: { ...deleted.project, bugtracker_url: 'javascript:alert(1)' } },
+    { ...deleted, tasks: [{ ...deleted.tasks[0], bugtracker_key: 'javascript:alert(1)' }] },
     { ...deleted, project: { ...deleted.project, bugtracker_key: 'pas une clé' } },
     { project: deleted.project },
   ]) {
@@ -544,6 +543,24 @@ test('versions du schéma : base neuve suivie dans schema_migration', async () =
   fresh.close();
 });
 
+test('migration 16 : ticket en lien complet retiré, la tâche redevient à reporter', async () => {
+  const { DatabaseSync } = await import('node:sqlite');
+  const { MIGRATIONS } = await import('../migrations.ts');
+  const file = path.join(dir, 'v15.sqlite');
+  const v15 = new DatabaseSync(file);
+  for (const m of MIGRATIONS.filter((m) => m.version <= 15)) v15.exec(m.sql);
+  v15.exec(`INSERT INTO project (name, bugtracker_url) VALUES ('P', 'https://t.fr/epic');
+            INSERT INTO task (project_id, title, bugtracker_wanted_at, bugtracker_at, bugtracker_url)
+              VALUES (1, 'Lien', '2026-09-01 10:00:00', '2026-09-02 11:00:00', 'https://t.fr/7');
+            PRAGMA user_version = 15;`);
+  v15.close();
+  const store15 = new Store(file);
+  const [p] = store15.state().projects;
+  assert.equal('bugtracker_url' in p, false);
+  assert.deepEqual([p.tasks[0].bugtracker_wanted_at, p.tasks[0].bugtracker_at], ['2026-09-01 10:00:00', null]);
+  store15.close();
+});
+
 test('versions du schéma : base v2 → dernière version (3, 4, 5, 6…), sauvegarde avant', async () => {
   const { DatabaseSync } = await import('node:sqlite');
   const { LATEST_VERSION } = await import('../migrations.ts');
@@ -571,7 +588,7 @@ test('versions du schéma : base v2 → dernière version (3, 4, 5, 6…), sauve
   // Données conservées et transformées par les migrations.
   assert.deepEqual(store2.state().projects[0].tasks[0], {
     id: 1, project_id: 1, title: 'Reportée en v2', bugtracker_wanted_at: '2026-01-01 09:00:00',
-    bugtracker_at: '2026-01-01 09:00:00', bugtracker_key: null, bugtracker_url: null, notes: null, time_spent: 0, timer_started_at: null, day_at: null, due_at: null, tags: [], priority: null,
+    bugtracker_at: null, bugtracker_key: null, notes: null, time_spent: 0, timer_started_at: null, day_at: null, due_at: null, tags: [], priority: null,
   });
   store2.close();
 

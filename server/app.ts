@@ -98,13 +98,12 @@ function httpUrl(value: unknown): string | null {
   return url.href;
 }
 
-// Ticket saisi : clé (PROJ-123) ou lien complet ; vide = aucun ticket.
-function bugtrackerTicket(value: unknown): { bugtrackerKey: string | null; bugtrackerUrl: string | null } {
-  if (value === null || value === '') return { bugtrackerKey: null, bugtrackerUrl: null };
-  const text = typeof value === 'string' ? value.trim() : '';
-  if (BUGTRACKER_KEY_RE.test(text.toUpperCase())) return { bugtrackerKey: text.toUpperCase(), bugtrackerUrl: null };
-  if (/^https?:/i.test(text)) return { bugtrackerKey: null, bugtrackerUrl: httpUrl(text) };
-  throw new HttpError(400, 'Ticket invalide : identifiant attendu, ex. PROJ-123');
+// Ticket saisi : identifiant (PROJ-123) ; vide = aucun ticket.
+function bugtrackerTicket(value: unknown): { bugtrackerKey: string | null } {
+  if (value === null || value === '') return { bugtrackerKey: null };
+  const text = typeof value === 'string' ? value.trim().toUpperCase() : '';
+  if (!BUGTRACKER_KEY_RE.test(text)) throw new HttpError(400, 'Ticket invalide : identifiant attendu, ex. PROJ-123');
+  return { bugtrackerKey: text };
 }
 
 const TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}:\d{2})?$/;
@@ -165,7 +164,6 @@ function restoredTask(body: Body): TaskRow {
     bugtracker_wanted_at: timestamp(body.bugtracker_wanted_at, 'Date de report'),
     bugtracker_at: timestamp(body.bugtracker_at, 'Date de report'),
     bugtracker_key: bugtrackerKey(body.bugtracker_key),
-    bugtracker_url: httpUrl(body.bugtracker_url ?? null),
     time_spent: int(body.time_spent ?? 0, 'Temps passé'),
     timer_started_at: timestamp(body.timer_started_at, 'Début du chrono'),
     day_at: dayAt(body.day_at),
@@ -187,7 +185,6 @@ function restoredProject(body: Body): DeletedProject {
     favorite_at: timestamp(p.favorite_at, 'Date de favori'),
     position: int(p.position ?? 0, 'Position'),
     bugtracker_key: bugtrackerKey(p.bugtracker_key),
-    bugtracker_url: httpUrl(p.bugtracker_url ?? null),
     notes: optionalText(p.notes ?? null, 'Contenu', 20_000),
   };
   const tasks = body.tasks.map((t) => restoredTask((t ?? {}) as Body));
@@ -395,11 +392,8 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
         if (!['none', 'wanted', 'done'].includes(body.bugtracker as string)) throw new HttpError(400, 'État de report invalide');
         patch.bugtracker = body.bugtracker as BugtrackerState;
       }
-      if ('bugtracker_ticket' in body) {
-        Object.assign(patch, bugtrackerTicket(body.bugtracker_ticket));
-        // Un ticket renseigné vaut « reportée ».
-        if ((patch.bugtrackerKey || patch.bugtrackerUrl) && !('bugtracker' in body)) patch.bugtracker = 'done';
-      }
+      // Un ticket renseigné vaut « reportée », vidé « à reporter » (règle de la base).
+      if ('bugtracker_ticket' in body) Object.assign(patch, bugtrackerTicket(body.bugtracker_ticket));
       if ('notes' in body) patch.notes = optionalText(body.notes, 'Notes', 20_000);
       if ('timer' in body) {
         if (!['start', 'pause', 'reset'].includes(body.timer as string)) throw new HttpError(400, 'Action du chrono invalide');

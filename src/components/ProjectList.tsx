@@ -8,7 +8,8 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { AddInput, EditableName } from './Editable';
 import { ProjectTicket } from './ReportBadge';
-import { TaskRow, TicketInput } from './TaskRow';
+import { TaskRow } from './TaskRow';
+import { TicketInput } from './Report';
 
 type MoveTask = (task: Task, direction: -1 | 1) => void;
 
@@ -26,7 +27,7 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
   const { setLastProject, undoable, openProject } = useActions();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editTicket, setEditTicket] = useState(false);
-  const ticket = p.bugtracker_key ?? p.bugtracker_url ?? '';
+  const ticket = p.bugtracker_key ?? '';
   const archived = Boolean(p.archived_at);
   const favorite = Boolean(p.favorite_at);
   const navKey = `project:${p.id}`;

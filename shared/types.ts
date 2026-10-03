@@ -63,16 +63,15 @@ export const jiraReady = (s: Settings) => Boolean(s.bugtracker_base_url && s.jir
 
 export const DEFAULT_DAY_CAPACITY = 5;
 
-// Lien du ticket : URL complète, sinon clé + URL du bugtracker.
-export function bugtrackerLink(t: Pick<Task, 'bugtracker_key' | 'bugtracker_url'>, settings: Settings): string | null {
-  if (t.bugtracker_url) return t.bugtracker_url;
+// Lien du ticket : clé + URL du bugtracker.
+export function bugtrackerLink(t: Pick<Task, 'bugtracker_key'>, settings: Settings): string | null {
   if (t.bugtracker_key && settings.bugtracker_base_url) return `${settings.bugtracker_base_url}/browse/${t.bugtracker_key}`;
   return null;
 }
 
 export const BUGTRACKER_KEY_RE = /^[A-Z][A-Z0-9_]*-\d+$/;
-// Ticket saisi (fiche ou ligne) : clé (PROJ-123) ou lien complet ; vide = aucun.
-export const isValidTicket = (s: string) => !s || BUGTRACKER_KEY_RE.test(s.toUpperCase()) || /^https?:\/\/\S+$/i.test(s);
+// Ticket saisi (fiche ou ligne) : identifiant (PROJ-123) ; vide = aucun.
+export const isValidTicket = (s: string) => !s || BUGTRACKER_KEY_RE.test(s.toUpperCase());
 
 export const hasDetails = (t: Pick<Task, 'notes'>) => Boolean(t.notes);
 
@@ -81,7 +80,7 @@ export function bugtrackerState(t: Pick<Task, 'bugtracker_wanted_at' | 'bugtrack
   return t.bugtracker_wanted_at ? 'wanted' : 'none';
 }
 
-export interface Project extends Pick<ProjectRow, 'id' | 'name' | 'archived_at' | 'favorite_at' | 'bugtracker_key' | 'bugtracker_url' | 'notes'> {
+export interface Project extends Pick<ProjectRow, 'id' | 'name' | 'archived_at' | 'favorite_at' | 'bugtracker_key' | 'notes'> {
   tasks: Task[]; // tâches à faire uniquement
 }
 
