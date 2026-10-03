@@ -284,7 +284,6 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
     }
   };
 
-  const state = done ? `faite le ${task.done_at.split('-').reverse().join('/')}` : 'à faire';
   const errorFor = (f: Field) =>
     error?.field === f && (
       <p id={`${id}-${f}-error`} role="alert" className="text-sm text-destructive">
@@ -343,7 +342,8 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
         {/* Icônes de la tâche à droite, comme sur la ligne. */}
         <div className="flex min-h-6 items-center justify-between gap-2">
           <DialogDescription>
-            {projectName} · {state}
+            {projectName}
+            {done && ` · faite le ${task.done_at.split('-').reverse().join('/')}`}
           </DialogDescription>
           <span className="flex items-center">
             {/* Temps passé, à gauche des icônes : aligné à droite, il s'allonge vers
@@ -424,25 +424,34 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
             className="reader grid min-h-0 flex-1 gap-4 outline-none"
             aria-describedby={`${id}-hint`}
           >
-            <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-sm">
-              <dt className="text-muted-foreground">Ticket :</dt>
-              <dd className="flex items-center">
+            {/* Deux colonnes alignées, une hauteur par ligne (celle de la pastille du
+                ticket) : libellés atténués, valeurs absentes atténuées aussi. */}
+            <dl className="grid grid-cols-[7rem_1fr] gap-x-4 text-sm leading-7">
+              <dt className="text-muted-foreground">Ticket</dt>
+              <dd className="flex min-h-7 items-center">
                 <ReportControl task={task} report={report} />
               </dd>
-              <dt className="text-muted-foreground">Date prévue :</dt>
-              <dd className="day-value first-letter:uppercase">{values.day ? formatDay(values.day) : 'aucune'}</dd>
-              <dt className="text-muted-foreground">Échéance :</dt>
-              <dd className="due-value first-letter:uppercase">{values.due ? formatDay(values.due) : 'aucune'}</dd>
-              <dt className="text-muted-foreground">Tags :</dt>
-              <dd className="tags-value">{values.tags.length ? values.tags.map((t) => `#${t}`).join(' ') : 'aucun'}</dd>
+              <dt className="text-muted-foreground">Date prévue</dt>
+              <dd className={cn('day-value first-letter:uppercase', !values.day && 'text-muted-foreground')}>
+                {values.day ? formatDay(values.day) : 'aucune'}
+              </dd>
+              <dt className="text-muted-foreground">Échéance</dt>
+              <dd className={cn('due-value first-letter:uppercase', !values.due && 'text-muted-foreground')}>
+                {values.due ? formatDay(values.due) : 'aucune'}
+              </dd>
+              <dt className="text-muted-foreground">Tags</dt>
+              <dd className={cn('tags-value', !values.tags.length && 'text-muted-foreground')}>
+                {values.tags.length ? values.tags.map((t) => `#${t}`).join(' ') : 'aucun'}
+              </dd>
             </dl>
             <div
               className={cn(
                 'notes-preview markdown min-h-[35vh] overflow-y-auto rounded-md border px-3 py-2 text-sm',
-                !values.notes.trim() && 'text-muted-foreground italic',
+                // Vide : « Aucun contenu » au centre, un peu plus gros.
+                !values.notes.trim() && 'flex items-center justify-center text-base text-muted-foreground',
               )}
               onDoubleClick={() => startEditing('notes')}
-              {...(values.notes.trim() ? { dangerouslySetInnerHTML: { __html: html } } : { children: 'Aucun contenu.' })}
+              {...(values.notes.trim() ? { dangerouslySetInnerHTML: { __html: html } } : { children: 'Aucun contenu' })}
             />
           </div>
         )}

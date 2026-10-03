@@ -53,26 +53,14 @@ export function useTimer(task: Task) {
 
 export type TimerState = ReturnType<typeof useTimer>;
 
-// Icônes du chrono : lancer / pause (pleine en marche, temps passé en
-// info-bulle), remise à zéro s'il y a du temps.
+// Icônes du chrono : remise à zéro s'il y a du temps, puis lancer / pause
+// (pleine en marche, temps passé en info-bulle).
 export function TimerButtons({ timer, className }: { timer: TimerState; className?: string }) {
   const hasTime = timer.running || timer.seconds > 0;
   const time = hasTime ? `${formatDuration(timer.seconds)} · ` : '';
   return (
     <span className={cn('timer flex flex-none', className)}>
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        tabIndex={-1}
-        className={cn('timer-toggle', timer.running ? 'text-foreground' : 'text-muted-foreground')}
-        aria-label="Chrono"
-        aria-pressed={timer.running}
-        title={`${time}${timer.running ? 'Pause' : 'Lancer le chrono'} (c)`}
-        onClick={timer.toggle}
-      >
-        {timer.running ? <Pause aria-hidden fill="currentColor" /> : <Play aria-hidden />}
-      </Button>
-      {/* Place gardée même sans temps passé : les icônes suivantes ne bougent pas. */}
+      {/* Place gardée même sans temps passé : lancer / pause ne bouge jamais. */}
       <Button
         variant="ghost"
         size="icon-xs"
@@ -84,6 +72,18 @@ export function TimerButtons({ timer, className }: { timer: TimerState; classNam
         onClick={timer.reset}
       >
         <RotateCcw aria-hidden />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        tabIndex={-1}
+        className={cn('timer-toggle', timer.running ? 'text-foreground' : 'text-muted-foreground')}
+        aria-label="Chrono"
+        aria-pressed={timer.running}
+        title={`${time}${timer.running ? 'Pause' : 'Lancer le chrono'} (c)`}
+        onClick={timer.toggle}
+      >
+        {timer.running ? <Pause aria-hidden fill="currentColor" /> : <Play aria-hidden />}
       </Button>
     </span>
   );

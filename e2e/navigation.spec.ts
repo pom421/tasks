@@ -936,7 +936,7 @@ test('fiche Markdown : e édite (titre → Tab → ticket → dates → tags →
   const dialog = page.getByRole('dialog', { name: 'Deux' });
   const preview = dialog.locator('.notes-preview');
   await expect(dialog.locator('.reader')).toBeFocused();
-  await expect(preview).toHaveText('Aucun contenu.');
+  await expect(preview).toHaveText('Aucun contenu');
   await expect(dialog.locator('.report-control')).toHaveText('aucun');
 
   await page.keyboard.press('e');
@@ -1249,12 +1249,36 @@ test('ligne épurée et fiche ordonnée : titre, ticket, dates, tags, contenu', 
   await pressDown(page, 2);
   await page.keyboard.press('Shift+Enter');
   const dialog = page.getByRole('dialog', { name: 'Une' });
-  await expect(dialog).toHaveAccessibleDescription(/Alpha · à faire/);
+  await expect(dialog).toHaveAccessibleDescription('Alpha'); // « à faire » sous-entendu
   await page.keyboard.press('e');
   // Titre en haut (champ nommé « Titre », sans libellé visible), puis ticket et contenu.
   await expect(dialog.getByLabel('Titre')).toBeFocused();
   const labels = await dialog.locator('label').allTextContents();
   expect(labels).toEqual(['Ticket', 'Date prévue', 'Échéance', 'Tags', 'Contenu']);
+});
+
+test('fiche : ▷ du chrono fixe quand ↻ apparaît ; libellés sans « : » ; contenu vide centré, sans italique', async ({ page }) => {
+  await pressDown(page, 2);
+  await page.keyboard.press('o');
+  const dialog = page.getByRole('dialog', { name: 'Une' });
+  await expect(dialog.locator('.reader')).toBeFocused();
+  const toggle = dialog.locator('.timer-toggle');
+  const reset = dialog.locator('.timer-reset');
+  await expect(reset).toBeHidden();
+  await page.waitForFunction(() => document.getAnimations().length === 0); // ouverture animée finie
+  const before = (await toggle.boundingBox())!.x;
+  await page.keyboard.press('c');
+  await expect(reset).toBeVisible();
+  expect((await reset.boundingBox())!.x).toBeLessThan(before); // ↻ à gauche de ▷
+  expect((await toggle.boundingBox())!.x).toBe(before);
+  await page.keyboard.press('c');
+
+  await expect(dialog.locator('dt')).toHaveText(['Ticket', 'Date prévue', 'Échéance', 'Tags']);
+  const preview = dialog.locator('.notes-preview');
+  await expect(preview).toHaveText('Aucun contenu');
+  await expect(preview).toHaveCSS('justify-content', 'center');
+  await expect(preview).toHaveCSS('align-items', 'center');
+  await expect(preview).toHaveCSS('font-style', 'normal');
 });
 
 test('fiche en lecture : ticket cliquable comme dans la ligne (clé + URL de base)', async ({ page, store, data }) => {

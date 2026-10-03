@@ -41,6 +41,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
+- [x] Fiche plus soignée : « · à faire » retiré (reste « · faite le … »), ↻ du chrono à gauche de ▷ (▷ ne bouge plus, aussi sur la ligne), libellés sans « : » en colonne alignée (valeurs absentes atténuées), « Aucun contenu » centré, plus gros, sans italique
 - [x] Projet : pastille et champ du ticket à droite, juste avant l'icône d'archive ; icône ticket retirée (`r` seulement, comme le report d'une tâche) (`49602a1`)
 - [x] Projet : champ du ticket après le cœur (favori), la pastille reste après le nom (`c2e995c`)
 - [x] Livraison par PR (plus de push direct sur `main`) : `CLAUDE.md`, skills `livrer` et `verifier-ci`
