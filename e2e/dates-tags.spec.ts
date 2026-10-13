@@ -197,7 +197,7 @@ test('Suivant : agenda par jour, tâche à ses deux dates, un cadre rouge par é
   store.updateTask(data.deux.id, { dueAt: '2026-09-20' });
   store.updateTask(data.trois.id, { dayAt: '2026-09-23', dueAt: '2026-09-22' }); // prévue avant : pas ici ; échéance dépassée : ici
   await open(page, '/plan');
-  await page.keyboard.press('Alt+ArrowRight');
+  await page.keyboard.press('Control+Shift+ArrowRight');
   await expect(tab(page, 'Suivant')).toHaveAttribute('aria-selected', 'true');
   await expect(page).toHaveURL(/\/suivant$/);
   await page.keyboard.press('P');

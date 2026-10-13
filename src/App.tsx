@@ -52,7 +52,7 @@ export function App() {
   const logView = path === '/log';
   const upcomingView = path === '/suivant';
   const projectsView = !dayView && !logView && !upcomingView;
-  // Onglets, dans l'ordre (Alt+← / Alt+→) ; P, T, S, L vont directement à l'un d'eux.
+  // Onglets, dans l'ordre (Ctrl+Maj+← / Ctrl+Maj+→) ; P, T, S, L vont directement à l'un d'eux.
   const TABS = [
     { label: 'Projets', to: '/', key: 'P', selected: projectsView },
     { label: 'Aujourd’hui', to: '/plan', key: 'T', selected: dayView },
@@ -227,8 +227,9 @@ export function App() {
       const target = e.target as HTMLElement;
       // Champ « + Ajouter » en lecture (atteint par la navigation) : raccourcis actifs.
       if (e.defaultPrevented || target.closest('input:not([readonly]), select, textarea, [role="dialog"]')) return;
-      // Alt+← / Alt+→ : onglet précédent / suivant (en boucle).
-      if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      // Ctrl+Maj+← / Ctrl+Maj+→ (ou ⌘+Maj, macOS prenant Ctrl+Maj+flèche) : onglet
+      // précédent / suivant (en boucle). Pas Alt : Ubuntu le réserve aux fenêtres.
+      if (e.shiftKey && !e.altKey && (e.ctrlKey || e.metaKey) && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
         e.preventDefault();
         const i = TABS.findIndex((t) => t.selected) + (e.key === 'ArrowLeft' ? -1 : 1);
         return navigate(TABS[(i + TABS.length) % TABS.length].to);
