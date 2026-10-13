@@ -91,8 +91,8 @@ Clavier (`?` affiche l'aide, un 2e `?` ou `Échap` la ferme ; groupée par thèm
 | `Échap` | Quitter l'édition sans enregistrer, retour à la navigation ; dans un champ « + Ajouter » en écriture : le vide et le repasse en lecture (curseur sur le champ, `j` / `k` et `n` utilisables) |
 | `Échap` puis `Échap` | Retirer tous les filtres : report, priorité, Archivés, Favoris, tags et ceux du Log (deux appuis rapprochés, hors champ de saisie) |
 | `Espace` | Cocher / décocher la tâche |
-| `Alt+↑` `Alt+↓` (ou `Alt+k` `Alt+j`) | Monter / descendre la tâche (priorité). En bord de projet, elle passe dans le projet voisin |
-| `Alt+↑` `Alt+↓` sur un projet | Monter / descendre tout le projet (avant / après le projet voisin) |
+| `Ctrl+Maj+↑` `Ctrl+Maj+↓` (`⌘+Maj` sur macOS) | Monter / descendre la tâche (priorité). En bord de projet, elle passe dans le projet voisin |
+| `Ctrl+Maj+↑` `Ctrl+Maj+↓` (`⌘+Maj` sur macOS) sur un projet | Monter / descendre tout le projet (avant / après le projet voisin) |
 | `Maj+Entrée` ou `o` | Ouvrir la fiche de la tâche (contenu Markdown, ticket) |
 | `e` | Ouvrir la fiche directement en édition (titre, `Tab` → ticket, `Tab` → dates…) |
 | `r` | Report : à reporter → reportée (champ du ticket dans la ligne : `Entrée` enregistre ; `Échap`, vide, invalide ou clic ailleurs : retour à rien) → rien ; aussi dans la fiche |

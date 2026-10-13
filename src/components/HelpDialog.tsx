@@ -32,7 +32,7 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
     [
       [[['n']], 'Nouvelle tâche (projet courant, sinon dernier utilisé)'],
       [[['Espace']], 'Cocher / décocher'],
-      [[['Alt+↑', 'Alt+↓'], ['Alt+k', 'Alt+j']], 'Monter / descendre, jusque dans le projet voisin'],
+      [[['Ctrl+Maj+↑', 'Ctrl+Maj+↓'], ['⌘+Maj+↑', '⌘+Maj+↓']], 'Monter / descendre, jusque dans le projet voisin'],
       [[['1', '2', '3']], 'Priorité ; le même chiffre la retire'],
       [[['r']], 'Report : à reporter → ticket (Entrée : reporté ; Échap : rien) → rien'],
       [[['c']], 'Chrono : lancer / mettre en pause'],
@@ -45,7 +45,7 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
     'Projet',
     [
       [[['n n']], 'Nouveau projet'],
-      [[['Alt+↑', 'Alt+↓']], 'Monter / descendre le projet'],
+      [[['Ctrl+Maj+↑', 'Ctrl+Maj+↓'], ['⌘+Maj+↑', '⌘+Maj+↓']], 'Monter / descendre le projet'],
       [[['f']], 'Favori / plus favori'],
       [[['a']], 'Archiver / désarchiver'],
       [[['r']], 'Ticket du projet (epic…) : saisir, modifier, vider pour le retirer'],
