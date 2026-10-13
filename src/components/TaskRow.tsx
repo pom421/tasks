@@ -26,7 +26,7 @@ import { DueDate, PlannedDate, TaskTags } from './TaskDates';
 // t l'ajoute à Aujourd’hui ou l'en retire (tâches à faire),
 // 1, 2, 3 donnent la priorité (le même chiffre la retire),
 // x ou Suppr demande la suppression, un second appui la confirme,
-// Alt+↑ / Alt+↓ (ou Alt+k / Alt+j) déplacent la tâche (onMove, tâches à faire).
+// Ctrl+Maj+↑ / Ctrl+Maj+↓ (ou ⌘+Maj) déplacent la tâche (onMove, tâches à faire).
 // highlight : recherche du Log, soulignée dans le titre.
 export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTask; onMove?: (direction: -1 | 1) => void; highlight?: string }) {
   const { openTask, undoable } = useActions();
@@ -68,16 +68,15 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
   const onKeyDown = (e: KeyboardEvent<HTMLLIElement>) => {
     const target = e.target as HTMLElement;
     // Hors de la ligne (fiche ouverte dans une modale, rendue ailleurs dans le DOM) ou dans un champ : rien.
-    if (!e.currentTarget.contains(target) || target.matches('input, textarea') || e.ctrlKey || e.metaKey) return;
-    if (e.altKey) {
-      const direction = moveDirection(e);
-      if (direction && onMove) {
-        e.preventDefault();
-        setConfirmDelete(false);
-        onMove(direction);
-      }
+    if (!e.currentTarget.contains(target) || target.matches('input, textarea')) return;
+    const direction = moveDirection(e);
+    if (direction && onMove) {
+      e.preventDefault();
+      setConfirmDelete(false);
+      onMove(direction);
       return;
     }
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key === 'x' || e.key === 'Delete') {
       e.preventDefault();
       if (confirmDelete) remove();
