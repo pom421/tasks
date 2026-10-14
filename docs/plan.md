@@ -40,6 +40,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
+- [x] Modification d'un nom : la saisie et la sélection restent quand la fenêtre perd le focus (`Alt+Tab` ; Firefox sous Linux en RDP, où `Ctrl` faisait perdre le focus : copier-coller impossible). Un clic ailleurs dans la page annule toujours
 - [x] Ligne de tâche moins dense, sur deux lignes (Projets, Aujourd’hui, Suivant) : titre, ticket et icônes en haut ; tags à gauche, date prévue, échéance et temps passé à droite en dessous ; 2e ligne toujours là (chrono ▷ au bout). ☀ et priorité tout à droite de la 1re ligne, 🗒 juste après le titre. Log : une seule ligne, comme avant ([PR #8](https://github.com/pom421/tasks/pull/8))
 - [x] Fiche : champ Sprint avec les sprints actifs puis à venir de Jira proposés (API Agile : tableaux Scrum du projet, puis leurs sprints ; 100 premiers par tableau, suffisant : validé) ([PR #9](https://github.com/pom421/tasks/pull/9))
 - [x] Fiche : mêmes champs au pixel près en lecture (bloqués) et en édition ; ligne 1 ticket + sprint (nouveau, synchronisé avec Jira, migration 17), ligne 2 dates + temps passé et chrono, ligne 3 tags ; en lecture, calendrier des dates et ✕ des tags cachés (validé) ([PR #7](https://github.com/pom421/tasks/pull/7))
