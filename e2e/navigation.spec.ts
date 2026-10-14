@@ -441,14 +441,14 @@ test('badge « reporté » conservé dans le journal, et J y fonctionne aussi', 
 // Titres des tâches à faire, par projet, tels qu'enregistrés.
 const order = (store: Store) => store.state().projects.map((p) => p.tasks.map((t) => t.title));
 
-test('Alt+↑ / Alt+↓ changent l’ordre dans le projet ; le focus suit la tâche', async ({ page, store, data }) => {
+test('Ctrl+Maj+↑ / Ctrl+Maj+↓ changent l’ordre dans le projet ; le focus suit la tâche', async ({ page, store, data }) => {
   await pressDown(page, 3); // « Deux »
-  await page.keyboard.press('Alt+ArrowUp');
+  await page.keyboard.press('Control+Shift+ArrowUp');
   await expect(page.locator(`#project-${data.alpha.id} .name`)).toHaveText(['Alpha', 'Deux', 'Une']);
   expect(order(store)).toEqual([['Deux', 'Une'], ['Trois']]);
   expect(await current(page)).toBe(`task:${data.tasks.deux.id}`);
 
-  await page.keyboard.press('Alt+ArrowDown');
+  await page.keyboard.press('Control+Shift+ArrowDown');
   await expect(page.locator(`#project-${data.alpha.id} .name`)).toHaveText(['Alpha', 'Une', 'Deux']);
   // Ordre conservé après rechargement.
   await reload(page);
@@ -457,24 +457,34 @@ test('Alt+↑ / Alt+↓ changent l’ordre dans le projet ; le focus suit la tâ
 
 test('en bord de projet, la tâche passe dans le projet voisin', async ({ page, store, data }) => {
   await pressDown(page, 3); // « Deux », dernière d'Alpha
-  await page.keyboard.press('Alt+ArrowDown'); // → en tête de Beta
+  await page.keyboard.press('Control+Shift+ArrowDown'); // → en tête de Beta
   await expect(page.locator(`#project-${data.beta.id} .name`)).toHaveText(['Beta', 'Deux', 'Trois']);
   expect(order(store)).toEqual([['Une'], ['Deux', 'Trois']]);
   expect(await current(page)).toBe(`task:${data.tasks.deux.id}`);
 
-  await page.keyboard.press('Alt+ArrowUp'); // → retour en fin d'Alpha
+  await page.keyboard.press('Control+Shift+ArrowUp'); // → retour en fin d'Alpha
   expect(await current(page)).toBe(`task:${data.tasks.deux.id}`);
   await expect(page.locator(`#project-${data.alpha.id} .name`)).toHaveText(['Alpha', 'Une', 'Deux']);
   expect(order(store)).toEqual([['Une', 'Deux'], ['Trois']]);
 });
 
-test('Alt+k / Alt+j comme Alt+↑ / Alt+↓ ; tout en haut, rien ne bouge', async ({ page, store, data }) => {
+test('⌘+Maj+↓ comme Ctrl+Maj+↓ (macOS) ; tout en haut, rien ne bouge ; Alt ne déplace plus', async ({ page, store, data }) => {
   await pressDown(page, 2); // « Une », première du premier projet
-  await page.keyboard.press('Alt+KeyK');
+  await page.keyboard.press('Control+Shift+ArrowUp');
+  // Anciennes touches (Alt+↓, Alt+j) : sans effet.
+  await page.keyboard.press('Alt+ArrowDown');
+  await page.keyboard.press('Alt+KeyJ');
   await page.waitForTimeout(200);
   expect(order(store)).toEqual([['Une', 'Deux'], ['Trois']]);
-  await page.keyboard.press('Alt+KeyJ');
+  await page.keyboard.press('Meta+Shift+ArrowDown');
   await expect(page.locator(`#project-${data.alpha.id} .name`)).toHaveText(['Alpha', 'Deux', 'Une']);
+  // Dans le champ du nom : sélection du texte, pas de déplacement.
+  await page.keyboard.press('Enter');
+  await expect(page.locator(`#project-${data.alpha.id} li.task input`)).toBeFocused();
+  await page.keyboard.press('Control+Shift+ArrowUp');
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(200);
+  expect(order(store)).toEqual([['Deux', 'Une'], ['Trois']]);
 });
 
 test('vers un projet vide ; les projets archivés masqués sont sautés', async ({ page, store, data }) => {
@@ -483,7 +493,7 @@ test('vers un projet vide ; les projets archivés masqués sont sautés', async 
   await reload(page);
   await expect(page.locator('.project')).toHaveCount(2); // Alpha, Gamma
   await pressDown(page, 3); // « Deux »
-  await page.keyboard.press('Alt+ArrowDown');
+  await page.keyboard.press('Control+Shift+ArrowDown');
   await expect(page.locator(`#project-${gamma.id} .name`)).toHaveText(['Gamma', 'Deux']);
   expect(store.state().projects.find((p) => p.id === gamma.id)!.tasks.map((t) => t.title)).toEqual(['Deux']);
 });
@@ -1603,10 +1613,10 @@ test('création annulable : u retire la tâche ou le projet créé, U le rétabl
 
 test('déplacements annulables : tâche et projet reviennent à leur place', async ({ page, store, data }) => {
   await page.locator(`[data-nav-key="task:${data.tasks.deux.id}"]`).focus();
-  await page.keyboard.press('Alt+ArrowDown'); // en tête de Beta
+  await page.keyboard.press('Control+Shift+ArrowDown'); // en tête de Beta
   await expect(page.locator(`#project-${data.beta.id} .task .name`)).toHaveText(['Deux', 'Trois']);
   await page.locator(`[data-nav-key="project:${data.beta.id}"]`).focus();
-  await page.keyboard.press('Alt+ArrowUp');
+  await page.keyboard.press('Control+Shift+ArrowUp');
   await expect(page.locator('.project').first()).toHaveId(`project-${data.beta.id}`);
   await page.keyboard.press('u');
   await expect(page.locator('.project').first()).toHaveId(`project-${data.alpha.id}`);
@@ -1669,22 +1679,25 @@ test('modification dans la fiche annulable : u remet le titre d’avant, U le r�
 
 // --- Déplacement de projet ------------------------------------------------------
 
-test('Alt+↑ / Alt+↓ sur un projet : il passe au-dessus du précédent / sous le suivant', async ({ page, store, data }) => {
+test('Ctrl+Maj+↑ / Ctrl+Maj+↓ sur un projet : il passe au-dessus du précédent / sous le suivant', async ({ page, store, data }) => {
   const names = () => page.locator('.project-head .name');
   await pressDown(page, 5); // projet « Beta »
   expect(await current(page)).toBe(`project:${data.beta.id}`);
-  await page.keyboard.press('Alt+ArrowUp');
+  await page.keyboard.press('Control+Shift+ArrowUp');
   await expect(names()).toHaveText(['Beta', 'Alpha']);
   expect(store.state().projects.map((p) => p.name)).toEqual(['Beta', 'Alpha']);
   expect(await current(page)).toBe(`project:${data.beta.id}`); // le focus suit
   // Ses tâches suivent aussi.
   await expect(page.locator(`#project-${data.beta.id} li.task .name`)).toHaveText(['Trois']);
 
-  await page.keyboard.press('Alt+ArrowUp'); // déjà en haut : rien
+  await page.keyboard.press('Control+Shift+ArrowUp'); // déjà en haut : rien
   await page.waitForTimeout(200);
   expect(store.state().projects.map((p) => p.name)).toEqual(['Beta', 'Alpha']);
 
-  await page.keyboard.press('Alt+KeyJ'); // comme Alt+↓
+  await page.keyboard.press('Alt+ArrowDown'); // ancienne touche : sans effet
+  await page.waitForTimeout(200);
+  expect(store.state().projects.map((p) => p.name)).toEqual(['Beta', 'Alpha']);
+  await page.keyboard.press('Meta+Shift+ArrowDown'); // comme Ctrl+Maj+↓ (macOS)
   await expect(names()).toHaveText(['Alpha', 'Beta']);
   await reload(page);
   await expect(names()).toHaveText(['Alpha', 'Beta']);

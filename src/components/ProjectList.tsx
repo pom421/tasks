@@ -21,7 +21,7 @@ interface ProjectCardProps {
 
 // Clavier, sur l'en-tête du projet (hors champ de saisie) : f favori,
 // a archiver / désarchiver, r saisir le ticket (dans la ligne), x ou Suppr demande la suppression, un second
-// appui la confirme ; Alt+↑ / Alt+↓ déplacent le projet. Tout est annulable (u).
+// appui la confirme ; Ctrl+Maj+↑ / Ctrl+Maj+↓ (ou ⌘+Maj) déplacent le projet. Tout est annulable (u).
 function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
   const { setLastProject, undoable } = useActions();
   const [confirmDelete, setConfirmDelete] = useState(false);

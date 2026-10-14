@@ -54,7 +54,7 @@ Chaque session démarre dans un conteneur neuf : les dépendances doivent y êtr
 
 ## Utilisation
 
-- Disposition : une colonne, quatre onglets : « Projets » (`P`, `/`), « Aujourd’hui » (`T`, `/plan`), « Suivant » (`S`, `/suivant`) et « Log » (`L`, `/log`) ; `Alt+←` / `Alt+→` passent à l'onglet précédent / suivant (en boucle). Chaque onglet garde la position du curseur : en y revenant, il est sur le même élément.
+- Disposition : une colonne, quatre onglets : « Projets » (`P`, `/`), « Aujourd’hui » (`T`, `/plan`), « Suivant » (`S`, `/suivant`) et « Log » (`L`, `/log`) ; `Ctrl+Maj+←` / `Ctrl+Maj+→` (`⌘+Maj` sur macOS) passent à l'onglet précédent / suivant (en boucle). Chaque onglet garde la position du curseur : en y revenant, il est sur le même élément.
 - Cocher une tâche → elle passe dans le Log, datée du jour, barrée. La décocher → elle revient dans son projet.
 - Log (un cadre par jour) : fonctionne seul, les boutons de la zone des projets n'y touchent pas. Il montre les 5 derniers jours ayant des entrées (une semaine de travail ; jours vides sautés). Sous les onglets, alignés à droite, quatre filtres, combinés : seuls restent les jours qui ont une tâche correspondante :
   - tags (`#` dans l'onglet Log) : tâches portant tous les tags choisis (autocomplétion parmi les tags des tâches faites ; ✕ sur une pastille la retire). N'apparaît que si une tâche faite a un tag ;
@@ -91,8 +91,8 @@ Clavier (`?` affiche l'aide, un 2e `?` ou `Échap` la ferme ; groupée par thèm
 | `Échap` | Quitter l'édition sans enregistrer, retour à la navigation ; dans un champ « + Ajouter » en écriture : le vide et le repasse en lecture (curseur sur le champ, `j` / `k` et `n` utilisables) |
 | `Échap` puis `Échap` | Retirer tous les filtres : report, priorité, Archivés, Favoris, tags et ceux du Log (deux appuis rapprochés, hors champ de saisie) |
 | `Espace` | Cocher / décocher la tâche |
-| `Alt+↑` `Alt+↓` (ou `Alt+k` `Alt+j`) | Monter / descendre la tâche (priorité). En bord de projet, elle passe dans le projet voisin |
-| `Alt+↑` `Alt+↓` sur un projet | Monter / descendre tout le projet (avant / après le projet voisin) |
+| `Ctrl+Maj+↑` `Ctrl+Maj+↓` (`⌘+Maj` sur macOS) | Monter / descendre la tâche (priorité). En bord de projet, elle passe dans le projet voisin |
+| `Ctrl+Maj+↑` `Ctrl+Maj+↓` (`⌘+Maj` sur macOS) sur un projet | Monter / descendre tout le projet (avant / après le projet voisin) |
 | `Maj+Entrée` ou `o` | Ouvrir la fiche de la tâche (contenu Markdown, ticket) |
 | `e` | Ouvrir la fiche directement en édition (titre, `Tab` → ticket, `Tab` → dates…) |
 | `r` | Report : à reporter → reportée (champ du ticket dans la ligne : `Entrée` enregistre ; `Échap`, vide, invalide ou clic ailleurs : retour à rien) → rien ; aussi dans la fiche |
@@ -100,7 +100,7 @@ Clavier (`?` affiche l'aide, un 2e `?` ou `Échap` la ferme ; groupée par thèm
 | `C` (majuscule) | Remettre le chrono à zéro (annulable par `u`) |
 | `t` | Ajouter la tâche à Aujourd’hui / l'en retirer (aussi dans la fiche) |
 | `P` / `T` / `S` / `L` (majuscules) | Onglet « Projets » / « Aujourd’hui » / « Suivant » / « Log » |
-| `Alt+←` / `Alt+→` | Onglet précédent / suivant (en boucle) |
+| `Ctrl+Maj+←` / `Ctrl+Maj+→` (`⌘+Maj` sur macOS) | Onglet précédent / suivant (en boucle) |
 | `>` / `<` dans la fiche | Pousser vers Jira / récupérer depuis Jira : fenêtre de comparaison, puis `Entrée` (ou la même touche) confirme, `Échap` annule |
 | `1` `2` `3` | Priorité 1, 2 ou 3 ; le même chiffre la retire (aussi dans la fiche) |
 | `R` (majuscule) | Projets : seulement les tâches à reporter → reportées → toutes (ou clic sur le bouton du report) |
