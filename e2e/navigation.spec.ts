@@ -127,6 +127,32 @@ test('Entrée sur une tâche puis Échap : annule, focus sur la tâche, navigati
   expect(await current(page)).toBe(`task:${data.tasks.deux.id}`);
 });
 
+test('édition du titre : la fenêtre perd le focus (Alt+Tab, Ctrl sous Linux) = saisie et sélection gardées ; clic ailleurs = annulée', async ({ page }) => {
+  await pressDown(page, 2);
+  await page.keyboard.press('Enter');
+  const input = page.locator('input.edit');
+  await expect(input).toHaveValue('Une');
+  await page.keyboard.type('Une modifiée');
+  await page.keyboard.press('Shift+Home');
+
+  // Fenêtre inactive : le champ perd le focus, puis le retrouve au retour.
+  await page.evaluate(() => {
+    const field = document.activeElement as HTMLInputElement;
+    const hasFocus = document.hasFocus;
+    document.hasFocus = () => false;
+    field.blur();
+    document.hasFocus = hasFocus;
+    field.focus();
+  });
+  await expect(input).toHaveValue('Une modifiée');
+  expect(await input.evaluate((el: HTMLInputElement) => [el.selectionStart, el.selectionEnd])).toEqual([0, 12]);
+
+  // Non-régression : un clic ailleurs dans la page annule toujours.
+  await page.locator('body').click({ position: { x: 1, y: 1 } });
+  await expect(input).toHaveCount(0);
+  await expect(page.locator('.task .name').first()).toHaveText('Une');
+});
+
 test('Entrée sur une tâche : modification enregistrée', async ({ page, store, data }) => {
   await pressDown(page, 3);
   await page.keyboard.press('Enter');
