@@ -96,7 +96,7 @@ export function ProjectFilters({ projects, bugtrackerFilter, onBugtrackerFilter,
           title="Afficher seulement les projets archivés (A)"
           onClick={onArchivedOnly}
         >
-          <Archive aria-hidden fill={archivedOnly ? 'currentColor' : 'none'} /> Archivés
+          <Archive aria-hidden className={archivedOnly ? 'fill-muted-foreground/30' : undefined} fill={archivedOnly ? undefined : 'none'} /> Archivés
         </Button>
       )}
       {show.favorites && (

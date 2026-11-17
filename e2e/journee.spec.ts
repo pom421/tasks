@@ -93,6 +93,21 @@ test('au-delà du maximum : 6/5 tâches en rouge ; maximum réglable', async ({ 
   await expect(count).not.toHaveClass(/text-destructive/);
 });
 
+test('au maximum : 5/5 tâches en orange (pas encore en rouge)', async ({ page, store, data }) => {
+  const extra = ['Quatre', 'Cinq'].map((t) => store.createTask(data.beta.id, t));
+  for (const t of [data.une, data.deux, data.trois, ...extra]) store.updateTask(t.id, { dayAt: TODAY });
+  await open(page, '/plan');
+  const count = page.locator('#day .day-count');
+  await expect(count).toHaveText('5/5 tâches');
+  await expect(count).toHaveClass(/text-orange-600/);
+  await expect(count).not.toHaveClass(/text-destructive/);
+
+  store.updateSettings({ day_capacity: 6 });
+  await page.reload();
+  await expect(count).toHaveText('5/6 tâches');
+  await expect(count).not.toHaveClass(/text-orange-600/);
+});
+
 test('clavier : t ajoute / retire, T change d’onglet, u annule', async ({ page, store, data }) => {
   await open(page);
   await page.keyboard.press('ArrowDown');
