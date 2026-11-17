@@ -20,6 +20,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Idées / plus tard
 
+- [ ] « Chemise » d'un projet : page de garde pour se rafraîchir la mémoire (fait récemment en changelog versionné, prochaines étapes, liens épinglés), avec invite discrète à la mettre à jour les jours où le projet a bougé. Propositions à trancher avant tout code
 - [ ] Lien d'un ticket : modèle d'URL réglable (`https://…/browse/{clé}`) pour GitLab ou GitHub (« pour l'instant, non » ; aujourd'hui `URL/browse/CLÉ`, format Jira)
 - [ ] Jira : convertir Markdown ↔ wiki (refusé pour l'instant : contenu envoyé tel quel)
 - [ ] Drizzle : passer à la 1.0 stable quand elle sort (épinglée en `1.0.0-rc.4`)
