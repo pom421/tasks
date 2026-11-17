@@ -165,3 +165,67 @@ test('! : message exact si aucune tâche de cette priorité ; bouton absent sans
   await page.locator('body').press('!');
   await expect(page.locator('#priority-filter')).toHaveText('Priorité 3');
 });
+
+// Tri par priorité d'un projet : bouton souris seulement, sans touche.
+test('projet : bouton « Trier par priorité » : 1, 2, 3, puis sans priorité ; u annule', async ({ page, store }) => {
+  const alpha = store.createProject('Alpha');
+  const [a, b, c, d] = ['Sans', 'Trois', 'Un', 'Deux'].map((t) => store.createTask(alpha.id, t));
+  store.updateTask(b.id, { priority: 3 });
+  store.updateTask(c.id, { priority: 1 });
+  store.updateTask(d.id, { priority: 2 });
+  void a;
+  await page.goto('/');
+  const names = page.locator('#projects li.task .name');
+  await expect(names).toHaveText(['Sans', 'Trois', 'Un', 'Deux']);
+
+  const project = page.locator(`#project-${alpha.id}`);
+  await project.locator('.project-head').hover();
+  const sort = project.getByRole('button', { name: 'Trier par priorité' });
+  await expect(sort).toBeVisible();
+  await expect(sort).toHaveAttribute('title', /1, 2, 3, puis sans priorité/);
+  await sort.click();
+  await expect(names).toHaveText(['Un', 'Deux', 'Trois', 'Sans']);
+
+  // Déjà trié : le bouton ne sert plus (sa place reste, invisible).
+  await project.locator('.project-head').hover();
+  await expect(sort).toBeHidden();
+
+  // u rend l'ordre d'avant, U le retrie.
+  await page.keyboard.press('u');
+  await expect(names).toHaveText(['Sans', 'Trois', 'Un', 'Deux']);
+  await page.keyboard.press('U');
+  await expect(names).toHaveText(['Un', 'Deux', 'Trois', 'Sans']);
+});
+
+test('tri par priorité : stable à priorité égale ; ignore les tâches faites et les autres projets', async ({ page, store }) => {
+  const alpha = store.createProject('Alpha');
+  const beta = store.createProject('Beta');
+  const [x, y, z] = ['X', 'Y', 'Z'].map((t) => store.createTask(alpha.id, t));
+  store.updateTask(x.id, { priority: 2 });
+  store.updateTask(y.id, { priority: 2 });
+  store.updateTask(z.id, { priority: 1 });
+  store.updateTask(store.createTask(alpha.id, 'Faite').id, { doneAt: '2026-09-25' });
+  store.createTask(beta.id, 'Autre');
+  await page.goto('/');
+  await page.locator(`#project-${alpha.id} .project-head`).hover();
+  await page.locator(`#project-${alpha.id}`).getByRole('button', { name: 'Trier par priorité' }).click();
+  await expect(page.locator(`#project-${alpha.id} li.task .name`)).toHaveText(['Z', 'X', 'Y']); // X avant Y comme avant
+  await expect(page.locator(`#project-${beta.id} li.task .name`)).toHaveText(['Autre']);
+  // Beta : aucune priorité, rien à trier.
+  await page.locator(`#project-${beta.id} .project-head`).hover();
+  await expect(page.locator(`#project-${beta.id}`).getByRole('button', { name: 'Trier par priorité' })).toBeHidden();
+});
+
+test('tri par priorité : sans effet quand un filtre de tâches est actif', async ({ page, store }) => {
+  const alpha = store.createProject('Alpha');
+  const [a, b] = ['Un', 'Deux'].map((t) => store.createTask(alpha.id, t));
+  store.updateTask(a.id, { priority: 2 });
+  store.updateTask(b.id, { priority: 1 });
+  await page.goto('/');
+  await page.locator(`#project-${alpha.id} .project-head`).hover();
+  await expect(page.locator(`#project-${alpha.id}`).getByRole('button', { name: 'Trier par priorité' })).toBeVisible();
+  await page.keyboard.press('!'); // filtre priorité 1 : liste incomplète
+  await expect(page.locator('#priority-filter')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator(`#project-${alpha.id} .project-head`).hover();
+  await expect(page.locator(`#project-${alpha.id}`).getByRole('button', { name: 'Trier par priorité' })).toBeHidden();
+});

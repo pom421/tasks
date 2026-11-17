@@ -832,7 +832,7 @@ test('ticket du projet : pas d’icône ; vidé, il est retiré ; lien refusé ;
   // Pas d'icône pour le ticket (comme le report d'une tâche) : r seulement.
   await head.hover();
   await expect(head.getByRole('button', { name: 'Ticket du projet' })).toHaveCount(0);
-  await expect(head.locator('.actions button')).toHaveCount(2); // archive, corbeille
+  await expect(head.locator('.actions button')).toHaveCount(3); // tri par priorité, archive, corbeille (pas d'icône de ticket)
   await head.locator('.name').focus();
   await page.keyboard.press('r');
   const ticket = head.getByRole('textbox', { name: 'Ticket' });

@@ -37,6 +37,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
+- [x] Projet : bouton « Trier par priorité » (flèche + 0 1, au survol, souris seulement) : 1, 2, 3 puis sans priorité, stable, annulable ; remplace le tri automatique refusé ([PR #16](https://github.com/pom421/tasks/pull/16))
 - [x] Dépendances : cooldown 7 jours avec exceptions par version précise (skill `dependances-securite`), `pnpm audit` en CI (PR + chaque jour, seuil `high`), 12 failles corrigées, toutes les dépendances, pnpm 12.19.0 et Node 26 et actions GitHub (`checkout` / `setup-node` v7) mis à jour dans le respect du cooldown ([PR #13](https://github.com/pom421/tasks/pull/13))
 - [x] Fiche d'un projet (`o`, `Maj+Entrée`, `e`, icône 🗒) : nom, ticket (cliquable en lecture, comme la pastille rose de la ligne), contenu Markdown ; pas de tags ni de dates pour l'instant ([PR #6](https://github.com/pom421/tasks/pull/6))
 - [x] Modification d'un nom : la saisie et la sélection restent quand la fenêtre perd le focus (`Alt+Tab` ; Firefox sous Linux en RDP, où `Ctrl` faisait perdre le focus : copier-coller impossible). Un clic ailleurs dans la page annule toujours ([PR #12](https://github.com/pom421/tasks/pull/12))
