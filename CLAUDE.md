@@ -59,6 +59,13 @@ données : `README.md` ; tâches et décisions attendues : `docs/plan.md`.
   `getByRole`.
 - Conteneur cloud : dépendances par le hook `SessionStart`, Chromium détecté par
   `playwright.config.ts` (ne pas lancer `playwright install`).
+- Bac à sable local (Linux) : **toujours lancer `pnpm test:e2e` en local avant
+  de livrer** (35 s ; la CI ne remplace pas). Première fois : `pnpm exec
+  playwright install chromium`, puis `sudo -n env "PATH=$PATH" "$(which pnpm)"
+  exec playwright install-deps chromium` (bibliothèques système). Installer les
+  dépendances dans un worktree, jamais dans le dépôt principal (partagé avec le
+  Mac, binaires natifs différents) ; cache pnpm hors du dépôt
+  (`pnpm config set --global store-dir ~/.local/share/pnpm-store`).
 - `pkill -f` / `pgrep` : jamais avec un motif qui correspond à la commande
   elle-même (le shell se tue).
 

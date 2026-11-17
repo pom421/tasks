@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react';
-import type { Settings, Task } from '../../shared/types.ts';
+import type { Project, Settings, Task } from '../../shared/types.ts';
 
-// Ouverture de la fiche : lecture (notes) ou édition complète (edit, focus sur
+// Ouverture de la fiche (tâche ou projet) : lecture (notes) ou édition complète (edit, focus sur
 // le titre).
 export type TaskField = 'notes' | 'edit';
 
@@ -26,6 +26,7 @@ export interface Actions {
   toast: (message: string) => void;
   setLastProject: (id: number) => void;
   openTask: (task: Task, field?: TaskField) => void;
+  openProject: (project: Project, field?: TaskField) => void; // fiche du projet, mêmes champs
   // Comme act, puis inscrit l'action dans l'historique si elle a réussi.
   undoable: (action: Undoable) => Promise<void>;
   settings: Settings;

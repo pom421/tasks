@@ -23,7 +23,7 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
   [
     'Fiche',
     [
-      [[['Maj+Entrée'], ['o']], 'Ouvrir en lecture'],
+      [[['Maj+Entrée'], ['o']], 'Lire (tâche ou projet)'],
       [[['e']], 'Ouvrir en édition (titre, Tab : ticket, sprint, dates…)'],
       [[['Ctrl+Entrée']], 'Enregistrer et lire ; en lecture, fermer'],
       [[['r', 'c', 'C', 't', '1', '2', '3']], 'Comme sur la tâche'],

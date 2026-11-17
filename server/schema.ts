@@ -23,6 +23,7 @@ export const project = sqliteTable('project', {
   favorite_at: text(), // favori depuis
   position: integer().notNull().default(0), // ordre d'affichage des projets
   bugtracker_key: text(), // ticket du projet (epic, PROJ-123), lien construit avec bugtracker_base_url
+  notes: text(), // contenu, en Markdown
 });
 
 export const task = sqliteTable(
