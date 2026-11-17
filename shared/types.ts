@@ -51,11 +51,12 @@ export interface Settings {
 export type SettingsPatch = Partial<Omit<Settings, 'jira_pat_set'>> & { jira_pat?: string | null };
 
 // Champs d'une tâche synchronisés avec un ticket Jira (titre ↔ summary,
-// contenu ↔ description, échéance ↔ duedate).
+// contenu ↔ description, échéance ↔ duedate, sprint ↔ champ Sprint).
 export interface JiraFields {
   title: string;
   notes: string | null;
   due_at: string | null; // 'YYYY-MM-DD'
+  sprint: string | null; // nom du sprint
 }
 
 // Pousser / récupérer : possible avec un identifiant (PROJ-123), l'URL et le PAT.

@@ -103,7 +103,7 @@ test('onglet Log : filtres (recherche, date, projet) sur une ligne sous les ongl
   expect(Math.abs((await middle('#filter-reset')) - line)).toBeLessThan(4);
 });
 
-test('P, T, L : onglet Projets, Aujourd’hui, Log ; Alt+← / Alt+→ en boucle ; / et d vont au Log', async ({ page }) => {
+test('P, T, L : onglet Projets, Aujourd’hui, Log ; Ctrl+Maj+← / Ctrl+Maj+→ en boucle ; / et d vont au Log', async ({ page }) => {
   const tab = (name: string) => page.getByRole('tab', { name, exact: true });
   await expect(tab('Log')).toHaveAttribute('aria-selected', 'true');
   await expect(tab('Log')).toHaveAttribute('title', 'Log (L)');
@@ -124,14 +124,18 @@ test('P, T, L : onglet Projets, Aujourd’hui, Log ; Alt+← / Alt+→ en boucle
   // Un 2e L reste sur le Log.
   await page.keyboard.press('L');
   await expect(tab('Log')).toHaveAttribute('aria-selected', 'true');
-  // Alt+← / Alt+→ : onglet voisin, en boucle.
-  await page.keyboard.press('Alt+ArrowRight');
+  // Ctrl+Maj+← / Ctrl+Maj+→ (ou ⌘+Maj) : onglet voisin, en boucle.
+  await page.keyboard.press('Control+Shift+ArrowRight');
   await expect(tab('Projets')).toHaveAttribute('aria-selected', 'true');
-  await page.keyboard.press('Alt+ArrowRight');
+  await page.keyboard.press('Meta+Shift+ArrowRight');
   await expect(tab('Aujourd’hui')).toHaveAttribute('aria-selected', 'true');
+  // Ancienne touche (Alt+←) : sans effet.
   await page.keyboard.press('Alt+ArrowLeft');
+  await page.waitForTimeout(200);
+  await expect(tab('Aujourd’hui')).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('Control+Shift+ArrowLeft');
   await expect(tab('Projets')).toHaveAttribute('aria-selected', 'true');
-  await page.keyboard.press('Alt+ArrowLeft');
+  await page.keyboard.press('Control+Shift+ArrowLeft');
   await expect(tab('Log')).toHaveAttribute('aria-selected', 'true');
   await expect(tab('Projets')).toHaveAttribute('title', 'Projets (P)');
   // Clic sur l'onglet.
@@ -144,7 +148,7 @@ test('P, T, L : onglet Projets, Aujourd’hui, Log ; Alt+← / Alt+→ en boucle
   await page.keyboard.press('/');
   await expect(tab('Log')).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('#log-search')).toBeFocused();
-  await page.keyboard.press('Alt+ArrowLeft'); // dans un champ : mot précédent, pas d'onglet
+  await page.keyboard.press('Control+Shift+ArrowLeft'); // dans un champ : sélection du mot, pas d'onglet
   await expect(tab('Log')).toHaveAttribute('aria-selected', 'true');
   await page.locator('#log-search').press('Escape');
   await page.locator('#journal').click({ position: { x: 5, y: 5 } });

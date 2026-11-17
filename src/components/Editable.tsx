@@ -25,6 +25,7 @@ export function EditableName({ value, navKey, onSave, className, truncate = fals
   const [editing, setEditing] = useState(false);
   const refocus = useRef(false);
   const span = useRef<HTMLSpanElement>(null);
+  const input = useRef<HTMLInputElement>(null);
   const tooltipTimer = useRef<number | undefined>(undefined);
   useEffect(() => () => clearTimeout(tooltipTimer.current), []);
 
@@ -33,6 +34,9 @@ export function EditableName({ value, navKey, onSave, className, truncate = fals
       refocus.current = false;
       span.current?.focus();
     }
+    // Titre sélectionné à l'ouverture seulement : au retour dans la fenêtre,
+    // la sélection faite entre-temps est gardée.
+    if (editing) input.current?.select();
   }, [editing]);
 
   const stop = (focusBack: boolean) => {
@@ -47,9 +51,11 @@ export function EditableName({ value, navKey, onSave, className, truncate = fals
         defaultValue={value}
         autoFocus
         autoComplete="off"
-        onFocus={(e) => e.currentTarget.select()}
-        // Perte de focus = annulation, sauf si Entrée/Échap vient de fermer le champ.
-        onBlur={() => !refocus.current && stop(false)}
+        ref={input}
+        // Perte de focus = annulation, sauf si Entrée/Échap vient de fermer le
+        // champ, ou si c'est la fenêtre qui perd le focus (Alt+Tab ; sous Linux,
+        // Firefox voit aussi une touche réservée par le bureau, comme Ctrl).
+        onBlur={() => !refocus.current && document.hasFocus() && stop(false)}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
             const next = e.currentTarget.value.trim();

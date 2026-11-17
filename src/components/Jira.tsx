@@ -46,6 +46,7 @@ export function JiraButtons({ blocker, onClick }: { blocker: string | null; onCl
 const FIELDS: { name: string; show: (f: JiraFields) => string; long?: boolean }[] = [
   { name: 'Titre', show: (f) => f.title },
   { name: 'Échéance', show: (f) => (f.due_at ? formatDay(f.due_at) : 'aucune') },
+  { name: 'Sprint', show: (f) => f.sprint ?? 'aucun' },
   { name: 'Contenu', show: (f) => f.notes ?? 'aucun', long: true },
 ];
 

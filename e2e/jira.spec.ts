@@ -1,26 +1,12 @@
-import http from 'node:http';
 import type { Page } from '@playwright/test';
 import type { Store } from '../server/db.ts';
+import { fakeJira as fakeServer, type FakeIssue } from '../server/test/fake-jira.ts';
 import { test, expect } from './fixtures.ts';
 
-type Issue = { summary: string; description: string | null; duedate: string | null };
-
 // Faux Jira Data Center (PAT « secret » en Bearer), réglé dans la base du test.
-async function fakeJira(store: Store, issues: Record<string, Issue>) {
-  const server = http.createServer(async (req, res) => {
-    const key = req.url!.match(/\/rest\/api\/2\/issue\/([^?]+)/)?.[1] ?? '';
-    if (req.headers.authorization !== 'Bearer secret') return res.writeHead(401).end();
-    if (!issues[key]) return res.writeHead(404).end();
-    if (req.method === 'PUT') {
-      const chunks: Buffer[] = [];
-      for await (const c of req) chunks.push(c as Buffer);
-      issues[key] = JSON.parse(Buffer.concat(chunks).toString()).fields;
-      return res.writeHead(204).end();
-    }
-    res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ key, fields: issues[key] }));
-  });
-  await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
-  store.updateSettings({ bugtracker_base_url: `http://127.0.0.1:${(server.address() as { port: number }).port}`, jira_pat: 'secret' });
+async function fakeJira(store: Store, issues: Record<string, FakeIssue>) {
+  const { server, url } = await fakeServer(issues);
+  store.updateSettings({ bugtracker_base_url: url, jira_pat: 'secret' });
   return server;
 }
 
@@ -68,18 +54,18 @@ test('boutons désactivés sans identifiant valide, sans URL ou sans PAT ; raiso
 });
 
 test('pousser : comparaison, confirmation par >, u remet l’ancien Jira', async ({ page, store }) => {
-  const issues = { 'PROJ-1': { summary: 'Ancien titre', description: 'Texte Jira', duedate: null } };
+  const issues: Record<string, FakeIssue> = { 'PROJ-1': { summary: 'Ancien titre', description: 'Texte Jira', duedate: null, sprint: 'Sprint 42' } };
   const jira = await fakeJira(store, issues);
   const alpha = store.createProject('Alpha');
   const une = store.createTask(alpha.id, 'Une');
-  store.updateTask(une.id, { bugtrackerKey: 'PROJ-1', notes: 'Texte Jira', dueAt: '2026-10-12' });
+  store.updateTask(une.id, { bugtrackerKey: 'PROJ-1', notes: 'Texte Jira', dueAt: '2026-10-12', sprint: 'Sprint 43' });
   try {
     const dialog = await openDialog(page);
     await page.keyboard.press('>');
     const compare = page.getByRole('dialog', { name: 'Pousser vers Jira : PROJ-1' });
     await expect(compare).toBeVisible();
-    await expect(compare.locator('.jira-local')).toHaveText(['Une', 'Lundi 12 octobre 2026', 'Texte Jira'].map((t) => new RegExp(t, 'i')));
-    await expect(compare.locator('.jira-remote')).toHaveText(['Ancien titre', 'aucune', 'Texte Jira']);
+    await expect(compare.locator('.jira-local')).toHaveText(['Une', /Lundi 12 octobre 2026/i, 'Sprint 43', 'Texte Jira']);
+    await expect(compare.locator('.jira-remote')).toHaveText(['Ancien titre', 'aucune', 'Sprint 42', 'Texte Jira']);
     await expect(compare.getByText('(identique)')).toHaveCount(1); // le contenu
     // Les touches de la fiche ne passent pas : c ne lance pas le chrono.
     await page.keyboard.press('c');
@@ -96,7 +82,7 @@ test('pousser : comparaison, confirmation par >, u remet l’ancien Jira', async
     await expect(compare).toBeVisible();
     await page.keyboard.press('>');
     await expect(dialog.getByRole('status')).toHaveText('Poussé vers Jira (PROJ-1).');
-    expect(issues['PROJ-1']).toEqual({ summary: 'Une', description: 'Texte Jira', duedate: '2026-10-12' });
+    expect(issues['PROJ-1']).toEqual({ summary: 'Une', description: 'Texte Jira', duedate: '2026-10-12', sprint: 'Sprint 43' });
 
     // Plus de différence : pas de comparaison.
     await page.keyboard.press('>');
@@ -109,13 +95,14 @@ test('pousser : comparaison, confirmation par >, u remet l’ancien Jira', async
     await page.keyboard.press('u');
     await expect.poll(() => issues['PROJ-1'].summary).toBe('Ancien titre');
     expect(issues['PROJ-1'].duedate).toBeNull();
+    expect(issues['PROJ-1'].sprint).toBe('Sprint 42');
   } finally {
     jira.close();
   }
 });
 
 test('récupérer : comparaison, Entrée confirme, la fiche et la ligne suivent, u annule', async ({ page, store }) => {
-  const issues = { 'PROJ-1': { summary: 'Titre Jira', description: '# Jira\r\nContenu', duedate: '2026-10-12' } };
+  const issues = { 'PROJ-1': { summary: 'Titre Jira', description: '# Jira\r\nContenu', duedate: '2026-10-12', sprint: 'Sprint 42' } };
   const jira = await fakeJira(store, issues);
   const alpha = store.createProject('Alpha');
   const une = store.createTask(alpha.id, 'Une');
@@ -131,7 +118,8 @@ test('récupérer : comparaison, Entrée confirme, la fiche et la ligne suivent,
     await expect(compare).toHaveCount(0);
     const updated = page.getByRole('dialog', { name: 'Titre Jira' });
     await expect(updated.getByRole('status')).toHaveText('Récupéré depuis Jira (PROJ-1).');
-    await expect(updated.locator('.due-value')).toHaveText('lundi 12 octobre 2026');
+    await expect(updated.getByLabel('Échéance')).toHaveValue('2026-10-12');
+    await expect(updated.getByLabel('Sprint')).toHaveValue('Sprint 42');
     await expect(updated.locator('.notes-preview h1')).toHaveText('Jira');
     expect(issues['PROJ-1'].summary).toBe('Titre Jira'); // Jira inchangé
 
@@ -141,9 +129,60 @@ test('récupérer : comparaison, Entrée confirme, la fiche et la ligne suivent,
     await page.keyboard.press('u');
     await expect(page.locator('#projects li.task', { hasText: 'Une' })).toBeVisible();
     await expect(row).toHaveCount(0);
+    expect(store.db.prepare('SELECT sprint FROM task WHERE id = ?').get(une.id)).toEqual({ sprint: null });
   } finally {
     jira.close();
   }
+});
+
+test('sprint : sprints actifs puis à venir de Jira proposés (↓, Entrée, clic) ; Échap ferme la liste ; sans Jira, texte libre', async ({ page, store }) => {
+  const jira = await fakeJira(store, { 'PROJ-1': { summary: 'Une', description: null, duedate: null } });
+  const alpha = store.createProject('Alpha');
+  const une = store.createTask(alpha.id, 'Une');
+  store.updateTask(une.id, { bugtrackerKey: 'PROJ-1' });
+  try {
+    const dialog = await openDialog(page);
+    await page.keyboard.press('e');
+    const sprint = dialog.getByRole('combobox', { name: 'Sprint' });
+    await sprint.focus();
+    const options = dialog.getByRole('listbox', { name: 'Sprints' }).getByRole('option');
+    await expect(options).toHaveText(['Sprint 42', 'Sprint 43']); // actif d'abord, ni fermé ni doublon
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await expect(options.nth(1)).toHaveAttribute('aria-selected', 'true');
+    await page.keyboard.press('Enter'); // choisit, sans enregistrer
+    await expect(sprint).toHaveValue('Sprint 43');
+    await expect(dialog.getByRole('listbox')).toHaveCount(0);
+    await expect(sprint).not.toHaveAttribute('readonly');
+
+    // Filtre par le texte ; Échap ferme la liste, la fiche reste ouverte.
+    await sprint.fill('');
+    await page.keyboard.type('42');
+    await expect(options).toHaveText(['Sprint 42']);
+    await page.keyboard.press('Escape');
+    await expect(dialog.getByRole('listbox')).toHaveCount(0);
+    await expect(dialog).toBeVisible();
+    // Clic sur une proposition, puis Entrée : enregistré, retour en lecture.
+    await page.keyboard.press('ArrowDown');
+    await options.first().click();
+    await expect(sprint).toHaveValue('Sprint 42');
+    await page.keyboard.press('Enter');
+    await expect(sprint).toHaveAttribute('readonly', '');
+    await expect.poll(() => store.db.prepare('SELECT sprint FROM task WHERE id = ?').get(une.id)).toEqual({ sprint: 'Sprint 42' });
+    // Lecture : pas de liste.
+    await sprint.click();
+    await expect(dialog.getByRole('listbox')).toHaveCount(0);
+  } finally {
+    jira.close();
+  }
+
+  // Sans URL ni PAT : texte libre, aucune proposition.
+  store.updateSettings({ bugtracker_base_url: null, jira_pat: null });
+  const dialog = await openDialog(page);
+  await page.keyboard.press('e');
+  await dialog.getByRole('combobox', { name: 'Sprint' }).focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(dialog.getByRole('listbox')).toHaveCount(0);
 });
 
 test('erreur de Jira affichée dans la fiche, sans comparaison', async ({ page, store }) => {

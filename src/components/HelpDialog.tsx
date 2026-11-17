@@ -4,6 +4,9 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 // touches) et action. Mêmes formulations que le README.
 type Shortcut = [keys: string[][], label: string];
 
+// Ctrl+Maj+flèche : ⌘+Maj+flèche sur macOS (le système y prend Ctrl+Maj+flèche).
+const MOD = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl';
+
 const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
   [
     'Navigation',
@@ -14,14 +17,14 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
       [[['Entrée']], 'Modifier le nom ; sur « + Ajouter », écrire'],
       [[['Échap']], 'Quitter l’édition sans enregistrer ; « + Ajouter » : vider, repasser en lecture'],
       [[['P', 'T', 'S', 'L']], 'Onglet Projets, Aujourd’hui, Suivant, Log'],
-      [[['Alt+←', 'Alt+→']], 'Onglet précédent / suivant'],
+      [[[`${MOD}+Maj+←/→`]], 'Onglet précédent / suivant'],
     ],
   ],
   [
     'Fiche',
     [
       [[['Maj+Entrée'], ['o']], 'Lire (tâche ou projet)'],
-      [[['e']], 'Ouvrir en édition (titre, Tab : ticket, dates, tags, contenu)'],
+      [[['e']], 'Ouvrir en édition (titre, Tab : ticket, sprint, dates, tags, contenu)'],
       [[['Ctrl+Entrée']], 'Enregistrer et lire ; en lecture, fermer'],
       [[['r', 'c', 'C', 't', '1', '2', '3']], 'Comme sur la tâche'],
       [[['>'], ['<']], 'Pousser vers Jira / récupérer depuis Jira (comparaison, puis confirmer)'],
@@ -32,7 +35,7 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
     [
       [[['n']], 'Nouvelle tâche (projet courant, sinon dernier utilisé)'],
       [[['Espace']], 'Cocher / décocher'],
-      [[['Alt+↑', 'Alt+↓'], ['Alt+k', 'Alt+j']], 'Monter / descendre, jusque dans le projet voisin'],
+      [[[`${MOD}+Maj+↑/↓`]], 'Monter / descendre, jusque dans le projet voisin'],
       [[['1', '2', '3']], 'Priorité ; le même chiffre la retire'],
       [[['r']], 'Report : à reporter → ticket (Entrée : reporté ; Échap : rien) → rien'],
       [[['c']], 'Chrono : lancer / mettre en pause'],
@@ -45,7 +48,7 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
     'Projet',
     [
       [[['n n']], 'Nouveau projet'],
-      [[['Alt+↑', 'Alt+↓']], 'Monter / descendre le projet'],
+      [[[`${MOD}+Maj+↑/↓`]], 'Monter / descendre le projet'],
       [[['f']], 'Favori / plus favori'],
       [[['a']], 'Archiver / désarchiver'],
       [[['r']], 'Ticket du projet (epic…) : saisir, modifier, vider pour le retirer'],

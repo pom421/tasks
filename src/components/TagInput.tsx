@@ -16,6 +16,7 @@ interface TagInputProps {
   placeholder?: string;
   create?: boolean; // accepte un tag nouveau (fiche) ; sinon seulement ceux proposés (filtres)
   removeLabel: (tag: string) => string;
+  readOnly?: boolean; // fiche en lecture : même aspect, rien de modifiable (✕ cachées, place gardée)
   className?: string;
 }
 
@@ -23,7 +24,7 @@ interface TagInputProps {
 // autocomplétion : ↑ / ↓ parcourent les propositions, Entrée (ou virgule)
 // ajoute, Retour arrière dans le champ vide retire le dernier, Échap vide le
 // champ et ferme la liste.
-export function TagInput({ id, tags, suggestions, onChange, label, title, placeholder, create, removeLabel, className }: TagInputProps) {
+export function TagInput({ id, tags, suggestions, onChange, label, title, placeholder, create, removeLabel, readOnly, className }: TagInputProps) {
   const listId = useId();
   const [text, setText] = useState('');
   const [open, setOpen] = useState(false);
@@ -91,7 +92,8 @@ export function TagInput({ id, tags, suggestions, onChange, label, title, placeh
             variant="ghost"
             size="icon-xs"
             tabIndex={-1}
-            className="size-[18px] rounded-full text-muted-foreground hover:text-foreground [&_svg]:size-3"
+            className={cn('size-[18px] rounded-full text-muted-foreground hover:text-foreground [&_svg]:size-3', readOnly && 'invisible')}
+            aria-hidden={readOnly || undefined}
             aria-label={removeLabel(tag)}
             title={removeLabel(tag)}
             onClick={() => {
@@ -113,6 +115,8 @@ export function TagInput({ id, tags, suggestions, onChange, label, title, placeh
         aria-controls={listId}
         aria-activedescendant={shown && active >= 0 ? `${listId}-${active}` : undefined}
         autoComplete="off"
+        readOnly={readOnly}
+        tabIndex={readOnly ? -1 : undefined}
         className="min-w-16 flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
         placeholder={tags.length ? '' : placeholder}
         value={text}

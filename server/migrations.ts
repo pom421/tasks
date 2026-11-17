@@ -147,6 +147,11 @@ export const MIGRATIONS: Migration[] = [
   },
   {
     version: 17,
+    name: 'sprint des tâches',
+    sql: `ALTER TABLE task ADD COLUMN sprint TEXT;`,
+  },
+  {
+    version: 18,
     name: 'contenu des projets',
     sql: `ALTER TABLE project ADD COLUMN notes TEXT;`,
   },
