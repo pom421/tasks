@@ -6,7 +6,7 @@ import crypto from 'node:crypto';
 import { type DeletedProject, type ProjectPatch, type Store, type TaskPatch, isDate, today } from './db.ts';
 import type { ProjectRow, TaskRow } from './schema.ts';
 import { BUGTRACKER_KEY_RE, PRIORITIES, normalizeTag, type BugtrackerState, type JiraFields, type Priority, type SettingsPatch, type TimerAction } from '../shared/types.ts';
-import { JiraError, listSprints, readIssue, writeIssue, type JiraConfig } from './jira.ts';
+import { JiraError, createIssue, listSprints, readIssue, writeIssue, type JiraConfig } from './jira.ts';
 import { parseMarkdown } from './markdown.ts';
 
 type Req = IncomingMessage;
@@ -331,6 +331,19 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
       };
       await jira((config) => writeIssue(config, key, fields));
       send(res, 200, { ok: true });
+    }],
+
+    // Crée une tâche Jira rattachée à l'epic (ticket du projet) : renvoie sa clé,
+    // que le front enregistre dans la tâche.
+    ['POST', /^\/api\/jira\/([A-Z][A-Z0-9_]*-\d+)\/tasks$/, async (req, res, _url, epic) => {
+      const body = await readJson(req);
+      const fields: JiraFields = {
+        title: requireText(body.title, 'Titre'),
+        notes: optionalText(body.notes, 'Contenu', 100_000),
+        due_at: dayAt(body.due_at),
+        sprint: optionalText(body.sprint ?? null, 'Sprint', 100),
+      };
+      send(res, 201, { key: await jira((config) => createIssue(config, epic, fields)) });
     }],
 
     ['POST', /^\/api\/projects$/, async (req, res) => {

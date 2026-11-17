@@ -347,6 +347,7 @@ export function App() {
           projectName={projectName(current)}
           field={openTask.field}
           jira={jiraReady(data.settings)}
+          projectTicket={data.projects.find((p) => p.id === current.project_id)?.bugtracker_key ?? null}
           tagSuggestions={[...new Set([...allTags(data.projects.flatMap((p) => p.tasks)), ...data.logTags])].sort((a, b) => a.localeCompare(b, 'fr'))}
           open={openTask.open}
           onClose={(changed) => {
