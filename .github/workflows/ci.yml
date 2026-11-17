@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Tous les jours : une faille publiée après la dernière PR est vue quand même.
+  schedule:
+    - cron: '17 6 * * *'
 
 # Jeton GitHub en lecture seule : la CI n'a rien à écrire.
 permissions:
@@ -14,11 +17,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
 
@@ -29,3 +32,21 @@ jobs:
       - run: pnpm test
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e
+
+  # Failles connues des dépendances (seuil : audit.level de pnpm-workspace.yaml).
+  # Job à part : rouge sans masquer le résultat des tests. Skill dependances-securite.
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit

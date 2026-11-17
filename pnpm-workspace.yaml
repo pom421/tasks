@@ -16,3 +16,14 @@ allowBuilds: {}
 
 # Versions exactes dans package.json (pas de ^) : une mise à jour est toujours explicite.
 savePrefix: ''
+
+# Exceptions au cooldown (correctifs de sécurité) : jamais un paquet entier,
+# toujours une version précise (`paquet@1.2.3`) dans minimumReleaseAgeExclude ;
+# voir le skill `dependances-securite`. Le prune retire de la liste les
+# exceptions devenues inutiles (version assez ancienne, ou plus utilisée).
+minimumReleaseAgeExclude: []
+minimumReleaseAgeExcludePrune: true
+
+# `pnpm audit` échoue à partir de ce niveau de gravité.
+audit:
+  level: high

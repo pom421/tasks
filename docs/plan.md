@@ -34,11 +34,10 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 - [ ] Corbeille durable (table `trash` : JSON du projet + tâches) si l'annulation
   `u`, limitée à l'onglet et à une seule action, ne suffit plus
 - [ ] Mémoriser les filtres (projets et Log) entre deux rechargements
-- [ ] Actions GitHub en Node 20 dépréciées (`actions/checkout@v4`,
-  `actions/setup-node@v4`) : passer aux versions suivantes
 
 ## Fait (récent)
 
+- [x] Dépendances : cooldown 7 jours avec exceptions par version précise (skill `dependances-securite`), `pnpm audit` en CI (PR + chaque jour, seuil `high`), 12 failles corrigées, toutes les dépendances, pnpm 12.19.0 et Node 26 et actions GitHub (`checkout` / `setup-node` v7) mis à jour dans le respect du cooldown ([PR #13](https://github.com/pom421/tasks/pull/13))
 - [x] Fiche d'un projet (`o`, `Maj+Entrée`, `e`, icône 🗒) : nom, ticket (cliquable en lecture, comme la pastille rose de la ligne), contenu Markdown ; pas de tags ni de dates pour l'instant ([PR #6](https://github.com/pom421/tasks/pull/6))
 - [x] Modification d'un nom : la saisie et la sélection restent quand la fenêtre perd le focus (`Alt+Tab` ; Firefox sous Linux en RDP, où `Ctrl` faisait perdre le focus : copier-coller impossible). Un clic ailleurs dans la page annule toujours ([PR #12](https://github.com/pom421/tasks/pull/12))
 - [x] Déplacer une tâche / un projet : `Ctrl+Maj+↑/↓` (ou `⌘+Maj+↑/↓`, macOS réservant `Ctrl+Maj+↑/↓` à Mission Control) au lieu de `Alt+↑/↓`, pris par Ubuntu ; `Alt+k/j` retirés (`Ctrl+Maj+J` ouvre la console de Chrome) ; onglet voisin de même : `Ctrl+Maj+←/→` (ou `⌘+Maj`) au lieu de `Alt+←/→` ([PR #11](https://github.com/pom421/tasks/pull/11))
