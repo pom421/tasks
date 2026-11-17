@@ -38,6 +38,7 @@ données : `README.md` ; tâches et décisions attendues : `docs/plan.md`.
 - `capture-ecran` : vérifier un rendu visuel (`pnpm demo` : base de démo).
 - `migration` : évolution du schéma de la base.
 - `drizzle` : requêtes, types et schéma (`server/schema.ts`).
+- `dependances-securite` : cooldown pnpm, exceptions, `pnpm audit`.
 
 ## Façon de travailler
 
