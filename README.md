@@ -58,6 +58,7 @@ Chaque session démarre dans un conteneur neuf : les dépendances doivent y êtr
 - Cocher une tâche → elle passe dans le Log, datée du jour, barrée. La décocher → elle revient dans son projet.
 - Log (un cadre par jour) : fonctionne seul, les boutons de la zone des projets n'y touchent pas. Il montre les 5 derniers jours ayant des entrées (une semaine de travail ; jours vides sautés). Sous les onglets, alignés à droite, quatre filtres, combinés : seuls restent les jours qui ont une tâche correspondante :
   - tags (`#` dans l'onglet Log) : tâches portant tous les tags choisis (autocomplétion parmi les tags des tâches faites ; ✕ sur une pastille la retire). N'apparaît que si une tâche faite a un tag ;
+  - à reporter (`R` dans l'onglet Log, ou clic) : seulement les tâches **faites** dont le report est demandé (le compteur « à reporter » des projets ne les compte plus, elles gardent leur badge dans le Log). Bouton « N tâches à reporter » (drapeau, plein quand actif), affiché seulement s'il y en a ou si le filtre est actif ; le nombre compte toutes les tâches faites à reporter, quels que soient les autres filtres. Se combine avec la recherche, les tags, la date et le projet ; la croix et `Échap` le retirent aussi.
   - recherche (`/`) : tâches dont le titre, le contenu ou le ticket contient le texte (sans tenir compte des majuscules ni des accents), le texte trouvé souligné dans les titres. `Échap` vide le champ ;
   - date « jusqu’au » (`d`) : les 5 jours jusqu’à cette date ; vide = période courante ;
   - projet (le nom du projet reste affiché au-dessus de ses tâches).
@@ -104,7 +105,7 @@ Clavier (`?` affiche l'aide, un 2e `?` ou `Échap` la ferme ; groupée par thèm
 | `Ctrl+Maj+←` / `Ctrl+Maj+→` (`⌘+Maj` sur macOS) | Onglet précédent / suivant (en boucle) |
 | `>` / `<` dans la fiche | Pousser vers Jira / récupérer depuis Jira : fenêtre de comparaison, puis `Entrée` (ou la même touche) confirme, `Échap` annule |
 | `1` `2` `3` | Priorité 1, 2 ou 3 ; le même chiffre la retire (aussi dans la fiche) |
-| `R` (majuscule) | Projets : seulement les tâches à reporter → reportées → toutes (ou clic sur le bouton du report) |
+| `R` (majuscule) | Projets : seulement les tâches à reporter → reportées → toutes (ou clic sur le bouton du report). Log : seulement les tâches faites à reporter |
 | `!` | Projets : seulement les tâches de priorité 1 → 2 → 3 → toutes (ou clic sur « Priorités ») |
 | `f` sur un projet | Favori / plus favori |
 | `F` (majuscule) | Afficher seulement les projets favoris (ou clic sur « Favoris ») |

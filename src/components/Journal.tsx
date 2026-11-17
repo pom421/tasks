@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { DoneTask, JournalDay, JournalFilter, Project } from '../../shared/types.ts';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Flag, X } from 'lucide-react';
 import { formatDay, isComplete } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -16,9 +16,10 @@ export interface Filter {
   project: string; // id du projet, '' = tous
   q: string; // recherche : titre, contenu, ticket
   tags: string[]; // tâches portant tous ces tags
+  report: boolean; // seulement les tâches faites à reporter (R)
 }
 
-export const NO_FILTER: Filter = { day: '', project: '', q: '', tags: [] };
+export const NO_FILTER: Filter = { day: '', project: '', q: '', tags: [], report: false };
 
 // Les 5 derniers jours ayant des entrées qui correspondent aux filtres, jusqu'à `day`.
 export function journalQuery(f: Filter): JournalFilter {
@@ -27,6 +28,7 @@ export function journalQuery(f: Filter): JournalFilter {
     projectId: Number(f.project) || undefined,
     q: f.q || undefined,
     tags: f.tags,
+    bugtrackerPending: f.report || undefined,
     limit: LOG_DAYS,
   };
 }
@@ -66,12 +68,13 @@ interface JournalProps {
   days: JournalDay[];
   dates: string[];
   tags: string[]; // tags des tâches faites (propositions)
+  reportPending: number; // tâches faites à reporter (toutes)
   projects: Project[];
   filter: Filter;
   onFilter: (filter: Filter) => void;
 }
 
-export function Journal({ days, dates, tags, projects, filter, onFilter }: JournalProps) {
+export function Journal({ days, dates, tags, reportPending, projects, filter, onFilter }: JournalProps) {
   // Champ de date non contrôlé : une valeur incomplète (année en cours de
   // frappe) ne doit pas être écrasée par React. Vide = période courante.
   const dateRef = useRef<HTMLInputElement>(null);
@@ -81,7 +84,7 @@ export function Journal({ days, dates, tags, projects, filter, onFilter }: Journ
   }, [shownDate]);
   const changeDay = (day: string) => isComplete(day) && onFilter({ ...filter, day });
 
-  const filtered = Boolean(filter.day || filter.project || filter.q || filter.tags.length);
+  const filtered = Boolean(filter.day || filter.project || filter.q || filter.tags.length || filter.report);
 
   // Recherche : lancée 250 ms après la dernière frappe ; le champ suit la
   // réinitialisation des filtres.
@@ -165,6 +168,19 @@ export function Journal({ days, dates, tags, projects, filter, onFilter }: Journ
             </option>
           ))}
         </select>
+        {/* À reporter (R) : tâches faites dont le report est demandé ; seulement s'il y en a, ou si le filtre est actif. */}
+        {(reportPending > 0 || filter.report) && (
+          <Button
+            id="log-report"
+            className={cn('h-[26px]', filter.report ? 'text-foreground' : 'text-muted-foreground')}
+            aria-pressed={filter.report}
+            title="Seulement les tâches faites à reporter (R)"
+            onClick={() => onFilter({ ...filter, report: !filter.report })}
+          >
+            <Flag aria-hidden fill={filter.report ? 'currentColor' : 'none'} />
+            {`${reportPending} ${reportPending > 1 ? 'tâches' : 'tâche'} à reporter`}
+          </Button>
+        )}
         {filtered && (
           <Button
             id="filter-reset"
