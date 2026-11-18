@@ -11,9 +11,27 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
   [
     'Navigation',
     [
-      [[['↑', '↓'], ['k', 'j']], 'Élément précédent / suivant (5 voisins restent visibles)'],
-      [[['Début', 'Fin'], ['g g', 'G']], 'Premier / dernier élément'],
-      [[['Maj+↑', 'Maj+↓'], ['K', 'J']], 'Projet précédent / suivant'],
+      [
+        [
+          ['↑', '↓'],
+          ['k', 'j'],
+        ],
+        'Élément précédent / suivant (5 voisins restent visibles)',
+      ],
+      [
+        [
+          ['Début', 'Fin'],
+          ['g g', 'G'],
+        ],
+        'Premier / dernier élément',
+      ],
+      [
+        [
+          ['Maj+↑', 'Maj+↓'],
+          ['K', 'J'],
+        ],
+        'Projet précédent / suivant',
+      ],
       [[['Entrée']], 'Modifier le nom ; sur « + Ajouter », écrire'],
       [[['Échap']], 'Quitter l’édition sans enregistrer ; « + Ajouter » : vider, repasser en lecture'],
       [[['P', 'T', 'S', 'L']], 'Onglet Projets, Aujourd’hui, Suivant, Log'],
@@ -118,7 +136,8 @@ export function HelpDialog({ open, onOpenChange }: { open: boolean; onOpenChange
           e.preventDefault();
           onOpenChange(false);
         }}
-        className="max-h-[85vh] grid-rows-[auto_minmax(0,1fr)] gap-0 p-0 sm:max-w-4xl xl:max-w-6xl">
+        className="max-h-[85vh] grid-rows-[auto_minmax(0,1fr)] gap-0 p-0 sm:max-w-4xl xl:max-w-6xl"
+      >
         <DialogTitle className="border-b px-6 py-4">Raccourcis</DialogTitle>
         <div className="min-h-0 overflow-y-auto px-6 pt-4">
           {/* Colonnes dans un bloc à hauteur naturelle : elles s'équilibrent. */}

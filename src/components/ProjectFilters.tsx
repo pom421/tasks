@@ -29,7 +29,19 @@ const filterClass = (active: boolean) => cn('h-[26px]', active ? 'text-foregroun
 // tous les projets, indépendamment des autres filtres actifs.
 // Boutons bascule sobres : toujours à contour ; icône vide, pleine quand le
 // filtre est actif ; état annoncé par aria-pressed.
-export function ProjectFilters({ projects, bugtrackerFilter, onBugtrackerFilter, priorityFilter, onPriorityFilter, favoritesOnly, onFavoritesOnly, archivedOnly, onArchivedOnly, tagFilter, onTagFilter }: ProjectFiltersProps) {
+export function ProjectFilters({
+  projects,
+  bugtrackerFilter,
+  onBugtrackerFilter,
+  priorityFilter,
+  onPriorityFilter,
+  favoritesOnly,
+  onFavoritesOnly,
+  archivedOnly,
+  onArchivedOnly,
+  tagFilter,
+  onTagFilter,
+}: ProjectFiltersProps) {
   const tasks = projects.flatMap((p) => p.tasks);
   const bugtrackerWanted = tasks.filter((t) => bugtrackerState(t) === 'wanted').length; // tâches à faire à reporter
   const bugtrackerDone = tasks.filter((t) => bugtrackerState(t) === 'done').length; // tâches à faire reportées
@@ -45,7 +57,12 @@ export function ProjectFilters({ projects, bugtrackerFilter, onBugtrackerFilter,
     tags: tags.length > 0 || tagFilter.length > 0,
   };
   return (
-    <div data-nav-header role="group" aria-label="Filtres des projets" className="mt-3 flex min-h-[26px] flex-wrap items-center justify-end gap-1.5">
+    <div
+      data-nav-header
+      role="group"
+      aria-label="Filtres des projets"
+      className="mt-3 flex min-h-[26px] flex-wrap items-center justify-end gap-1.5"
+    >
       {/* Tags (#) : autocomplétion parmi les tags des tâches à faire, ✕ pour en retirer un. */}
       {show.tags && (
         <TagInput
@@ -96,7 +113,8 @@ export function ProjectFilters({ projects, bugtrackerFilter, onBugtrackerFilter,
           title="Afficher seulement les projets archivés (A)"
           onClick={onArchivedOnly}
         >
-          <Archive aria-hidden className={archivedOnly ? 'fill-muted-foreground/30' : undefined} fill={archivedOnly ? undefined : 'none'} /> Archivés
+          <Archive aria-hidden className={archivedOnly ? 'fill-muted-foreground/30' : undefined} fill={archivedOnly ? undefined : 'none'} />{' '}
+          Archivés
         </Button>
       )}
       {show.favorites && (

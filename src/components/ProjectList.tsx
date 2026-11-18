@@ -47,7 +47,11 @@ function ProjectCard({ project: p, onMove, onSortPriority, onMoveProject }: Proj
   const toggleFavorite = () => change(favorite ? 'retrait des favoris' : 'ajout aux favoris', { favorite: !favorite }, { favorite });
   const toggleArchived = () => change(archived ? 'désarchivage' : 'archivage', { archived: !archived }, { archived });
   const saveTicket = (value: string) =>
-    change(value ? 'ticket du projet' : 'retrait du ticket du projet', { bugtracker_ticket: value || null }, { bugtracker_ticket: ticket || null });
+    change(
+      value ? 'ticket du projet' : 'retrait du ticket du projet',
+      { bugtracker_ticket: value || null },
+      { bugtracker_ticket: ticket || null },
+    );
   const remove = () => {
     let deleted: Record<string, unknown> | undefined;
     return undoable({
@@ -69,7 +73,7 @@ function ProjectCard({ project: p, onMove, onSortPriority, onMoveProject }: Proj
     if ((e.target as HTMLElement).matches('input') || e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key === 'x' || e.key === 'Delete') {
       e.preventDefault();
-      if (confirmDelete) remove();
+      if (confirmDelete) void remove();
       else setConfirmDelete(true);
       return;
     }
@@ -77,11 +81,11 @@ function ProjectCard({ project: p, onMove, onSortPriority, onMoveProject }: Proj
     setConfirmDelete(false); // toute autre touche annule la demande
     if (e.key === 'f') {
       e.preventDefault();
-      toggleFavorite();
+      void toggleFavorite();
     }
     if (e.key === 'a') {
       e.preventDefault();
-      toggleArchived();
+      void toggleArchived();
     }
     if (e.key === 'r') {
       e.preventDefault();
@@ -129,7 +133,8 @@ function ProjectCard({ project: p, onMove, onSortPriority, onMoveProject }: Proj
         onBlur={onBlur}
         className={cn(
           'project-head group flex items-baseline gap-2 border-b pb-0.5 has-[.name:focus]:bg-accent has-[.name:focus]:pl-1.5 has-[.name:focus]:shadow-[inset_3px_0_var(--color-primary)]',
-          confirmDelete && 'bg-destructive/10 has-[.name:focus]:bg-destructive/10 has-[.name:focus]:shadow-[inset_3px_0_var(--color-destructive)]',
+          confirmDelete &&
+            'bg-destructive/10 has-[.name:focus]:bg-destructive/10 has-[.name:focus]:shadow-[inset_3px_0_var(--color-destructive)]',
         )}
       >
         <EditableName
@@ -163,7 +168,11 @@ function ProjectCard({ project: p, onMove, onSortPriority, onMoveProject }: Proj
               !p.notes && 'invisible group-hover:visible group-focus-within:visible',
             )}
             aria-label="Fiche du projet"
-            title={p.notes ? 'Voir la synthèse (o ou Maj+Entrée ; s : la modifier)' : 'Ouvrir la fiche du projet (o ou Maj+Entrée ; s : écrire la synthèse)'}
+            title={
+              p.notes
+                ? 'Voir la synthèse (o ou Maj+Entrée ; s : la modifier)'
+                : 'Ouvrir la fiche du projet (o ou Maj+Entrée ; s : écrire la synthèse)'
+            }
             onClick={() => openProject(p, 'notes')}
           >
             <NotebookText aria-hidden />
@@ -243,7 +252,9 @@ function ProjectCard({ project: p, onMove, onSortPriority, onMoveProject }: Proj
             size="icon-xs"
             className="summary-reminder self-center text-muted-foreground"
             aria-label={summaryDone ? 'Synthèse à jour' : 'Synthèse à mettre à jour'}
-            title={summaryDone ? 'Synthèse mise à jour aujourd’hui (s)' : 'Synthèse à mettre à jour : une tâche du projet faite aujourd’hui (s)'}
+            title={
+              summaryDone ? 'Synthèse mise à jour aujourd’hui (s)' : 'Synthèse à mettre à jour : une tâche du projet faite aujourd’hui (s)'
+            }
             onClick={() => openProject(p, 'summary')}
           >
             <Circle aria-hidden fill={summaryDone ? 'currentColor' : 'none'} />
@@ -255,12 +266,7 @@ function ProjectCard({ project: p, onMove, onSortPriority, onMoveProject }: Proj
           <TaskRow key={t.id} task={t} onMove={onMove && ((direction) => onMove(t, direction))} />
         ))}
       </ul>
-      <AddInput
-        placeholder="+ Ajouter une tâche (n)"
-        navKey={`add:${p.id}`}
-        onFocus={() => setLastProject(p.id)}
-        onAdd={addTask}
-      />
+      <AddInput placeholder="+ Ajouter une tâche (n)" navKey={`add:${p.id}`} onFocus={() => setLastProject(p.id)} onAdd={addTask} />
     </div>
   );
 }
@@ -394,13 +400,15 @@ export function ProjectList({ projects, archivedOnly, bugtrackerFilter, priority
             onMoveProject={(direction) => moveProject(p, direction)}
           />
         ))}
-        {!visible.length && (
-          <p className="empty mt-3 italic text-muted-foreground">
-            {emptyMessage()}
-          </p>
-        )}
+        {!visible.length && <p className="empty mt-3 italic text-muted-foreground">{emptyMessage()}</p>}
       </section>
-      <AddInput id="new-project" className="mt-6 font-semibold" placeholder="+ Nouveau projet (n n)" navKey="new-project" onAdd={addProject} />
+      <AddInput
+        id="new-project"
+        className="mt-6 font-semibold"
+        placeholder="+ Nouveau projet (n n)"
+        navKey="new-project"
+        onAdd={addProject}
+      />
     </>
   );
 }

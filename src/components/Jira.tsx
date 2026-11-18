@@ -24,7 +24,13 @@ export function jiraBlocker(ticketKey: string | null, ready: boolean): string | 
 // URL ni PAT aucune. Avec un identifiant : ☁↑ pousser, ☁↓ récupérer. Sans
 // identifiant mais avec un ticket de projet (l'epic) : un seul bouton « + » qui
 // crée le ticket dans Jira.
-export function JiraButtons({ ready, ticketKey, canCreate, onClick, onCreate }: {
+export function JiraButtons({
+  ready,
+  ticketKey,
+  canCreate,
+  onClick,
+  onCreate,
+}: {
   ready: boolean;
   ticketKey: string | null;
   canCreate: boolean;
@@ -79,7 +85,15 @@ export const sameJira = (a: JiraFields, b: JiraFields) => FIELDS.every((f) => f.
 // tâche et du ticket côte à côte, champs identiques atténués.
 // Confirmer : bouton, Entrée (il a le focus) ou la même touche (> ou <) ;
 // Échap ou Annuler : rien n'est fait.
-export function JiraCompare({ direction, ticketKey, local, remote, busy, onConfirm, onCancel }: {
+export function JiraCompare({
+  direction,
+  ticketKey,
+  local,
+  remote,
+  busy,
+  onConfirm,
+  onCancel,
+}: {
   direction: JiraDirection;
   ticketKey: string;
   local: JiraFields;
@@ -112,7 +126,9 @@ export function JiraCompare({ direction, ticketKey, local, remote, busy, onConfi
           {label} : {ticketKey}
         </DialogTitle>
         <DialogDescription>
-          {direction === 'push' ? 'Les valeurs de la tâche remplaceront celles du ticket Jira.' : 'Les valeurs du ticket Jira remplaceront celles de la tâche.'}
+          {direction === 'push'
+            ? 'Les valeurs de la tâche remplaceront celles du ticket Jira.'
+            : 'Les valeurs du ticket Jira remplaceront celles de la tâche.'}
         </DialogDescription>
         <div className="grid min-h-0 grid-cols-[auto_1fr_1fr] gap-x-4 gap-y-2 overflow-y-auto text-sm">
           <span />
@@ -120,21 +136,27 @@ export function JiraCompare({ direction, ticketKey, local, remote, busy, onConfi
           <span className="font-semibold">{direction === 'pull' && '← '}Jira</span>
           {FIELDS.map((f) => {
             const same = f.show(local) === f.show(remote);
-            const cell = cn('[overflow-wrap:anywhere]', f.long && 'max-h-60 overflow-y-auto rounded-md border px-2 py-1 font-mono text-xs whitespace-pre-wrap', same && 'text-muted-foreground');
+            const cell = cn(
+              '[overflow-wrap:anywhere]',
+              f.long && 'max-h-60 overflow-y-auto rounded-md border px-2 py-1 font-mono text-xs whitespace-pre-wrap',
+              same && 'text-muted-foreground',
+            );
             return [
               <span key={`${f.name}-name`} className={cn('text-muted-foreground', !same && 'font-medium text-foreground')}>
                 {f.name}
                 {same && <span className="block text-xs">(identique)</span>}
               </span>,
-              <div key={`${f.name}-local`} className={cn('jira-local', cell)}>{f.show(local)}</div>,
-              <div key={`${f.name}-remote`} className={cn('jira-remote', cell)}>{f.show(remote)}</div>,
+              <div key={`${f.name}-local`} className={cn('jira-local', cell)}>
+                {f.show(local)}
+              </div>,
+              <div key={`${f.name}-remote`} className={cn('jira-remote', cell)}>
+                {f.show(remote)}
+              </div>,
             ];
           })}
         </div>
         <div className="flex items-center justify-between gap-2">
-          <p className="text-xs text-muted-foreground">
-            {key} ou Entrée : confirmer · Échap : annuler
-          </p>
+          <p className="text-xs text-muted-foreground">{key} ou Entrée : confirmer · Échap : annuler</p>
           <DialogFooter>
             <Button type="button" onClick={onCancel}>
               Annuler
@@ -151,7 +173,14 @@ export function JiraCompare({ direction, ticketKey, local, remote, busy, onConfi
 
 // Fenêtre de confirmation avant de créer le ticket : ce qui sera envoyé.
 // Entrée (le bouton a le focus) ou le bouton confirme, Échap ou Annuler : rien n'est fait.
-export function JiraCreate({ epicKey, projectName, fields, busy, onConfirm, onCancel }: {
+export function JiraCreate({
+  epicKey,
+  projectName,
+  fields,
+  busy,
+  onConfirm,
+  onCancel,
+}: {
   epicKey: string;
   projectName: string;
   fields: JiraFields;
@@ -183,8 +212,16 @@ export function JiraCreate({ epicKey, projectName, fields, busy, onConfirm, onCa
         </DialogDescription>
         <div className="grid min-h-0 grid-cols-[auto_1fr] gap-x-4 gap-y-2 overflow-y-auto text-sm">
           {FIELDS.map((f) => [
-            <span key={`${f.name}-name`} className="text-muted-foreground">{f.name}</span>,
-            <div key={`${f.name}-value`} className={cn('jira-new [overflow-wrap:anywhere]', f.long && 'max-h-60 overflow-y-auto rounded-md border px-2 py-1 font-mono text-xs whitespace-pre-wrap')}>
+            <span key={`${f.name}-name`} className="text-muted-foreground">
+              {f.name}
+            </span>,
+            <div
+              key={`${f.name}-value`}
+              className={cn(
+                'jira-new [overflow-wrap:anywhere]',
+                f.long && 'max-h-60 overflow-y-auto rounded-md border px-2 py-1 font-mono text-xs whitespace-pre-wrap',
+              )}
+            >
               {f.show(fields)}
             </div>,
           ])}

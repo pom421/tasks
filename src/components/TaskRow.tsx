@@ -28,7 +28,15 @@ import { DueDate, PlannedDate, TaskTags } from './TaskDates';
 // x ou Suppr demande la suppression, un second appui la confirme,
 // Ctrl+Maj+↑ / Ctrl+Maj+↓ (ou ⌘+Maj) déplacent la tâche (onMove, tâches à faire).
 // highlight : recherche du Log, soulignée dans le titre.
-export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTask; onMove?: (direction: -1 | 1) => void; highlight?: string }) {
+export function TaskRow({
+  task,
+  onMove,
+  highlight = '',
+}: {
+  task: Task | DoneTask;
+  onMove?: (direction: -1 | 1) => void;
+  highlight?: string;
+}) {
   const { openTask, undoable } = useActions();
   const done = 'done_at' in task;
   const [editingDate, setEditingDate] = useState(false);
@@ -79,7 +87,7 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key === 'x' || e.key === 'Delete') {
       e.preventDefault();
-      if (confirmDelete) remove();
+      if (confirmDelete) void remove();
       else setConfirmDelete(true);
       return;
     }
@@ -94,7 +102,7 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
     if (e.key === ' ' && target.getAttribute('role') !== 'checkbox') {
       // Sur la case elle-même, Espace la coche nativement.
       e.preventDefault();
-      toggleDone();
+      void toggleDone();
     }
     if (!done && plan.onKey(e)) return;
     if (e.key === 'r') {
@@ -118,7 +126,8 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
     <li
       className={cn(
         'task group flex min-w-0 flex-col rounded px-1 py-0.5 text-sm hover:bg-accent has-[.name:focus]:bg-accent has-[.name:focus]:shadow-[inset_3px_0_var(--color-primary)]',
-        confirmDelete && 'bg-destructive/10 has-[.name:focus]:bg-destructive/10 has-[.name:focus]:shadow-[inset_3px_0_var(--color-destructive)]',
+        confirmDelete &&
+          'bg-destructive/10 has-[.name:focus]:bg-destructive/10 has-[.name:focus]:shadow-[inset_3px_0_var(--color-destructive)]',
       )}
       onKeyDown={onKeyDown}
       onBlur={onBlur}
@@ -137,7 +146,10 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
             value={task.title}
             display={splitMatches(task.title, highlight).map((part, i) =>
               part.match ? (
-                <mark key={i} className="search-match bg-transparent text-foreground underline decoration-search-mark decoration-[3px] underline-offset-2 [text-decoration-skip-ink:none]">
+                <mark
+                  key={i}
+                  className="search-match bg-transparent text-foreground underline decoration-search-mark decoration-[3px] underline-offset-2 [text-decoration-skip-ink:none]"
+                >
                   {part.text}
                 </mark>
               ) : (
@@ -206,7 +218,13 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
                   onBlur={() => setEditingDate(false)}
                 />
               ) : (
-                <Button variant="ghost" size="xs" className="text-muted-foreground" title="Changer la date" onClick={() => setEditingDate(true)}>
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  className="text-muted-foreground"
+                  title="Changer la date"
+                  onClick={() => setEditingDate(true)}
+                >
                   date
                 </Button>
               )}

@@ -47,9 +47,7 @@ function Day({ day, highlight }: { day: JournalDay; highlight: string }) {
   }
   return (
     <div className="day mt-3 rounded-lg border px-3 pt-2 pb-1.5">
-      <h3 className="mb-1 border-b pb-1 text-sm font-semibold text-muted-foreground first-letter:uppercase">
-        {formatDay(day.date)}
-      </h3>
+      <h3 className="mb-1 border-b pb-1 text-sm font-semibold text-muted-foreground first-letter:uppercase">{formatDay(day.date)}</h3>
       {groups.map((g, i) => (
         <div key={`${g.id}-${i}`}>
           <div className="project-label mt-1.5 ml-1 text-sm font-semibold">{g.name}</div>
@@ -128,7 +126,10 @@ export function Journal({ days, dates, tags, reportPending, projects, filter, on
           aria-label="Rechercher dans le Log"
           title="Rechercher dans le Log : titre, contenu, ticket (/)"
           placeholder="Rechercher… (/)"
-          className={cn(fieldClass, 'w-40 outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50')}
+          className={cn(
+            fieldClass,
+            'w-40 outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
+          )}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
@@ -160,7 +161,14 @@ export function Journal({ days, dates, tags, reportPending, projects, filter, on
           className={fieldClass}
           onChange={(e) => changeDay(e.target.value)}
         />
-        <select id="filter-project" aria-label="Filtrer par projet" title="Projet" className={fieldClass} value={filter.project} onChange={(e) => onFilter({ ...filter, project: e.target.value })}>
+        <select
+          id="filter-project"
+          aria-label="Filtrer par projet"
+          title="Projet"
+          className={fieldClass}
+          value={filter.project}
+          onChange={(e) => onFilter({ ...filter, project: e.target.value })}
+        >
           <option value="">Tous les projets</option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>

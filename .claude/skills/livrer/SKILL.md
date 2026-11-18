@@ -5,7 +5,8 @@ description: Vérifier, documenter, commiter, pousser et ouvrir une PR vers main
 
 # Livrer une modification
 
-1. **Vérifier** (tout doit passer) : `pnpm typecheck`, `pnpm test`, `pnpm test:e2e` : **toujours en local**, même
+1. **Vérifier** (tout doit passer) : `pnpm ready` (format, lint, types, tests unitaires ;
+   `pnpm exec vp check --fix` corrige le formatage), `pnpm test:e2e` : **toujours en local**, même
    si la CI les relance (si l'outil manque, voir `CLAUDE.md`, « Pièges connus »).
    Un test qui échoue n'est jamais « instable » : trouver la cause
    (`pnpm exec playwright test -g "<nom>" --repeat-each 20`).

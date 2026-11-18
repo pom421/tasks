@@ -15,17 +15,20 @@ il retarde les correctifs, d'où des exceptions **ciblées et temporaires**.
 1. Vérifier la date de publication : `npm view <paquet> time --json | tail`.
    Moins de 7 jours : attendre ou prendre la version précédente.
 2. Version **exacte** dans `package.json` (`savePrefix: ''`).
-3. `pnpm install`, puis `pnpm typecheck`, `pnpm test`, `pnpm test:e2e`.
+3. `pnpm install`, puis `pnpm ready`, `pnpm test:e2e`.
+4. Vite+ : `vite-plus`, l'alias `vite` (`npm:@voidzero-dev/vite-plus-core@…`) de
+   `package.json` et `overrides.vite` de `pnpm-workspace.yaml` changent ensemble,
+   à la même version.
 
 ## Corriger une faille (`pnpm audit`, seuil `high`)
 
 Échoue dès qu'une faille atteint `audit.level`. Avant d'agir, lire l'advisory
 officiel (lien GHSA) : une « version de sécurité » peut être un piège.
 
-| Cas | Commande | Effet |
-|---|---|---|
-| Le parent autorise le patch (plage large) | `pnpm audit --fix=update` | met à jour le lockfile, config intacte |
-| Le parent bloque le patch (version exacte) | `pnpm audit --fix` | ajoute un `overrides` permanent |
+| Cas                                        | Commande                  | Effet                                  |
+| ------------------------------------------ | ------------------------- | -------------------------------------- |
+| Le parent autorise le patch (plage large)  | `pnpm audit --fix=update` | met à jour le lockfile, config intacte |
+| Le parent bloque le patch (version exacte) | `pnpm audit --fix`        | ajoute un `overrides` permanent        |
 
 - Un `overrides` s'oublie : le retirer dès que le parent publie une version
   corrigée, et relire la liste de temps en temps.

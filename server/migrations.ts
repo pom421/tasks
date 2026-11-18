@@ -228,9 +228,7 @@ export function migrate(db: DatabaseSync, file?: string): MigrationReport {
     fs.chmodSync(backup, 0o600);
   }
 
-  const record = db.prepare(
-    "INSERT INTO schema_migration (version, name, app_version, applied_at) VALUES (?, ?, ?, datetime('now'))",
-  );
+  const record = db.prepare("INSERT INTO schema_migration (version, name, app_version, applied_at) VALUES (?, ?, ?, datetime('now'))");
   for (const m of pending) {
     db.exec('BEGIN');
     try {

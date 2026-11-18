@@ -28,7 +28,12 @@ export function UpcomingView({ projects }: { projects: Project[] }) {
   return (
     <section id="upcoming" aria-label="Suivant">
       {dates.map((date) => (
-        <Day key={date} title={date < today ? `${formatDay(date)} (échéance dépassée)` : formatDay(date)} late={date < today} tasks={byDate.get(date)!} />
+        <Day
+          key={date}
+          title={date < today ? `${formatDay(date)} (échéance dépassée)` : formatDay(date)}
+          late={date < today}
+          tasks={byDate.get(date)!}
+        />
       ))}
       {!dates.length && <p className="empty mt-3 italic text-muted-foreground">Aucune tâche datée à venir.</p>}
     </section>
@@ -45,7 +50,11 @@ function Day({ title, late, tasks }: { title: string; late: boolean; tasks: Entr
   }
   return (
     <div className="upcoming-day mt-3 rounded-lg border px-3 pt-2 pb-1.5">
-      <h3 className={`mb-1 border-b pb-1 text-sm font-semibold first-letter:uppercase ${late ? 'text-destructive' : 'text-muted-foreground'}`}>{title}</h3>
+      <h3
+        className={`mb-1 border-b pb-1 text-sm font-semibold first-letter:uppercase ${late ? 'text-destructive' : 'text-muted-foreground'}`}
+      >
+        {title}
+      </h3>
       {groups.map((g) => (
         <div key={g.id}>
           <div className="project-label mt-1.5 ml-1 text-sm font-semibold">{g.name}</div>

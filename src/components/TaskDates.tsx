@@ -33,7 +33,10 @@ export function PlannedDate({ day }: { day: string | null }) {
   if (!day) return null;
   const label = `Prévue le ${formatDay(day)}`;
   return (
-    <span className="planned-date flex flex-none items-center gap-0.5 text-[11px] whitespace-nowrap text-muted-foreground [&_svg]:size-3" title={label}>
+    <span
+      className="planned-date flex flex-none items-center gap-0.5 text-[11px] whitespace-nowrap text-muted-foreground [&_svg]:size-3"
+      title={label}
+    >
       <CalendarDays aria-hidden />
       <span className="sr-only">{label}</span>
       <span aria-hidden>{shortDay(day)}</span>
@@ -45,7 +48,10 @@ export function PlannedDate({ day }: { day: string | null }) {
 export function TaskTags({ tags, className }: { tags: string[]; className?: string }) {
   if (!tags.length) return null;
   return (
-    <span className={cn('tags min-w-0 truncate text-[11px] text-muted-foreground', className)} title={`Tags : ${tags.map((t) => `#${t}`).join(' ')}`}>
+    <span
+      className={cn('tags min-w-0 truncate text-[11px] text-muted-foreground', className)}
+      title={`Tags : ${tags.map((t) => `#${t}`).join(' ')}`}
+    >
       {tags.map((t) => `#${t}`).join(' ')}
     </span>
   );

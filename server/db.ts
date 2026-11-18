@@ -115,9 +115,7 @@ export function validateDbFile(file: string) {
   let db: DatabaseSync | undefined;
   try {
     db = new DatabaseSync(file, { readOnly: true });
-    const tables = (db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]).map(
-      (r) => r.name,
-    );
+    const tables = (db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]).map((r) => r.name);
     if (!tables.includes('project') || !tables.includes('task')) {
       throw new Error('tables project/task absentes');
     }
@@ -170,7 +168,9 @@ export class Store {
     // "project"."id" écrit en entier : dans une requête sur une seule table, Drizzle
     // n'écrit que "id", que la sous-requête sur task prendrait pour task.id.
     const projectId = sql.raw('"project"."id"');
-    const summary_day = sql<string | null>`(SELECT MAX(${projectSummary.day}) FROM ${projectSummary} WHERE ${projectSummary.project_id} = ${projectId})`;
+    const summary_day = sql<
+      string | null
+    >`(SELECT MAX(${projectSummary.day}) FROM ${projectSummary} WHERE ${projectSummary.project_id} = ${projectId})`;
     const done_today = day
       ? sql<boolean>`EXISTS (SELECT 1 FROM ${task} WHERE ${task.project_id} = ${projectId} AND ${task.done_at} = ${day})`.mapWith(Boolean)
       : sql<boolean>`0`.mapWith(Boolean);
@@ -257,7 +257,9 @@ export class Store {
   // Tags des tâches faites, triés : propositions du filtre du Log.
   private doneTags(): string[] {
     return this.orm
-      .all<{ tag: string }>(sql`SELECT DISTINCT j.value AS tag FROM ${task}, json_each(${task.tags}) AS j WHERE ${task.done_at} IS NOT NULL ORDER BY 1`)
+      .all<{ tag: string }>(
+        sql`SELECT DISTINCT j.value AS tag FROM ${task}, json_each(${task.tags}) AS j WHERE ${task.done_at} IS NOT NULL ORDER BY 1`,
+      )
       .map((r) => r.tag);
   }
 
@@ -388,13 +390,22 @@ export class Store {
   // dueAt : échéance, null = aucune ; sprint : nom du sprint, null = aucun ; tags : liste complète (remplace l'ancienne) ;
   // priority : 1 à 3, null = aucune.
   updateTask(id: number, patch: TaskPatch) {
-    const { title, doneAt, bugtracker, bugtrackerKey, notes, timer, timeSpent, timerStartedAt, dayAt, dueAt, sprint, tags, priority } = patch;
-    const update = (set: SQLiteUpdateSetSource<typeof task>, where: SQL | undefined = undefined) =>
-      this.orm.update(task).set(set).where(and(eq(task.id, id), where)).run();
+    const { title, doneAt, bugtracker, bugtrackerKey, notes, timer, timeSpent, timerStartedAt, dayAt, dueAt, sprint, tags, priority } =
+      patch;
+    const update = (set: SQLiteUpdateSetSource<typeof task>, where?: SQL) =>
+      this.orm
+        .update(task)
+        .set(set)
+        .where(and(eq(task.id, id), where))
+        .run();
     if (doneAt) update(PAUSE, RUNNING);
     if (doneAt !== undefined) update({ done_at: doneAt });
     if (timer === 'start') {
-      this.orm.update(task).set(PAUSE).where(and(RUNNING, ne(task.id, id))).run();
+      this.orm
+        .update(task)
+        .set(PAUSE)
+        .where(and(RUNNING, ne(task.id, id)))
+        .run();
       update({ timer_started_at: sql`COALESCE(${task.timer_started_at}, ${NOW})` }, isNull(task.done_at));
     }
     if (timer === 'pause') update(PAUSE, RUNNING);
@@ -420,7 +431,10 @@ export class Store {
     // Reportée = un ticket : sans ticket, la tâche revient « à reporter » ; avec, elle est reportée.
     update({ bugtracker_at: null }, isNull(task.bugtracker_key));
     update(
-      { bugtracker_wanted_at: sql`COALESCE(${task.bugtracker_wanted_at}, ${NOW})`, bugtracker_at: sql`COALESCE(${task.bugtracker_at}, ${NOW})` },
+      {
+        bugtracker_wanted_at: sql`COALESCE(${task.bugtracker_wanted_at}, ${NOW})`,
+        bugtracker_at: sql`COALESCE(${task.bugtracker_at}, ${NOW})`,
+      },
       isNotNull(task.bugtracker_key),
     );
     return this.task(id);
@@ -441,9 +455,7 @@ export class Store {
       .map((r) => r.id);
     ids.splice(Math.min(Math.max(index, 0), ids.length), 0, id);
     this.orm.transaction((tx) => {
-      ids.forEach((taskId, position) =>
-        tx.update(task).set({ project_id: projectId, position }).where(eq(task.id, taskId)).run(),
-      );
+      ids.forEach((taskId, position) => tx.update(task).set({ project_id: projectId, position }).where(eq(task.id, taskId)).run());
     });
     return true;
   }

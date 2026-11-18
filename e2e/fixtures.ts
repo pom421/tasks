@@ -12,6 +12,7 @@ const DIST = path.join(import.meta.dirname, '..', 'dist');
 // Chaque test a son serveur et sa base vierge : `store` sert à préparer
 // les données et à vérifier ce qui a été enregistré.
 export const test = base.extend<{ store: Store }>({
+  // oxlint-disable-next-line eslint/no-empty-pattern -- Playwright exige la déstructuration des fixtures
   store: async ({}, use) => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tasks-e2e-'));
     const store = new Store(path.join(dir, 'tasks.db'));

@@ -18,4 +18,4 @@ pnpm install --frozen-lockfile
 
 # Pas de téléchargement de navigateur : Chromium est déjà dans le conteneur
 # (/opt/pw-browsers), détecté par playwright.config.ts.
-echo "Dépendances installées. Tests : pnpm typecheck && pnpm test && pnpm test:e2e"
+echo "Dépendances installées. Tests : pnpm ready && pnpm test:e2e"

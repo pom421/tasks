@@ -3,9 +3,15 @@ import { test, expect } from './fixtures.ts';
 
 // Tâches faites sur 8 jours (21 : deux tâches), dans Alpha ; jours vides entre.
 const DONE = [
-  ['Quatorze', '2026-09-14'], ['Quinze', '2026-09-15'], ['Seize', '2026-09-16'], ['Dix-huit', '2026-09-18'],
-  ['Vingt', '2026-09-20'], ['Vingt et un A', '2026-09-21'], ['Vingt et un B', '2026-09-21'],
-  ['Vingt-trois', '2026-09-23'], ['Vingt-quatre', '2026-09-24'],
+  ['Quatorze', '2026-09-14'],
+  ['Quinze', '2026-09-15'],
+  ['Seize', '2026-09-16'],
+  ['Dix-huit', '2026-09-18'],
+  ['Vingt', '2026-09-20'],
+  ['Vingt et un A', '2026-09-21'],
+  ['Vingt et un B', '2026-09-21'],
+  ['Vingt-trois', '2026-09-23'],
+  ['Vingt-quatre', '2026-09-24'],
 ];
 test.beforeEach(async ({ page, store }) => {
   const p = store.createProject('Alpha');
@@ -18,8 +24,11 @@ test.beforeEach(async ({ page, store }) => {
 const days = (page: Page) => page.locator('#journal .day h3');
 const date = (page: Page) => page.locator('#filter-date');
 const RECENT = [
-  'jeudi 24 septembre 2026', 'mercredi 23 septembre 2026', 'lundi 21 septembre 2026',
-  'dimanche 20 septembre 2026', 'vendredi 18 septembre 2026',
+  'jeudi 24 septembre 2026',
+  'mercredi 23 septembre 2026',
+  'lundi 21 septembre 2026',
+  'dimanche 20 septembre 2026',
+  'vendredi 18 septembre 2026',
 ];
 const OLDER = ['mercredi 16 septembre 2026', 'mardi 15 septembre 2026', 'lundi 14 septembre 2026'];
 

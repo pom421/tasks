@@ -6,7 +6,10 @@ const TODAY = '2026-09-25';
 
 const reminder = (page: Page, projectId: number) => page.locator(`#project-${projectId} .summary-reminder`);
 
-test('cercle : seulement si une tâche du projet est faite aujourd’hui ; vide puis plein une fois la synthèse mise à jour', async ({ page, store }) => {
+test('cercle : seulement si une tâche du projet est faite aujourd’hui ; vide puis plein une fois la synthèse mise à jour', async ({
+  page,
+  store,
+}) => {
   const alpha = store.createProject('Alpha');
   const beta = store.createProject('Beta');
   const faite = store.createTask(alpha.id, 'Faite aujourd’hui');
@@ -36,7 +39,9 @@ test('cercle : seulement si une tâche du projet est faite aujourd’hui ; vide 
   await expect(dialog).toHaveCount(0);
   await expect(circle).toHaveAttribute('aria-label', 'Synthèse à jour');
   await expect(circle.locator('svg')).toHaveAttribute('fill', 'currentColor');
-  expect(store.db.prepare('SELECT day, content FROM project_summary WHERE project_id = ?').all(alpha.id)).toEqual([{ day: TODAY, content: '## Le projet\nUn essai' }]);
+  expect(store.db.prepare('SELECT day, content FROM project_summary WHERE project_id = ?').all(alpha.id)).toEqual([
+    { day: TODAY, content: '## Le projet\nUn essai' },
+  ]);
 
   // u : la synthèse revient à vide, sans version ; le cercle se vide (il reste : tâche faite).
   await page.keyboard.press('u');
@@ -44,7 +49,10 @@ test('cercle : seulement si une tâche du projet est faite aujourd’hui ; vide 
   expect(store.db.prepare('SELECT COUNT(*) AS n FROM project_summary').get()).toEqual({ n: 0 });
 });
 
-test('s sur un projet : synthèse en édition ; boutons d’insertion (faites depuis la version d’avant, P1) en liens', async ({ page, store }) => {
+test('s sur un projet : synthèse en édition ; boutons d’insertion (faites depuis la version d’avant, P1) en liens', async ({
+  page,
+  store,
+}) => {
   const alpha = store.createProject('Alpha');
   store.updateProject(alpha.id, { notes: 'Ancienne', day: '2026-09-20' });
   const old = store.createTask(alpha.id, 'Faite avant la version');

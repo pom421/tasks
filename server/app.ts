@@ -5,7 +5,16 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { type DeletedProject, type ProjectPatch, type Store, type TaskPatch, isDate, today } from './db.ts';
 import type { ProjectRow, TaskRow } from './schema.ts';
-import { BUGTRACKER_KEY_RE, PRIORITIES, normalizeTag, type BugtrackerState, type JiraFields, type Priority, type SettingsPatch, type TimerAction } from '../shared/types.ts';
+import {
+  BUGTRACKER_KEY_RE,
+  PRIORITIES,
+  normalizeTag,
+  type BugtrackerState,
+  type JiraFields,
+  type Priority,
+  type SettingsPatch,
+  type TimerAction,
+} from '../shared/types.ts';
 import { JiraError, createIssue, listSprints, readIssue, writeIssue, type JiraConfig } from './jira.ts';
 import { parseMarkdown } from './markdown.ts';
 
@@ -280,257 +289,354 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
 
   const routes: [string, RegExp, Handler][] = [
     // day : journée de « Plan journée » (date du navigateur), facultative.
-    ['GET', /^\/api\/state$/, (_req, res, url) => {
-      const day = url.searchParams.get('day') || undefined;
-      if (day && !isDate(day)) throw new HttpError(400, 'Date invalide');
-      send(res, 200, store.state(day));
-    }],
+    [
+      'GET',
+      /^\/api\/state$/,
+      (_req, res, url) => {
+        const day = url.searchParams.get('day') || undefined;
+        if (day && !isDate(day)) throw new HttpError(400, 'Date invalide');
+        send(res, 200, store.state(day));
+      },
+    ],
 
-    ['GET', /^\/api\/journal$/, (_req, res, url) => {
-      const from = url.searchParams.get('from') || undefined;
-      const to = url.searchParams.get('to') || undefined;
-      const projectId = Number(url.searchParams.get('project')) || undefined;
-      const bugtrackerPending = url.searchParams.get('bugtracker') === 'pending';
-      const q = url.searchParams.get('q')?.trim().slice(0, 200) || undefined;
-      // tags=client,urgent : tâches portant tous ces tags.
-      const tagList = tags(url.searchParams.get('tags')?.split(',').filter(Boolean) ?? []);
-      const n = Math.trunc(Number(url.searchParams.get('limit')));
-      const limit = n > 0 ? Math.min(n, 100) : undefined;
-      if ((from && !isDate(from)) || (to && !isDate(to))) throw new HttpError(400, 'Date invalide');
-      if (from && to && from > to) throw new HttpError(400, 'La date de début est après la date de fin');
-      send(res, 200, store.journal({ from, to, projectId, bugtrackerPending, q, tags: tagList, limit }));
-    }],
+    [
+      'GET',
+      /^\/api\/journal$/,
+      (_req, res, url) => {
+        const from = url.searchParams.get('from') || undefined;
+        const to = url.searchParams.get('to') || undefined;
+        const projectId = Number(url.searchParams.get('project')) || undefined;
+        const bugtrackerPending = url.searchParams.get('bugtracker') === 'pending';
+        const q = url.searchParams.get('q')?.trim().slice(0, 200) || undefined;
+        // tags=client,urgent : tâches portant tous ces tags.
+        const tagList = tags(url.searchParams.get('tags')?.split(',').filter(Boolean) ?? []);
+        const n = Math.trunc(Number(url.searchParams.get('limit')));
+        const limit = n > 0 ? Math.min(n, 100) : undefined;
+        if ((from && !isDate(from)) || (to && !isDate(to))) throw new HttpError(400, 'Date invalide');
+        if (from && to && from > to) throw new HttpError(400, 'La date de début est après la date de fin');
+        send(res, 200, store.journal({ from, to, projectId, bugtrackerPending, q, tags: tagList, limit }));
+      },
+    ],
 
     ['GET', /^\/api\/settings$/, (_req, res) => send(res, 200, store.settings())],
 
-    ['PUT', /^\/api\/settings$/, async (req, res) => {
-      const body = await readJson(req);
-      const patch: SettingsPatch = {};
-      // URL du bugtracker, sans « / » final (on y ajoute /browse/CLÉ).
-      if ('bugtracker_base_url' in body) patch.bugtracker_base_url = httpUrl(body.bugtracker_base_url)?.replace(/\/+$/, '') ?? null;
-      // Plan journée : maximum de tâches, de 1 à 50.
-      if ('day_capacity' in body) {
-        const n = body.day_capacity;
-        if (!Number.isInteger(n) || (n as number) < 1 || (n as number) > 50) throw new HttpError(400, 'Maximum invalide : nombre de 1 à 50 attendu');
-        patch.day_capacity = n as number;
-      }
-      // PAT Jira : écrit, jamais relu par le navigateur ; null le retire.
-      if ('jira_pat' in body) patch.jira_pat = optionalText(body.jira_pat, 'PAT', 500);
-      send(res, 200, store.updateSettings(patch));
-    }],
+    [
+      'PUT',
+      /^\/api\/settings$/,
+      async (req, res) => {
+        const body = await readJson(req);
+        const patch: SettingsPatch = {};
+        // URL du bugtracker, sans « / » final (on y ajoute /browse/CLÉ).
+        if ('bugtracker_base_url' in body) patch.bugtracker_base_url = httpUrl(body.bugtracker_base_url)?.replace(/\/+$/, '') ?? null;
+        // Plan journée : maximum de tâches, de 1 à 50.
+        if ('day_capacity' in body) {
+          const n = body.day_capacity;
+          if (!Number.isInteger(n) || (n as number) < 1 || (n as number) > 50)
+            throw new HttpError(400, 'Maximum invalide : nombre de 1 à 50 attendu');
+          patch.day_capacity = n as number;
+        }
+        // PAT Jira : écrit, jamais relu par le navigateur ; null le retire.
+        if ('jira_pat' in body) patch.jira_pat = optionalText(body.jira_pat, 'PAT', 500);
+        send(res, 200, store.updateSettings(patch));
+      },
+    ],
 
     // Ticket Jira : lecture (aperçu avant de pousser ou de récupérer) et écriture.
-    ['GET', /^\/api\/jira\/([A-Z][A-Z0-9_]*-\d+)$/, async (_req, res, _url, key) => {
-      send(res, 200, await jira((config) => readIssue(config, key)));
-    }],
+    [
+      'GET',
+      /^\/api\/jira\/([A-Z][A-Z0-9_]*-\d+)$/,
+      async (_req, res, _url, key) => {
+        send(res, 200, await jira((config) => readIssue(config, key)));
+      },
+    ],
 
     // Noms des sprints actifs puis à venir d'un projet (PROJ) : propositions du champ Sprint.
-    ['GET', /^\/api\/jira\/sprints\/([A-Z][A-Z0-9_]*)$/, async (_req, res, _url, project) => {
-      send(res, 200, (await jira((config) => listSprints(config, project))).map((s) => s.name));
-    }],
+    [
+      'GET',
+      /^\/api\/jira\/sprints\/([A-Z][A-Z0-9_]*)$/,
+      async (_req, res, _url, project) => {
+        send(
+          res,
+          200,
+          (await jira((config) => listSprints(config, project))).map((s) => s.name),
+        );
+      },
+    ],
 
-    ['PUT', /^\/api\/jira\/([A-Z][A-Z0-9_]*-\d+)$/, async (req, res, _url, key) => {
-      const body = await readJson(req);
-      const fields: JiraFields = {
-        title: requireText(body.title, 'Titre'),
-        notes: optionalText(body.notes, 'Contenu', 100_000),
-        due_at: dayAt(body.due_at),
-        sprint: optionalText(body.sprint ?? null, 'Sprint', 100),
-      };
-      await jira((config) => writeIssue(config, key, fields));
-      send(res, 200, { ok: true });
-    }],
+    [
+      'PUT',
+      /^\/api\/jira\/([A-Z][A-Z0-9_]*-\d+)$/,
+      async (req, res, _url, key) => {
+        const body = await readJson(req);
+        const fields: JiraFields = {
+          title: requireText(body.title, 'Titre'),
+          notes: optionalText(body.notes, 'Contenu', 100_000),
+          due_at: dayAt(body.due_at),
+          sprint: optionalText(body.sprint ?? null, 'Sprint', 100),
+        };
+        await jira((config) => writeIssue(config, key, fields));
+        send(res, 200, { ok: true });
+      },
+    ],
 
     // Crée une tâche Jira rattachée à l'epic (ticket du projet) : renvoie sa clé,
     // que le front enregistre dans la tâche.
-    ['POST', /^\/api\/jira\/([A-Z][A-Z0-9_]*-\d+)\/tasks$/, async (req, res, _url, epic) => {
-      const body = await readJson(req);
-      const fields: JiraFields = {
-        title: requireText(body.title, 'Titre'),
-        notes: optionalText(body.notes, 'Contenu', 100_000),
-        due_at: dayAt(body.due_at),
-        sprint: optionalText(body.sprint ?? null, 'Sprint', 100),
-      };
-      send(res, 201, { key: await jira((config) => createIssue(config, epic, fields)) });
-    }],
+    [
+      'POST',
+      /^\/api\/jira\/([A-Z][A-Z0-9_]*-\d+)\/tasks$/,
+      async (req, res, _url, epic) => {
+        const body = await readJson(req);
+        const fields: JiraFields = {
+          title: requireText(body.title, 'Titre'),
+          notes: optionalText(body.notes, 'Contenu', 100_000),
+          due_at: dayAt(body.due_at),
+          sprint: optionalText(body.sprint ?? null, 'Sprint', 100),
+        };
+        send(res, 201, { key: await jira((config) => createIssue(config, epic, fields)) });
+      },
+    ],
 
-    ['POST', /^\/api\/projects$/, async (req, res) => {
-      const { name } = await readJson(req);
-      send(res, 201, store.createProject(requireText(name, 'Nom')));
-    }],
+    [
+      'POST',
+      /^\/api\/projects$/,
+      async (req, res) => {
+        const { name } = await readJson(req);
+        send(res, 201, store.createProject(requireText(name, 'Nom')));
+      },
+    ],
 
-    ['PATCH', /^\/api\/projects\/(\d+)$/, async (req, res, _url, id) => {
-      const body = await readJson(req);
-      const patch: ProjectPatch = {};
-      if ('name' in body) patch.name = requireText(body.name, 'Nom');
-      if ('archived' in body) patch.archived = Boolean(body.archived);
-      if ('favorite' in body) patch.favorite = Boolean(body.favorite);
-      if ('bugtracker_ticket' in body) Object.assign(patch, bugtrackerTicket(body.bugtracker_ticket));
-      if ('notes' in body) patch.notes = optionalText(body.notes, 'Synthèse', 20_000);
-      if ('day' in body) {
-        if (!isDate(body.day)) throw new HttpError(400, 'Jour invalide');
-        patch.day = body.day;
-      }
-      const project = store.updateProject(Number(id), patch);
-      if (!project) throw new HttpError(404, 'Projet introuvable');
-      send(res, 200, project);
-    }],
+    [
+      'PATCH',
+      /^\/api\/projects\/(\d+)$/,
+      async (req, res, _url, id) => {
+        const body = await readJson(req);
+        const patch: ProjectPatch = {};
+        if ('name' in body) patch.name = requireText(body.name, 'Nom');
+        if ('archived' in body) patch.archived = Boolean(body.archived);
+        if ('favorite' in body) patch.favorite = Boolean(body.favorite);
+        if ('bugtracker_ticket' in body) Object.assign(patch, bugtrackerTicket(body.bugtracker_ticket));
+        if ('notes' in body) patch.notes = optionalText(body.notes, 'Synthèse', 20_000);
+        if ('day' in body) {
+          if (!isDate(body.day)) throw new HttpError(400, 'Jour invalide');
+          patch.day = body.day;
+        }
+        const project = store.updateProject(Number(id), patch);
+        if (!project) throw new HttpError(404, 'Projet introuvable');
+        send(res, 200, project);
+      },
+    ],
 
     // Synthèse d'un projet : versions et tâches faites depuis la version d'avant `day`.
-    ['GET', /^\/api\/projects\/(\d+)\/summaries$/, async (_req, res, url, id) => {
-      const day = url.searchParams.get('day');
-      if (!isDate(day)) throw new HttpError(400, 'Jour invalide');
-      const summaries = store.summaries(Number(id), day);
-      if (!summaries) throw new HttpError(404, 'Projet introuvable');
-      send(res, 200, summaries);
-    }],
+    [
+      'GET',
+      /^\/api\/projects\/(\d+)\/summaries$/,
+      async (_req, res, url, id) => {
+        const day = url.searchParams.get('day');
+        if (!isDate(day)) throw new HttpError(400, 'Jour invalide');
+        const summaries = store.summaries(Number(id), day);
+        if (!summaries) throw new HttpError(404, 'Projet introuvable');
+        send(res, 200, summaries);
+      },
+    ],
 
     // Déplacement d'un projet : { index } parmi tous les projets.
-    ['POST', /^\/api\/projects\/(\d+)\/move$/, async (req, res, _url, id) => {
-      const index = Number((await readJson(req)).index);
-      if (!Number.isInteger(index) || index < 0) throw new HttpError(400, 'Index invalide');
-      if (!store.moveProject(Number(id), index)) throw new HttpError(404, 'Projet introuvable');
-      send(res, 200, { ok: true });
-    }],
+    [
+      'POST',
+      /^\/api\/projects\/(\d+)\/move$/,
+      async (req, res, _url, id) => {
+        const index = Number((await readJson(req)).index);
+        if (!Number.isInteger(index) || index < 0) throw new HttpError(400, 'Index invalide');
+        if (!store.moveProject(Number(id), index)) throw new HttpError(404, 'Projet introuvable');
+        send(res, 200, { ok: true });
+      },
+    ],
 
     // Ordre des tâches à faire d'un projet : { ids } = toutes, dans le nouvel ordre
     // (tri par priorité ; l'annulation renvoie l'ancien ordre).
-    ['POST', /^\/api\/projects\/(\d+)\/order$/, async (req, res, _url, id) => {
-      const { ids } = await readJson(req);
-      if (!Array.isArray(ids) || !ids.every((i) => Number.isInteger(i))) throw new HttpError(400, 'Liste de tâches invalide');
-      if (!store.hasProject(Number(id))) throw new HttpError(404, 'Projet introuvable');
-      if (!store.orderTasks(Number(id), ids)) throw new HttpError(400, 'Il faut toutes les tâches à faire du projet, une fois chacune');
-      send(res, 200, { ok: true });
-    }],
+    [
+      'POST',
+      /^\/api\/projects\/(\d+)\/order$/,
+      async (req, res, _url, id) => {
+        const { ids } = await readJson(req);
+        if (!Array.isArray(ids) || !ids.every((i) => Number.isInteger(i))) throw new HttpError(400, 'Liste de tâches invalide');
+        if (!store.hasProject(Number(id))) throw new HttpError(404, 'Projet introuvable');
+        if (!store.orderTasks(Number(id), ids)) throw new HttpError(400, 'Il faut toutes les tâches à faire du projet, une fois chacune');
+        send(res, 200, { ok: true });
+      },
+    ],
 
     // Renvoie le projet supprimé et ses tâches : le front les garde pour pouvoir annuler (u).
-    ['DELETE', /^\/api\/projects\/(\d+)$/, (_req, res, _url, id) => {
-      const deleted = store.deleteProject(Number(id));
-      if (!deleted) throw new HttpError(404, 'Projet introuvable');
-      send(res, 200, deleted);
-    }],
+    [
+      'DELETE',
+      /^\/api\/projects\/(\d+)$/,
+      (_req, res, _url, id) => {
+        const deleted = store.deleteProject(Number(id));
+        if (!deleted) throw new HttpError(404, 'Projet introuvable');
+        send(res, 200, deleted);
+      },
+    ],
 
     // Annulation d'une suppression de projet : réinsertion telle quelle.
-    ['POST', /^\/api\/projects\/restore$/, async (req, res) => {
-      const deleted = restoredProject(await readJson(req));
-      if (store.hasProject(deleted.project.id)) throw new HttpError(409, 'Projet déjà présent');
-      if (deleted.tasks.some((t) => store.hasTask(t.id))) throw new HttpError(409, 'Tâche déjà présente');
-      send(res, 201, store.restoreProject(deleted));
-    }],
+    [
+      'POST',
+      /^\/api\/projects\/restore$/,
+      async (req, res) => {
+        const deleted = restoredProject(await readJson(req));
+        if (store.hasProject(deleted.project.id)) throw new HttpError(409, 'Projet déjà présent');
+        if (deleted.tasks.some((t) => store.hasTask(t.id))) throw new HttpError(409, 'Tâche déjà présente');
+        send(res, 201, store.restoreProject(deleted));
+      },
+    ],
 
-    ['POST', /^\/api\/tasks$/, async (req, res) => {
-      const { project_id: projectId, title } = await readJson(req);
-      const text = requireText(title, 'Titre');
-      try {
-        send(res, 201, store.createTask(Number(projectId), text));
-      } catch {
-        throw new HttpError(400, 'Projet introuvable');
-      }
-    }],
+    [
+      'POST',
+      /^\/api\/tasks$/,
+      async (req, res) => {
+        const { project_id: projectId, title } = await readJson(req);
+        const text = requireText(title, 'Titre');
+        try {
+          send(res, 201, store.createTask(Number(projectId), text));
+        } catch {
+          throw new HttpError(400, 'Projet introuvable');
+        }
+      },
+    ],
 
     // Une tâche, à faire ou faite (lien de la synthèse vers sa fiche).
-    ['GET', /^\/api\/tasks\/(\d+)$/, async (_req, res, _url, id) => {
-      const found = store.getTask(Number(id));
-      if (!found) throw new HttpError(404, 'Tâche introuvable');
-      send(res, 200, found);
-    }],
+    [
+      'GET',
+      /^\/api\/tasks\/(\d+)$/,
+      async (_req, res, _url, id) => {
+        const found = store.getTask(Number(id));
+        if (!found) throw new HttpError(404, 'Tâche introuvable');
+        send(res, 200, found);
+      },
+    ],
 
-    ['PATCH', /^\/api\/tasks\/(\d+)$/, async (req, res, _url, id) => {
-      const body = await readJson(req);
-      const patch: TaskPatch = {};
-      if ('title' in body) patch.title = requireText(body.title, 'Titre');
-      // done: true -> faite (à done_at ou aujourd'hui), false -> à faire.
-      const doneAt = body.done_at ?? (body.done ? today() : null);
-      if (('done' in body || 'done_at' in body) && doneAt !== null && !isDate(doneAt)) {
-        throw new HttpError(400, 'Date invalide');
-      }
-      if ('done' in body) patch.doneAt = body.done ? (doneAt as string) : null;
-      else if ('done_at' in body) patch.doneAt = doneAt as string | null;
-      if ('bugtracker' in body) {
-        if (!['none', 'wanted', 'done'].includes(body.bugtracker as string)) throw new HttpError(400, 'État de report invalide');
-        patch.bugtracker = body.bugtracker as BugtrackerState;
-      }
-      // Un ticket renseigné vaut « reportée », vidé « à reporter » (règle de la base).
-      if ('bugtracker_ticket' in body) Object.assign(patch, bugtrackerTicket(body.bugtracker_ticket));
-      if ('notes' in body) patch.notes = optionalText(body.notes, 'Notes', 20_000);
-      if ('timer' in body) {
-        if (!['start', 'pause', 'reset'].includes(body.timer as string)) throw new HttpError(400, 'Action du chrono invalide');
-        patch.timer = body.timer as TimerAction;
-      }
-      // Annulation (u) : valeurs précédentes du chrono.
-      if ('time_spent' in body) patch.timeSpent = int(body.time_spent, 'Temps passé');
-      if ('timer_started_at' in body) patch.timerStartedAt = timestamp(body.timer_started_at, 'Début du chrono');
-      if ('day_at' in body) patch.dayAt = dayAt(body.day_at);
-      if ('due_at' in body) patch.dueAt = dayAt(body.due_at);
-      if ('sprint' in body) patch.sprint = optionalText(body.sprint, 'Sprint', 100);
-      if ('tags' in body) patch.tags = tags(body.tags);
-      if ('priority' in body) patch.priority = priority(body.priority);
-      const task = store.updateTask(Number(id), patch);
-      if (!task) throw new HttpError(404, 'Tâche introuvable');
-      send(res, 200, task);
-    }],
+    [
+      'PATCH',
+      /^\/api\/tasks\/(\d+)$/,
+      async (req, res, _url, id) => {
+        const body = await readJson(req);
+        const patch: TaskPatch = {};
+        if ('title' in body) patch.title = requireText(body.title, 'Titre');
+        // done: true -> faite (à done_at ou aujourd'hui), false -> à faire.
+        const doneAt = body.done_at ?? (body.done ? today() : null);
+        if (('done' in body || 'done_at' in body) && doneAt !== null && !isDate(doneAt)) {
+          throw new HttpError(400, 'Date invalide');
+        }
+        if ('done' in body) patch.doneAt = body.done ? (doneAt as string) : null;
+        else if ('done_at' in body) patch.doneAt = doneAt as string | null;
+        if ('bugtracker' in body) {
+          if (!['none', 'wanted', 'done'].includes(body.bugtracker as string)) throw new HttpError(400, 'État de report invalide');
+          patch.bugtracker = body.bugtracker as BugtrackerState;
+        }
+        // Un ticket renseigné vaut « reportée », vidé « à reporter » (règle de la base).
+        if ('bugtracker_ticket' in body) Object.assign(patch, bugtrackerTicket(body.bugtracker_ticket));
+        if ('notes' in body) patch.notes = optionalText(body.notes, 'Notes', 20_000);
+        if ('timer' in body) {
+          if (!['start', 'pause', 'reset'].includes(body.timer as string)) throw new HttpError(400, 'Action du chrono invalide');
+          patch.timer = body.timer as TimerAction;
+        }
+        // Annulation (u) : valeurs précédentes du chrono.
+        if ('time_spent' in body) patch.timeSpent = int(body.time_spent, 'Temps passé');
+        if ('timer_started_at' in body) patch.timerStartedAt = timestamp(body.timer_started_at, 'Début du chrono');
+        if ('day_at' in body) patch.dayAt = dayAt(body.day_at);
+        if ('due_at' in body) patch.dueAt = dayAt(body.due_at);
+        if ('sprint' in body) patch.sprint = optionalText(body.sprint, 'Sprint', 100);
+        if ('tags' in body) patch.tags = tags(body.tags);
+        if ('priority' in body) patch.priority = priority(body.priority);
+        const task = store.updateTask(Number(id), patch);
+        if (!task) throw new HttpError(404, 'Tâche introuvable');
+        send(res, 200, task);
+      },
+    ],
 
     // Déplacement (priorité) : { project_id, index } parmi les tâches à faire.
-    ['POST', /^\/api\/tasks\/(\d+)\/move$/, async (req, res, _url, id) => {
-      const body = await readJson(req);
-      const projectId = Number(body.project_id);
-      const index = Number(body.index);
-      if (!Number.isInteger(index) || index < 0) throw new HttpError(400, 'Index invalide');
-      if (!store.hasProject(projectId)) throw new HttpError(400, 'Projet introuvable');
-      if (!store.moveTask(Number(id), projectId, index)) throw new HttpError(404, 'Tâche à faire introuvable');
-      send(res, 200, { ok: true });
-    }],
+    [
+      'POST',
+      /^\/api\/tasks\/(\d+)\/move$/,
+      async (req, res, _url, id) => {
+        const body = await readJson(req);
+        const projectId = Number(body.project_id);
+        const index = Number(body.index);
+        if (!Number.isInteger(index) || index < 0) throw new HttpError(400, 'Index invalide');
+        if (!store.hasProject(projectId)) throw new HttpError(400, 'Projet introuvable');
+        if (!store.moveTask(Number(id), projectId, index)) throw new HttpError(404, 'Tâche à faire introuvable');
+        send(res, 200, { ok: true });
+      },
+    ],
 
     // Renvoie la tâche supprimée : le front la garde pour pouvoir annuler (u).
-    ['DELETE', /^\/api\/tasks\/(\d+)$/, (_req, res, _url, id) => {
-      const row = store.deleteTask(Number(id));
-      if (!row) throw new HttpError(404, 'Tâche introuvable');
-      send(res, 200, row);
-    }],
+    [
+      'DELETE',
+      /^\/api\/tasks\/(\d+)$/,
+      (_req, res, _url, id) => {
+        const row = store.deleteTask(Number(id));
+        if (!row) throw new HttpError(404, 'Tâche introuvable');
+        send(res, 200, row);
+      },
+    ],
 
     // Annulation d'une suppression : la tâche renvoyée par DELETE, réinsérée telle quelle.
-    ['POST', /^\/api\/tasks\/restore$/, async (req, res) => {
-      const row = restoredTask(await readJson(req));
-      if (store.hasTask(row.id)) throw new HttpError(409, 'Tâche déjà présente');
-      if (!store.hasProject(row.project_id)) throw new HttpError(400, 'Projet introuvable');
-      send(res, 201, store.restoreTask(row));
-    }],
+    [
+      'POST',
+      /^\/api\/tasks\/restore$/,
+      async (req, res) => {
+        const row = restoredTask(await readJson(req));
+        if (store.hasTask(row.id)) throw new HttpError(409, 'Tâche déjà présente');
+        if (!store.hasProject(row.project_id)) throw new HttpError(400, 'Projet introuvable');
+        send(res, 201, store.restoreTask(row));
+      },
+    ],
 
-    ['GET', /^\/api\/export$/, (_req, res) => {
-      const file = tmpFile('.sqlite');
-      try {
-        store.exportTo(file);
-        const data = fs.readFileSync(file);
-        res.writeHead(200, {
-          'Content-Type': 'application/vnd.sqlite3',
-          'Content-Disposition': `attachment; filename="tasks-${today()}.sqlite"`,
-        });
-        res.end(data);
-      } finally {
-        fs.rmSync(file, { force: true });
-      }
-    }],
+    [
+      'GET',
+      /^\/api\/export$/,
+      (_req, res) => {
+        const file = tmpFile('.sqlite');
+        try {
+          store.exportTo(file);
+          const data = fs.readFileSync(file);
+          res.writeHead(200, {
+            'Content-Type': 'application/vnd.sqlite3',
+            'Content-Disposition': `attachment; filename="tasks-${today()}.sqlite"`,
+          });
+          res.end(data);
+        } finally {
+          fs.rmSync(file, { force: true });
+        }
+      },
+    ],
 
-    ['POST', /^\/api\/import$/, async (req, res) => {
-      const file = tmpFile('.sqlite');
-      requireType(req, 'application/octet-stream');
-      try {
-        fs.writeFileSync(file, await readBody(req), { mode: 0o600 });
-        store.replaceWith(file);
-      } catch (err) {
-        throw err instanceof HttpError ? err : new HttpError(400, (err as Error).message);
-      } finally {
-        fs.rmSync(file, { force: true });
-      }
-      send(res, 200, { ok: true });
-    }],
+    [
+      'POST',
+      /^\/api\/import$/,
+      async (req, res) => {
+        const file = tmpFile('.sqlite');
+        requireType(req, 'application/octet-stream');
+        try {
+          fs.writeFileSync(file, await readBody(req), { mode: 0o600 });
+          store.replaceWith(file);
+        } catch (err) {
+          throw err instanceof HttpError ? err : new HttpError(400, (err as Error).message);
+        } finally {
+          fs.rmSync(file, { force: true });
+        }
+        send(res, 200, { ok: true });
+      },
+    ],
 
-    ['POST', /^\/api\/import-markdown$/, async (req, res) => {
-      requireType(req, 'text/markdown');
-      const items = parseMarkdown((await readBody(req)).toString('utf8'));
-      if (!items.length) throw new HttpError(400, 'Aucun projet ni tâche trouvé');
-      send(res, 200, store.importItems(items));
-    }],
+    [
+      'POST',
+      /^\/api\/import-markdown$/,
+      async (req, res) => {
+        requireType(req, 'text/markdown');
+        const items = parseMarkdown((await readBody(req)).toString('utf8'));
+        if (!items.length) throw new HttpError(400, 'Aucun projet ni tâche trouvé');
+        send(res, 200, store.importItems(items));
+      },
+    ],
   ];
 
   return async (req: Req, res: Res) => {

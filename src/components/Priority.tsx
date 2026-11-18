@@ -30,7 +30,7 @@ export function usePriority(task: Task) {
     const p = Number(e.key) as Priority;
     if (!PRIORITIES.includes(p)) return false;
     e.preventDefault();
-    set(task.priority === p ? null : p);
+    void set(task.priority === p ? null : p);
     return true;
   };
   return { cycle, onKey };

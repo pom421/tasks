@@ -17,5 +17,5 @@
     "noFallthroughCasesInSwitch": true,
     "paths": { "@/*": ["./src/*"] }
   },
-  "include": ["src", "server", "shared", "e2e", "vite.config.ts", "playwright.config.ts"]
+  "include": ["src", "server", "shared", "e2e", "scripts", "vite.config.ts", "playwright.config.ts"]
 }

@@ -74,7 +74,12 @@ export function SprintInput({
         onKeyDown={onKey}
       />
       {shown && (
-        <ul id={listId} role="listbox" aria-label="Sprints" className="absolute top-full left-0 z-50 mt-1 min-w-full rounded-md border bg-background py-1 shadow-md">
+        <ul
+          id={listId}
+          role="listbox"
+          aria-label="Sprints"
+          className="absolute top-full left-0 z-50 mt-1 min-w-full rounded-md border bg-background py-1 shadow-md"
+        >
           {options.map((sprint, i) => (
             <li
               key={sprint}

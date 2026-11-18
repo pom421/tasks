@@ -73,7 +73,11 @@ test('fiche : date prévue, échéance et tags (e), étiquettes sur la 2e ligne,
   expect(taskRow(store, data.une.id)).toEqual({ day_at: null, due_at: null, tags: '[]' });
 });
 
-test('fiche : mêmes champs au pixel près en lecture et en édition, bloqués en lecture ; sprint enregistré, u annule', async ({ page, store, data }) => {
+test('fiche : mêmes champs au pixel près en lecture et en édition, bloqués en lecture ; sprint enregistré, u annule', async ({
+  page,
+  store,
+  data,
+}) => {
   store.updateTask(data.une.id, { dueAt: '2026-10-12', tags: ['client'], timeSpent: 600 });
   await open(page);
   await page.locator(`[data-nav-key="task:${data.une.id}"]`).focus();
@@ -85,7 +89,11 @@ test('fiche : mêmes champs au pixel près en lecture et en édition, bloqués e
   // Titre : position et hauteur (le champ s'arrête avant la croix).
   const boxes = () =>
     dialog.evaluate((d) =>
-      [...d.querySelectorAll('h2:not(.sr-only), [aria-label="Titre"], label, input[id]:not([aria-label="Titre"]), .tag-input, .notes-preview, textarea')].map((e) => {
+      [
+        ...d.querySelectorAll(
+          'h2:not(.sr-only), [aria-label="Titre"], label, input[id]:not([aria-label="Titre"]), .tag-input, .notes-preview, textarea',
+        ),
+      ].map((e) => {
         const r = e.getBoundingClientRect();
         return e.matches('h2, [aria-label="Titre"]') ? [r.x, r.y, r.height] : [r.x, r.y, r.width, r.height];
       }),
@@ -137,7 +145,11 @@ test('fiche : mêmes champs au pixel près en lecture et en édition, bloqués e
   await expect.poll(() => store.db.prepare('SELECT sprint FROM task WHERE id = ?').get(data.une.id)).toEqual({ sprint: null });
 });
 
-test('étiquettes : date prévue (aujourd’hui compris) ; échéance dépassée en rouge, alignée d’une ligne à l’autre ; Log sur une ligne', async ({ page, store, data }) => {
+test('étiquettes : date prévue (aujourd’hui compris) ; échéance dépassée en rouge, alignée d’une ligne à l’autre ; Log sur une ligne', async ({
+  page,
+  store,
+  data,
+}) => {
   store.updateTask(data.une.id, { dayAt: TODAY, dueAt: '2026-09-24' });
   store.updateTask(data.deux.id, { dayAt: '2026-09-23' });
   store.updateTask(data.trois.id, { dueAt: '2026-09-26', doneAt: TODAY, tags: ['client'] });
@@ -226,7 +238,11 @@ test('Suivant : agenda par jour, tâche à ses deux dates, un cadre rouge par é
   await expect(page.locator('#upcoming .empty')).toHaveText('Aucune tâche datée à venir.');
 });
 
-test('filtre # des projets : autocomplétion, pastilles ✕, tous les tags requis, message exact, Échap Échap', async ({ page, store, data }) => {
+test('filtre # des projets : autocomplétion, pastilles ✕, tous les tags requis, message exact, Échap Échap', async ({
+  page,
+  store,
+  data,
+}) => {
   await open(page);
   // Aucun tag : pas de filtre.
   await expect(page.locator('#project-tags')).toHaveCount(0);
@@ -317,8 +333,18 @@ test('non-régression : # s’écrit dans un champ de saisie ; ☀ et t inchang�
   expect(taskRow(store, data.deux.id)).toMatchObject({ day_at: TODAY });
 });
 
-test('icônes toujours à la même place : étiquettes (tags, dates, report) avant, emplacements fixes après', async ({ page, store, data }) => {
-  store.updateTask(data.une.id, { notes: 'Contenu', tags: ['client', 'interne', 'api-publique', 'urgent'], dayAt: '2026-09-28', dueAt: '2026-10-12', bugtracker: 'wanted' });
+test('icônes toujours à la même place : étiquettes (tags, dates, report) avant, emplacements fixes après', async ({
+  page,
+  store,
+  data,
+}) => {
+  store.updateTask(data.une.id, {
+    notes: 'Contenu',
+    tags: ['client', 'interne', 'api-publique', 'urgent'],
+    dayAt: '2026-09-28',
+    dueAt: '2026-10-12',
+    bugtracker: 'wanted',
+  });
   store.updateTask(data.deux.id, { timeSpent: 600 });
   store.updateTask(data.trois.id, { priority: 2 });
   await open(page);

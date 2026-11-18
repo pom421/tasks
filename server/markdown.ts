@@ -36,7 +36,10 @@ function findDate(text: string): string | null {
 }
 
 function clean(text: string): string {
-  return text.replace(CHECKBOX_RE, '').replace(/\*\*|__/g, '').trim();
+  return text
+    .replace(CHECKBOX_RE, '')
+    .replace(/\*\*|__/g, '')
+    .trim();
 }
 
 export function parseMarkdown(md: string): ImportItem[] {

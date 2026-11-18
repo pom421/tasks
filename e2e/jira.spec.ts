@@ -93,7 +93,13 @@ test('créer le ticket : tâche enfant du ticket du projet, après confirmation 
     await page.keyboard.press('+');
     await expect(dialog.locator('.jira-status')).toHaveText('Ticket PROJ-101 créé dans Jira, rattaché à PROJ-9.');
     await expect(dialog.locator('.report-key')).toHaveText('PROJ-101');
-    expect(issues['PROJ-101']).toEqual({ summary: 'Une', description: 'Détail', duedate: '2026-10-12', sprint: 'Sprint 43', epic: 'PROJ-9' });
+    expect(issues['PROJ-101']).toEqual({
+      summary: 'Une',
+      description: 'Détail',
+      duedate: '2026-10-12',
+      sprint: 'Sprint 43',
+      epic: 'PROJ-9',
+    });
     // Un ticket existe : « + » laisse la place à pousser / récupérer.
     await expect(create).toHaveCount(0);
     await expect(dialog.getByRole('button', { name: 'Pousser vers Jira' })).toBeEnabled();
@@ -130,7 +136,9 @@ test('créer le ticket : absent sans ticket de projet, sans URL ni PAT, ou sur u
 });
 
 test('pousser : comparaison, confirmation par >, u remet l’ancien Jira', async ({ page, store }) => {
-  const issues: Record<string, FakeIssue> = { 'PROJ-1': { summary: 'Ancien titre', description: 'Texte Jira', duedate: null, sprint: 'Sprint 42' } };
+  const issues: Record<string, FakeIssue> = {
+    'PROJ-1': { summary: 'Ancien titre', description: 'Texte Jira', duedate: null, sprint: 'Sprint 42' },
+  };
   const jira = await fakeJira(store, issues);
   const alpha = store.createProject('Alpha');
   const une = store.createTask(alpha.id, 'Une');
@@ -211,7 +219,10 @@ test('récupérer : comparaison, Entrée confirme, la fiche et la ligne suivent,
   }
 });
 
-test('sprint : sprints actifs puis à venir de Jira proposés (↓, Entrée, clic) ; Échap ferme la liste ; sans Jira, texte libre', async ({ page, store }) => {
+test('sprint : sprints actifs puis à venir de Jira proposés (↓, Entrée, clic) ; Échap ferme la liste ; sans Jira, texte libre', async ({
+  page,
+  store,
+}) => {
   const jira = await fakeJira(store, { 'PROJ-1': { summary: 'Une', description: null, duedate: null } });
   const alpha = store.createProject('Alpha');
   const une = store.createTask(alpha.id, 'Une');
