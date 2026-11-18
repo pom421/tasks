@@ -32,6 +32,7 @@ export interface Actions {
   // Comme act, puis inscrit l'action dans l'historique si elle a réussi.
   undoable: (action: Undoable) => Promise<void>;
   settings: Settings;
+  projectTicket: (projectId: number) => string | null; // ticket du projet (l'epic), parent des tickets créés
   navigate: (path: string) => void;
 }
 
