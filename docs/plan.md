@@ -26,6 +26,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
+- [x] README : installer pnpm sans corepack (absent de Node 25 et plus) : `npm install -g pnpm@12.19.0` (PR #20)
 - [x] Synthèse d'un projet (remplace son contenu) : Markdown libre (le projet et ses liens, fait récemment, prochaines étapes), une version par jour consultable et restaurable ; boutons « Tâches faites » (depuis la version d'avant) et « Priorités 1 » qui insèrent des liens vers les fiches ; cercle à droite du projet les jours où une tâche est faite (vide, plein une fois la synthèse mise à jour) ; `s` ; migration 19 ([PR #19](https://github.com/pom421/tasks/pull/19))
 - [x] Jira : créer le ticket depuis une tâche sans identifiant (icône « ticket + », seulement si le projet a un ticket, l'epic, et que l'URL et le PAT sont réglés) : tâche enfant de l'epic après confirmation ; ☁↑ / ☁↓ n'apparaissent plus tant qu'ils sont inutilisables ; `+` dans la fiche ; délier une tâche de son ticket en deux temps, avec avertissement (`r r`, ✕ ✕) ([PR #17](https://github.com/pom421/tasks/pull/17))
 - [x] Projet : bouton « Trier par priorité » (flèche + 0 1, au survol, souris seulement) : 1, 2, 3 puis sans priorité, stable, annulable ; remplace le tri automatique refusé ([PR #16](https://github.com/pom421/tasks/pull/16))
