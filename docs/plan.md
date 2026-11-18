@@ -8,26 +8,17 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
+- [ ] Jira : créer le ticket depuis une tâche sans identifiant, enfant d'un ticket représentant le projet ; icônes distinctes de « remonter » (☁↑)
 
 ## Décisions attendues
 
-- [?] Lien d'un ticket par sa clé : `URL/browse/CLÉ` est le format de Jira. Pour un autre outil (GitLab `/-/issues/N`, GitHub `/issues/N`), régler un modèle d'URL (`https://…/browse/{clé}`) ?
-- [?] Log : aujourd'hui sans entrée n'apparaît plus (avant : cadre « Rien de fait ce jour-là »). À réafficher ?
-- [?] Compteur « N tâches à reporter » : ne compte plus les tâches **faites** à
-  reporter (elles gardent leur badge dans le Log). Ajouter un indicateur dans
-  le Log pour ne pas les oublier ?
-- [?] Filtre « Archivés » actif : icône archive pleine = bloc noir (le trait
-  intérieur disparaît). Remplissage gris clair à la place ?
-- [?] Chrono : un seul en marche à la fois (en lancer un met l'autre en pause). À garder ?
-- [?] Aujourd’hui : les tâches en retard comptent dans « 3/5 tâches ». À garder ?
-- [?] Fiche : dans un champ date, `Tab` parcourt jour / mois / année (natif du navigateur) avant le champ suivant. Acceptable ?
-- [?] Plan journée : compteur rouge seulement **au-delà** du maximum (6/5), pas à 5/5. Orange à 5/5 ?
-- [?] Jira : contenu envoyé tel quel (Markdown) dans la description, qui est en wiki Jira (`##` ne devient pas un titre). Convertir Markdown ↔ wiki ?
-- [?] Jira : créer le ticket depuis la tâche quand il n'y a pas encore d'identifiant ?
-- [?] Priorité : trier les tâches par priorité (en plus du filtre `P`) ?
+- [?] Jira, créer le ticket depuis la tâche : type de ticket, projet Jira, lien du ticket enfant (décision prise : oui, à concevoir)
 
 ## Idées / plus tard
 
+- [ ] Fiche « vue d'ensemble » d'un projet (nom à choisir ; « chemise » écarté) : Markdown libre, versionnée par jour (dernière version affichée, anciennes consultables), avec trois blocs : fait récemment (liste à puces, une ligne par tâche faite : titre avec lien, texte libre n'importe où), prochaines étapes (idem, seulement les P1), liens épinglés (Markdown). Étape 1 : petit cercle à droite d'un projet quand la fiche est à mettre à jour (projet modifié aujourd'hui, fiche pas touchée). Plus tard : vue horizontale de tous les projets (1/3 de largeur chacun, défilement horizontal)
+- [ ] Lien d'un ticket : modèle d'URL réglable (`https://…/browse/{clé}`) pour GitLab ou GitHub (« pour l'instant, non » ; aujourd'hui `URL/browse/CLÉ`, format Jira)
+- [ ] Jira : convertir Markdown ↔ wiki (refusé pour l'instant : contenu envoyé tel quel)
 - [ ] Drizzle : passer à la 1.0 stable quand elle sort (épinglée en `1.0.0-rc.4`)
 - [ ] Supprimer les branches distantes fusionnées `ui/taches-icones-a-droite` et `ui/disposition-deux-colonnes` (à faire sur GitHub)
 - [ ] ~~Animations des listes~~ : AutoAnimate essayé puis retiré (rendu jugé pire). Ne pas reproposer sans nouvelle demande.
@@ -38,6 +29,9 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 ## Fait (récent)
 
 - [x] Projet : bouton « Trier par priorité » (flèche + 0 1, au survol, souris seulement) : 1, 2, 3 puis sans priorité, stable, annulable ; remplace le tri automatique refusé ([PR #16](https://github.com/pom421/tasks/pull/16))
+- [x] Log : bouton « N tâches à reporter » (drapeau, `R` dans l'onglet Log) : seulement les tâches faites à reporter, que le compteur des projets ne compte plus ([PR #15](https://github.com/pom421/tasks/pull/15))
+- [x] Décisions tranchées : Log sans entrée non réaffiché ; chrono unique, retard compté dans « 3/5 », `Tab` natif dans les dates, tri automatique par priorité refusé (remplacé par un bouton) ; filtre « Archivés » actif en remplissage gris clair ; compteur du plan orange à 5/5, rouge au-delà ([PR #14](https://github.com/pom421/tasks/pull/14))
+- [x] Audit : faille `picomatch` (GHSA-fc5q-39xc-vjpf, haute, sans correctif) ignorée avec sa raison : dépendance de développement (Vite), motifs jamais saisis par un utilisateur ; à retirer quand un correctif sort ([PR #18](https://github.com/pom421/tasks/pull/18))
 - [x] Dépendances : cooldown 7 jours avec exceptions par version précise (skill `dependances-securite`), `pnpm audit` en CI (PR + chaque jour, seuil `high`), 12 failles corrigées, toutes les dépendances, pnpm 12.19.0 et Node 26 et actions GitHub (`checkout` / `setup-node` v7) mis à jour dans le respect du cooldown ([PR #13](https://github.com/pom421/tasks/pull/13))
 - [x] Fiche d'un projet (`o`, `Maj+Entrée`, `e`, icône 🗒) : nom, ticket (cliquable en lecture, comme la pastille rose de la ligne), contenu Markdown ; pas de tags ni de dates pour l'instant ([PR #6](https://github.com/pom421/tasks/pull/6))
 - [x] Modification d'un nom : la saisie et la sélection restent quand la fenêtre perd le focus (`Alt+Tab` ; Firefox sous Linux en RDP, où `Ctrl` faisait perdre le focus : copier-coller impossible). Un clic ailleurs dans la page annule toujours ([PR #12](https://github.com/pom421/tasks/pull/12))

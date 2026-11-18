@@ -201,14 +201,14 @@ export class Store {
       .map((r) => r.d!);
     if (limit) {
       const window = dates.filter((d) => (!from || d >= from) && (!to || d <= to)).slice(-limit);
-      if (!window.length) return { days: [], dates, tags: this.doneTags() };
+      if (!window.length) return { days: [], dates, ...this.logExtras() };
       [from, to] = [window[0], window.at(-1)];
     }
     if (from) where.push(gte(task.done_at, from));
     if (to) where.push(lte(task.done_at, to));
     if (!from && !to && !projectId && !bugtrackerPending && !q && !tags.length) {
       const last = dates.at(-1);
-      if (!last) return { days: [], dates, tags: this.doneTags() };
+      if (!last) return { days: [], dates, ...this.logExtras() };
       where.push(eq(task.done_at, last));
     }
     // done_at jamais NULL ici (filtré plus haut).
@@ -225,7 +225,13 @@ export class Store {
       if (day?.date !== r.done_at) days.push((day = { date: r.done_at, tasks: [] }));
       day.tasks.push(r);
     }
-    return { days, dates, tags: this.doneTags() };
+    return { days, dates, ...this.logExtras() };
+  }
+
+  // Données du Log indépendantes des filtres : tags proposés, tâches faites à reporter
+  // (le bouton du filtre n'apparaît que s'il y en a).
+  private logExtras(): Pick<Journal, 'tags' | 'bugtrackerPending'> {
+    return { tags: this.doneTags(), bugtrackerPending: this.count(and(isNotNull(task.done_at), BUGTRACKER_PENDING)) };
   }
 
   // Tags des tâches faites, triés : propositions du filtre du Log.

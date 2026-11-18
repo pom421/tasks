@@ -30,8 +30,8 @@ function ByProject({ projects, keep }: { projects: Project[]; keep: (t: Task) =>
 
 // Onglet « Aujourd’hui » : les tâches à faire prévues pour aujourd'hui (t, ☀
 // ou date prévue), et en tête celles prévues avant et pas faites (en retard),
-// groupées par projet, sous le compteur « 3/5 tâches » (rouge au-delà du
-// maximum). Les tâches faites partent dans le Log mais restent comptées.
+// groupées par projet, sous le compteur « 3/5 tâches » (orange au maximum,
+// rouge au-delà). Les tâches faites partent dans le Log mais restent comptées.
 export function DayView({ projects, dayDone, capacity }: DayViewProps) {
   const today = localToday();
   const tasks = projects.flatMap((p) => p.tasks);
@@ -39,11 +39,12 @@ export function DayView({ projects, dayDone, capacity }: DayViewProps) {
   const todo = late + tasks.filter((t) => t.day_at === today).length;
   const total = todo + dayDone;
   const over = total > capacity;
+  const full = total === capacity && capacity > 0;
 
   return (
     <section id="day" aria-label="Aujourd’hui">
       <p
-        className={cn('day-count mt-3 text-sm', over ? 'font-medium text-destructive' : 'text-muted-foreground')}
+        className={cn('day-count mt-3 text-sm', over ? 'font-medium text-destructive' : full ? 'font-medium text-orange-600 dark:text-orange-400' : 'text-muted-foreground')}
         title={`Maximum : ${capacity} ${plural(capacity, 'tâche')} par jour (Réglages) ; les tâches en retard comptent`}
       >
         {total}/{capacity} {plural(total, 'tâche')}

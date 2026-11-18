@@ -532,6 +532,7 @@ test('A : bascule le filtre Archivés', async ({ page, store, data }) => {
   await expect(page.locator('.project .project-head .name')).toHaveText(['Alpha']);
   await page.keyboard.press('A');
   await expect(filter).toHaveAttribute('aria-pressed', 'true');
+  await expect(filter.locator('svg')).toHaveClass(/fill-muted-foreground/); // remplissage gris clair, pas de bloc noir
   await expect(page.locator('.project .project-head .name')).toHaveText(['Beta']);
   await page.keyboard.press('A');
   await expect(filter).toHaveAttribute('aria-pressed', 'false');
@@ -589,7 +590,7 @@ test('boutons de filtre : à reporter, Archivés, Favoris, dans cet ordre, seule
   await archived.click();
   await expect(archived).toHaveAttribute('aria-pressed', 'true');
   // Sobre : pas de fond coloré, l'icône se remplit.
-  await expect(archived.locator('svg')).toHaveAttribute('fill', 'currentColor');
+  await expect(archived.locator('svg')).toHaveClass(/fill-muted-foreground/); // gris clair, pas de bloc noir
   await expect(archived).not.toHaveClass(/bg-primary/);
   await expect(page.locator('#projects .project-head .name')).toHaveText(['Gamma']);
   await archived.click();
