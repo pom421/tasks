@@ -1,7 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { DoneTask, JiraFields, Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
-import type { TaskField } from '@/lib/actions';
+import { useActions, type TaskField } from '@/lib/actions';
 import { record } from '@/lib/history';
 import { focusByKey } from '@/lib/nav';
 import { renderMarkdown } from '@/lib/markdown';
@@ -18,14 +18,15 @@ import { PriorityButton, usePriority } from './Priority';
 import { TagInput } from './TagInput';
 import { SprintInput } from './SprintInput';
 import { ReportControl, useReport } from './Report';
-import { JiraButtons, JiraCompare, jiraBlocker, sameJira, type JiraDirection } from './Jira';
+import { JiraButtons, JiraCompare, JiraCreate, jiraBlocker, sameJira, type JiraDirection } from './Jira';
 
 interface TaskDialogProps {
   task: Task | DoneTask;
   projectName: string;
   field: TaskField;
   tagSuggestions: string[]; // tags existants (autocomplétion)
-  jira: boolean; // URL des tickets et PAT renseignés : pousser / récupérer possibles
+  jira: boolean; // URL des tickets et PAT renseignés : pousser / récupérer / créer possibles
+  projectTicket: string | null; // ticket du projet (l'epic) : parent des tickets créés
   open: boolean;
   // changed : quelque chose a été enregistré (les données sont à recharger).
   onClose: (changed: boolean) => void;
@@ -49,12 +50,15 @@ const BOX = 'flex h-9 items-center rounded-md border border-input px-3 text-sm s
 // sur la ligne (r ou clic) : aucun → à reporter → identifiant (Échap, vide,
 // invalide ou clic ailleurs : retour à aucun) → aucun (r ou ✕).
 // Jira (ticket PROJ-123, URL et PAT renseignés) : > pousse vers Jira, < récupère
-// depuis Jira, après une fenêtre de comparaison ; annulable (u).
+// depuis Jira, après une fenêtre de comparaison ; annulable (u). Sans identifiant,
+// si le projet a un ticket (epic) : + (ou l'icône) crée le ticket dans Jira, enfant
+// de l'epic, après une fenêtre de confirmation (pas annulable : il existe dans Jira).
 // Tout est enregistré automatiquement, rien n'est perdu.
 // Accessibilité : focus piégé, titre et description annoncés (Radix),
 // libellés reliés aux champs, erreurs annoncées.
-export function TaskDialog({ task, projectName, field, tagSuggestions, jira, open, onClose }: TaskDialogProps) {
+export function TaskDialog({ task, projectName, field, tagSuggestions, jira, projectTicket, open, onClose }: TaskDialogProps) {
   const id = useId();
+  const { act } = useActions();
   const done = 'done_at' in task;
   const timer = useTimer(task);
   const plan = usePlan(task);
@@ -202,6 +206,30 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
     sprint: saved.current.sprint.trim() || null,
   });
 
+  // Création du ticket : confirmation (valeurs envoyées), puis identifiant enregistré.
+  const canCreate = !ticketKey && Boolean(projectTicket) && !done;
+  const [creating, setCreating] = useState<JiraFields | null>(null);
+  const startCreate = async () => {
+    if (!canCreate || jiraBusy) return;
+    setJiraStatus({});
+    if (await persist()) setCreating(localJira());
+  };
+  const confirmCreate = async () => {
+    if (!creating || !projectTicket) return;
+    setJiraBusy(true);
+    try {
+      const { key } = await api.createJiraTask(projectTicket, creating);
+      await act(() => api.updateTask(task.id, { bugtracker_ticket: key }));
+      setJiraStatus({ ok: `Ticket ${key} créé dans Jira, rattaché à ${projectTicket}.` });
+    } catch (err) {
+      setJiraStatus({ error: (err as Error).message });
+    } finally {
+      setJiraBusy(false);
+      setCreating(null);
+      focusSoon('reader');
+    }
+  };
+
   // 1er temps : enregistre la fiche, lit le ticket et ouvre la comparaison.
   const startJira = async (direction: JiraDirection) => {
     if (blocker || !ticketKey || jiraBusy) return;
@@ -284,12 +312,19 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     // Champ bloqué (lecture) : les touches restent celles de la fiche.
     const inField = (e.target as HTMLElement).matches('input:not([readonly]), textarea');
+    // Toute autre touche que r (et Échap, traité à part) annule l'avertissement « délier ».
+    if (e.key !== 'r' && e.key !== 'Escape') report.cancelUnlink();
     if (!inField && !done && !e.ctrlKey && !e.metaKey && !e.altKey && timer.onKey(e)) return;
     if (!inField && !done && !e.ctrlKey && !e.metaKey && !e.altKey && plan.onKey(e)) return;
     if (!inField && !e.ctrlKey && !e.metaKey && !e.altKey && priority.onKey(e)) return;
     if ((e.key === '>' || e.key === '<') && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault();
       startJira(e.key === '>' ? 'push' : 'pull');
+      return;
+    }
+    if (e.key === '+' && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      if (jira) startCreate();
       return;
     }
     if (e.key === 'r' && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -340,6 +375,8 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
         // Échap : fermer en enregistrant (et rester ouvert en cas d'erreur).
         onEscapeKeyDown={(e) => {
           e.preventDefault();
+          // Échap pendant l'avertissement « délier » : l'annule, la fiche reste ouverte.
+          if (report.unlinking) return report.cancelUnlink();
           // Échap dans le champ du ticket : abandonne la saisie, la fiche reste ouverte.
           if ((e.target as HTMLElement).matches('.ticket-input')) return;
           // Échap dans un champ à propositions ouvertes : ferme la liste seulement.
@@ -388,7 +425,7 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
           <span className="flex items-center">
             {!done && <PlanButton plan={plan} />}
             <PriorityButton priority={task.priority} onClick={priority.cycle} />
-            <JiraButtons blocker={blocker} onClick={startJira} />
+            <JiraButtons ready={jira} ticketKey={ticketKey} canCreate={canCreate} onClick={startJira} onCreate={startCreate} />
           </span>
         </div>
 
@@ -504,6 +541,19 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, ope
           <p role="alert" className="jira-status text-sm text-destructive">
             {jiraStatus.error}
           </p>
+        )}
+        {creating && projectTicket && (
+          <JiraCreate
+            epicKey={projectTicket}
+            projectName={projectName}
+            fields={creating}
+            busy={jiraBusy}
+            onConfirm={confirmCreate}
+            onCancel={() => {
+              setCreating(null);
+              focusSoon('reader');
+            }}
+          />
         )}
         {compare && (
           <JiraCompare

@@ -1,5 +1,5 @@
 import { useRef, type KeyboardEvent } from 'react';
-import { CloudDownload, CloudUpload } from 'lucide-react';
+import { CloudDownload, CloudUpload, TicketPlus } from 'lucide-react';
 import type { JiraFields } from '../../shared/types.ts';
 import { formatDay } from '@/lib/dates';
 import { cn } from '@/lib/utils';
@@ -20,9 +20,33 @@ export function jiraBlocker(ticketKey: string | null, ready: boolean): string | 
   return null;
 }
 
-// Icônes ☁↑ / ☁↓ de la fiche : désactivées tant qu'il manque l'identifiant
-// du ticket, l'URL ou le PAT (la raison est dans l'info-bulle).
-export function JiraButtons({ blocker, onClick }: { blocker: string | null; onClick: (d: JiraDirection) => void }) {
+// Icônes Jira de la fiche : seulement celles qui servent (cliquables), sans
+// URL ni PAT aucune. Avec un identifiant : ☁↑ pousser, ☁↓ récupérer. Sans
+// identifiant mais avec un ticket de projet (l'epic) : un seul bouton « + » qui
+// crée le ticket dans Jira.
+export function JiraButtons({ ready, ticketKey, canCreate, onClick, onCreate }: {
+  ready: boolean;
+  ticketKey: string | null;
+  canCreate: boolean;
+  onClick: (d: JiraDirection) => void;
+  onCreate: () => void;
+}) {
+  if (!ready) return null;
+  if (!ticketKey) {
+    return canCreate ? (
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        tabIndex={-1}
+        className="jira-create flex-none text-muted-foreground"
+        aria-label="Créer le ticket dans Jira"
+        title="Créer le ticket dans Jira : une tâche rattachée au ticket du projet (+)"
+        onClick={onCreate}
+      >
+        <TicketPlus aria-hidden />
+      </Button>
+    ) : null;
+  }
   return (['push', 'pull'] as const).map((d) => {
     const { label, key, Icon } = ACTIONS[d];
     return (
@@ -33,8 +57,7 @@ export function JiraButtons({ blocker, onClick }: { blocker: string | null; onCl
         tabIndex={-1}
         className={`jira-${d} flex-none text-muted-foreground`}
         aria-label={label}
-        title={blocker ? `${label} (${key}) : ${blocker}` : `${label} (${key})`}
-        disabled={Boolean(blocker)}
+        title={`${label} (${key})`}
         onClick={() => onClick(d)}
       >
         <Icon aria-hidden />
@@ -118,6 +141,62 @@ export function JiraCompare({ direction, ticketKey, local, remote, busy, onConfi
             </Button>
             <Button ref={confirm} type="button" disabled={busy} onClick={onConfirm}>
               {label}
+            </Button>
+          </DialogFooter>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Fenêtre de confirmation avant de créer le ticket : ce qui sera envoyé.
+// Entrée (le bouton a le focus) ou le bouton confirme, Échap ou Annuler : rien n'est fait.
+export function JiraCreate({ epicKey, projectName, fields, busy, onConfirm, onCancel }: {
+  epicKey: string;
+  projectName: string;
+  fields: JiraFields;
+  busy: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const confirm = useRef<HTMLButtonElement>(null);
+  return (
+    <Dialog open onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent
+        className="jira-create-dialog flex max-h-[85vh] flex-col sm:max-w-2xl"
+        onKeyDown={(e) => {
+          // Les touches ne remontent pas à la fiche ; + confirme, comme > pour pousser.
+          e.stopPropagation();
+          if (e.key === '+') {
+            e.preventDefault();
+            if (!busy) onConfirm();
+          }
+        }}
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+          confirm.current?.focus();
+        }}
+      >
+        <DialogTitle>Créer le ticket dans Jira</DialogTitle>
+        <DialogDescription>
+          Une tâche sera créée dans Jira, rattachée à {epicKey} (ticket du projet {projectName}). Elle ne pourra pas être supprimée d’ici.
+        </DialogDescription>
+        <div className="grid min-h-0 grid-cols-[auto_1fr] gap-x-4 gap-y-2 overflow-y-auto text-sm">
+          {FIELDS.map((f) => [
+            <span key={`${f.name}-name`} className="text-muted-foreground">{f.name}</span>,
+            <div key={`${f.name}-value`} className={cn('jira-new [overflow-wrap:anywhere]', f.long && 'max-h-60 overflow-y-auto rounded-md border px-2 py-1 font-mono text-xs whitespace-pre-wrap')}>
+              {f.show(fields)}
+            </div>,
+          ])}
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs text-muted-foreground">+ ou Entrée : créer · Échap : annuler</p>
+          <DialogFooter>
+            <Button type="button" onClick={onCancel}>
+              Annuler
+            </Button>
+            <Button ref={confirm} type="button" disabled={busy} onClick={onConfirm}>
+              Créer le ticket
             </Button>
           </DialogFooter>
         </div>

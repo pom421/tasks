@@ -8,11 +8,9 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-- [ ] Jira : créer le ticket depuis une tâche sans identifiant, enfant d'un ticket représentant le projet ; icônes distinctes de « remonter » (☁↑)
 
 ## Décisions attendues
 
-- [?] Jira, créer le ticket depuis la tâche : type de ticket, projet Jira, lien du ticket enfant (décision prise : oui, à concevoir)
 
 ## Idées / plus tard
 
@@ -28,6 +26,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
+- [x] Jira : créer le ticket depuis une tâche sans identifiant (icône « ticket + », seulement si le projet a un ticket, l'epic, et que l'URL et le PAT sont réglés) : tâche enfant de l'epic après confirmation ; ☁↑ / ☁↓ n'apparaissent plus tant qu'ils sont inutilisables ; `+` dans la fiche ; délier une tâche de son ticket en deux temps, avec avertissement (`r r`, ✕ ✕) ([PR #17](https://github.com/pom421/tasks/pull/17))
 - [x] Projet : bouton « Trier par priorité » (flèche + 0 1, au survol, souris seulement) : 1, 2, 3 puis sans priorité, stable, annulable ; remplace le tri automatique refusé ([PR #16](https://github.com/pom421/tasks/pull/16))
 - [x] Log : bouton « N tâches à reporter » (drapeau, `R` dans l'onglet Log) : seulement les tâches faites à reporter, que le compteur des projets ne compte plus ([PR #15](https://github.com/pom421/tasks/pull/15))
 - [x] Décisions tranchées : Log sans entrée non réaffiché ; chrono unique, retard compté dans « 3/5 », `Tab` natif dans les dates, tri automatique par priorité refusé (remplacé par un bouton) ; filtre « Archivés » actif en remplissage gris clair ; compteur du plan orange à 5/5, rouge au-delà ([PR #14](https://github.com/pom421/tasks/pull/14))

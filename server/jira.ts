@@ -14,8 +14,9 @@ export interface JiraConfig {
 export class JiraError extends Error {}
 
 const SPRINT_TYPE = 'com.pyxis.greenhopper.jira:gh-sprint';
+const EPIC_LINK_TYPE = 'com.pyxis.greenhopper.jira:gh-epic-link';
 
-async function call(config: JiraConfig, method: 'GET' | 'PUT', path: string, body?: unknown, key?: string): Promise<Response> {
+async function call(config: JiraConfig, method: 'GET' | 'PUT' | 'POST', path: string, body?: unknown, key?: string): Promise<Response> {
   let res: Response;
   try {
     res = await fetch(`${config.baseUrl}${path}`, {
@@ -127,4 +128,40 @@ export async function writeIssue(config: JiraConfig, key: string, fields: JiraFi
     body[field] = fields.sprint ? await findSprint(config, key, fields.sprint) : null;
   }
   await call(config, 'PUT', `/rest/api/2/issue/${encodeURIComponent(key)}`, { fields: body }, key);
+}
+
+// Type « tâche » d'un projet : son nom varie avec la langue de Jira.
+async function taskTypeId(config: JiraConfig, project: string): Promise<string> {
+  const data = await get<{ issueTypes?: { id: string; name: string; subtask?: boolean }[] }>(config, `/rest/api/2/project/${encodeURIComponent(project)}`);
+  const types = (data.issueTypes ?? []).filter((t) => !t.subtask);
+  const found = types.find((t) => /^(task|tâche|tache)$/i.test(t.name));
+  if (!found) throw new JiraError(`Type « Tâche » introuvable dans le projet ${project} (types : ${types.map((t) => t.name).join(', ') || 'aucun'})`);
+  return found.id;
+}
+
+// Crée une tâche Jira rattachée à l'epic `epicKey` (le ticket du projet) :
+// même projet Jira que l'epic, lien par le champ Epic Link, mêmes champs que
+// la synchronisation (titre, contenu, échéance, sprint). Renvoie la clé créée.
+export async function createIssue(config: JiraConfig, epicKey: string, fields: JiraFields): Promise<string> {
+  const project = epicKey.split('-')[0];
+  const all = await get<{ id: string; schema?: { custom?: string } }[]>(config, '/rest/api/2/field');
+  const epicField = all.find((f) => f.schema?.custom === EPIC_LINK_TYPE)?.id;
+  if (!epicField) throw new JiraError('Pas de champ « Epic Link » dans Jira : impossible de rattacher la tâche à l’epic');
+  const body: Record<string, unknown> = {
+    project: { key: project },
+    issuetype: { id: await taskTypeId(config, project) },
+    summary: fields.title,
+    [epicField]: epicKey,
+  };
+  if (fields.notes) body.description = fields.notes;
+  if (fields.due_at) body.duedate = fields.due_at;
+  if (fields.sprint) {
+    const sprint = all.find((f) => f.schema?.custom === SPRINT_TYPE)?.id;
+    if (!sprint) throw new JiraError('Pas de champ Sprint dans Jira');
+    body[sprint] = await findSprint(config, epicKey, fields.sprint);
+  }
+  const res = await call(config, 'POST', '/rest/api/2/issue', { fields: body }, epicKey);
+  const { key } = (await res.json()) as { key?: string };
+  if (!key) throw new JiraError('Jira n’a pas renvoyé la clé du ticket créé');
+  return key;
 }

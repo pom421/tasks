@@ -434,6 +434,7 @@ test('badge « reporté » conservé dans le journal, et J y fonctionne aussi', 
   await pressDown(page, 1);
   expect(await current(page)).toBe(`task:${data.tasks.trois.id}`);
   await page.keyboard.press('r');
+  await page.keyboard.press('r'); // délier : en deux temps
   await expect(row.locator('.report')).toHaveCount(0);
   expect(store.journal({ projectId: data.beta.id }).days[0].tasks[0].bugtracker_at).toBeNull();
 });
@@ -737,6 +738,18 @@ test('r fait tourner : à reporter (contour) → ticket demandé dans la ligne (
   await page.keyboard.type('PROJ-1');
   await page.keyboard.press('Enter');
   await expect(une.locator('.report-done')).toHaveText('reporté · PROJ-1');
+  // Délier : 1er r = avertissement, Échap l'annule ; une autre touche aussi.
+  await page.keyboard.press('r');
+  await expect(une.locator('.confirm-unlink')).toHaveText('r à nouveau : délier PROJ-1 (le ticket reste dans Jira) · Échap : annuler');
+  await page.keyboard.press('Escape');
+  await expect(une.locator('.confirm-unlink')).toHaveCount(0);
+  await expect(une.locator('.report-done')).toHaveText('reporté · PROJ-1');
+  await page.keyboard.press('r');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowUp');
+  await expect(une.locator('.confirm-unlink')).toHaveCount(0);
+  // r r : délié.
+  await page.keyboard.press('r');
   await page.keyboard.press('r');
   await expect(une.locator('.report')).toHaveCount(0);
   expect(store.state().projects[0].tasks[0]).toMatchObject({ bugtracker_wanted_at: null, bugtracker_at: null, bugtracker_key: null });
@@ -1029,8 +1042,14 @@ test('fiche : ticket en un contrôle, aucun → à reporter → identifiant ; É
   await expect(dialog.locator('.report-done')).toHaveText('reporté · PROJ-2');
   await expect(une.locator('.report-done')).toHaveText('reporté · PROJ-2');
 
-  // ✕ : plus de report ; u le rend avec son identifiant.
+  // ✕ : avertissement (Échap l'annule, la fiche reste ouverte), ✕ à nouveau : plus de report ; u le rend.
   await dialog.getByRole('button', { name: 'Retirer le report' }).click();
+  await expect(dialog.locator('.confirm-unlink')).toContainText('délier PROJ-2 (le ticket reste dans Jira)');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('.confirm-unlink')).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Retirer le report' }).click();
+  await dialog.getByRole('button', { name: 'Confirmer le retrait du report' }).click();
   await expect(control).toHaveText('aucun');
   expect(store.state().projects[0].tasks[0]).toMatchObject({ bugtracker_wanted_at: null, bugtracker_key: null });
   await page.keyboard.press('Escape');
@@ -1062,6 +1081,8 @@ test('fiche : r comme sur la ligne (lecture et édition hors champ) ; clic aille
   await page.keyboard.press('Enter');
   await expect(dialog.locator('.report-done')).toHaveText('reporté · PROJ-3');
   await control.locator('button').focus(); // ✕
+  await page.keyboard.press('r'); // avertissement
+  await expect(dialog.locator('.confirm-unlink')).toBeVisible();
   await page.keyboard.press('r'); // retire le report
   await expect(control).toHaveText('aucun');
 

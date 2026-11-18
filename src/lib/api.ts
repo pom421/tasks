@@ -69,6 +69,7 @@ export const api = {
   restoreTask: (row: Record<string, unknown>) => request('POST', '/api/tasks/restore', row),
   // Ticket Jira (clé PROJ-123) : lecture et écriture des champs synchronisés.
   jiraIssue: (key: string) => request<JiraFields>('GET', `/api/jira/${key}`),
+  createJiraTask: (epicKey: string, fields: JiraFields) => request<{ key: string }>('POST', `/api/jira/${epicKey}/tasks`, fields),
   updateJiraIssue: (key: string, fields: JiraFields) => request('PUT', `/api/jira/${key}`, fields),
   // Noms des sprints actifs puis à venir du projet (PROJ), propositions du champ Sprint.
   jiraSprints: (project: string) => request<string[]>('GET', `/api/jira/sprints/${project}`),

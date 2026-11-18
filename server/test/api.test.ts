@@ -843,6 +843,18 @@ test('Jira : PAT jamais relu ni exporté, lecture et écriture d’un ticket', a
     // Clé invalide : route inconnue.
     assert.equal((await call('GET', '/api/jira/jira-1')).status, 404);
 
+    // Création : tâche (type trouvé par son nom) rattachée à l'epic, mêmes champs.
+    const made = await call('POST', '/api/jira/JIRA-1/tasks', { title: 'Nouvelle', notes: 'Détail', due_at: '2026-11-30', sprint: 'Sprint 43' });
+    assert.equal(made.status, 201);
+    assert.match(made.body.key, /^JIRA-\d+$/);
+    assert.deepEqual(issues[made.body.key], { summary: 'Nouvelle', description: 'Détail', duedate: '2026-11-30', sprint: 'Sprint 43', epic: 'JIRA-1' });
+    // Sans contenu, échéance ni sprint : champs absents (pas de valeur vide envoyée).
+    const bare = await call('POST', '/api/jira/JIRA-1/tasks', { title: 'Nue', notes: null, due_at: null, sprint: null });
+    assert.deepEqual(issues[bare.body.key], { summary: 'Nue', description: null, duedate: null, sprint: null, epic: 'JIRA-1' });
+    assert.equal((await call('POST', '/api/jira/JIRA-1/tasks', { title: '' })).status, 400);
+    assert.equal((await call('POST', '/api/jira/JIRA-1/tasks', { title: 'x', notes: null, due_at: null, sprint: 'Sprint 41' })).status, 502); // fermé
+    assert.equal((await call('POST', '/api/jira/jira-1/tasks', { title: 'x' })).status, 404);
+
     // Erreurs de Jira renvoyées telles quelles (502).
     const unknown = await call('GET', '/api/jira/JIRA-9');
     assert.equal(unknown.status, 502);

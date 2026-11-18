@@ -20,37 +20,113 @@ async function openDialog(page: Page) {
   return page.getByRole('dialog', { name: 'Une' });
 }
 
-test('boutons désactivés sans identifiant valide, sans URL ou sans PAT ; raison en info-bulle', async ({ page, store }) => {
+test('icônes Jira : seulement celles qui servent (identifiant, URL et PAT) ; jamais désactivées', async ({ page, store }) => {
   const alpha = store.createProject('Alpha');
   const une = store.createTask(alpha.id, 'Une');
   const dialog = await openDialog(page);
-  const push = dialog.getByRole('button', { name: 'Pousser vers Jira' });
-  const pull = dialog.getByRole('button', { name: 'Récupérer depuis Jira' });
-  await expect(push).toBeDisabled();
-  await expect(pull).toBeDisabled();
-  await expect(push).toHaveAttribute('title', 'Pousser vers Jira (>) : renseigner l’identifiant du ticket (PROJ-123)');
+  const jiraButtons = dialog.locator('button.jira-push, button.jira-pull, button.jira-create');
+  // Rien : ni identifiant, ni URL, ni PAT, ni ticket de projet.
+  await expect(jiraButtons).toHaveCount(0);
   // > sans effet.
   await page.keyboard.press('>');
   await expect(page.getByRole('dialog')).toHaveCount(1);
 
-  // Identifiant mais ni URL ni PAT : désactivés, renvoi aux Réglages.
+  // Identifiant mais ni URL ni PAT : toujours rien (pas d'icône inutilisable).
   const control = dialog.locator('.report-control');
   await control.click(); // à reporter
   await control.click(); // champ de l'identifiant
   await page.keyboard.type('proj-1');
   await page.keyboard.press('Enter');
   await expect(dialog.locator('.report-key')).toHaveText('PROJ-1');
-  await expect(push).toBeDisabled();
-  await expect(pull).toHaveAttribute('title', 'Récupérer depuis Jira (<) : renseigner l’URL des tickets et le PAT dans les Réglages');
+  await expect(jiraButtons).toHaveCount(0);
   await page.keyboard.press('Escape');
 
-  // URL et PAT réglés : actifs.
+  // URL et PAT réglés : pousser et récupérer, actifs.
   store.updateSettings({ bugtracker_base_url: 'https://jira.example', jira_pat: 'secret' });
   store.updateTask(une.id, { bugtrackerKey: 'PROJ-1' });
   await openDialog(page);
+  const push = dialog.getByRole('button', { name: 'Pousser vers Jira' });
+  const pull = dialog.getByRole('button', { name: 'Récupérer depuis Jira' });
   await expect(push).toBeEnabled();
   await expect(push).toHaveAttribute('title', 'Pousser vers Jira (>)');
   await expect(pull).toBeEnabled();
+  await expect(dialog.locator('button.jira-create')).toHaveCount(0); // déjà un ticket : pas de création
+});
+
+test('créer le ticket : tâche enfant du ticket du projet, après confirmation ; identifiant enregistré', async ({ page, store }) => {
+  const issues: Record<string, FakeIssue> = { 'PROJ-9': { summary: 'Epic du projet', description: null, duedate: null } };
+  const jira = await fakeJira(store, issues);
+  const alpha = store.createProject('Alpha');
+  store.updateProject(alpha.id, { bugtrackerKey: 'PROJ-9' });
+  const une = store.createTask(alpha.id, 'Une');
+  store.updateTask(une.id, { notes: 'Détail', dueAt: '2026-10-12', sprint: 'Sprint 43' });
+  try {
+    const dialog = await openDialog(page);
+    const create = dialog.getByRole('button', { name: 'Créer le ticket dans Jira' });
+    await expect(create).toBeEnabled();
+    // Pas d'icônes de synchronisation sans ticket : l'icône « + » les remplace.
+    await expect(dialog.locator('button.jira-push, button.jira-pull')).toHaveCount(0);
+    await create.click();
+
+    const confirm = page.getByRole('dialog', { name: 'Créer le ticket dans Jira' });
+    await expect(confirm).toContainText('rattachée à PROJ-9');
+    await expect(confirm.locator('.jira-new')).toHaveText(['Une', /Lundi 12 octobre 2026/i, 'Sprint 43', 'Détail']);
+
+    // Échap : rien n'est créé.
+    await page.keyboard.press('Escape');
+    await expect(confirm).toHaveCount(0);
+    expect(Object.keys(issues)).toEqual(['PROJ-9']);
+
+    // + dans un champ de saisie : tapé, rien n'est créé.
+    await page.keyboard.press('e');
+    await expect(dialog.getByLabel('Titre')).toBeFocused();
+    await page.keyboard.press('End');
+    await page.keyboard.type('+');
+    await expect(dialog.getByLabel('Titre')).toHaveValue('Une+');
+    await expect(confirm).toHaveCount(0);
+    await page.keyboard.press('Backspace');
+    await page.keyboard.press('Control+Enter'); // retour en lecture
+
+    // Confirmer par + puis + : le ticket est créé sous l'epic, l'identifiant est enregistré (report fait).
+    await page.keyboard.press('+');
+    await expect(confirm).toBeVisible();
+    await page.keyboard.press('+');
+    await expect(dialog.locator('.jira-status')).toHaveText('Ticket PROJ-101 créé dans Jira, rattaché à PROJ-9.');
+    await expect(dialog.locator('.report-key')).toHaveText('PROJ-101');
+    expect(issues['PROJ-101']).toEqual({ summary: 'Une', description: 'Détail', duedate: '2026-10-12', sprint: 'Sprint 43', epic: 'PROJ-9' });
+    // Un ticket existe : « + » laisse la place à pousser / récupérer.
+    await expect(create).toHaveCount(0);
+    await expect(dialog.getByRole('button', { name: 'Pousser vers Jira' })).toBeEnabled();
+    await expect(dialog.getByRole('button', { name: 'Récupérer depuis Jira' })).toBeEnabled();
+  } finally {
+    jira.close();
+  }
+});
+
+test('créer le ticket : absent sans ticket de projet, sans URL ni PAT, ou sur une tâche faite', async ({ page, store }) => {
+  const alpha = store.createProject('Alpha');
+  const une = store.createTask(alpha.id, 'Une');
+  await fakeJira(store, {}).then((server) => server.close()); // URL et PAT réglés, serveur éteint
+  const dialog = await openDialog(page);
+  await expect(dialog.locator('button.jira-create')).toHaveCount(0); // projet sans ticket
+  await page.keyboard.press('Escape');
+
+  store.updateProject(alpha.id, { bugtrackerKey: 'PROJ-9' });
+  await openDialog(page);
+  await expect(dialog.locator('button.jira-create')).toHaveCount(1);
+  await page.keyboard.press('Escape');
+
+  store.updateSettings({ bugtracker_base_url: null, jira_pat: null });
+  await openDialog(page);
+  await expect(dialog.locator('button.jira-create')).toHaveCount(0); // ni URL ni PAT
+  await page.keyboard.press('Escape');
+
+  store.updateSettings({ bugtracker_base_url: 'https://jira.example', jira_pat: 'secret' });
+  store.updateTask(une.id, { doneAt: '2026-09-25' });
+  await page.goto('/log');
+  await page.locator('#journal li.task .name', { hasText: 'Une' }).first().focus();
+  await page.keyboard.press('o');
+  await expect(page.getByRole('dialog', { name: 'Une' }).locator('button.jira-create')).toHaveCount(0); // tâche faite
 });
 
 test('pousser : comparaison, confirmation par >, u remet l’ancien Jira', async ({ page, store }) => {
