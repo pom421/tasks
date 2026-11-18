@@ -1,4 +1,4 @@
-import { useState, type FocusEvent, type KeyboardEvent } from 'react';
+import { useRef, useState, type FocusEvent, type KeyboardEvent } from 'react';
 import { hasDetails, type DoneTask, type Task } from '../../shared/types.ts';
 import { NotebookText } from 'lucide-react';
 import { api, type TaskPatch } from '@/lib/api';
@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button';
 import { EditableName } from './Editable';
 import { ReportBadge } from './ReportBadge';
 import { TicketInput, UnlinkWarning, useReport } from './Report';
+import { CreateWarning, JiraCreateButton, jiraCreateBlocker, jiraFieldsOf } from './Jira';
+import { jiraReady } from '../../shared/types.ts';
 import { focusByKey, moveDirection } from '@/lib/nav';
 import { TimeSpent, TimerButtons, useTimer } from './Timer';
 import { PlanButton, usePlan } from './Plan';
@@ -37,7 +39,7 @@ export function TaskRow({
   onMove?: (direction: -1 | 1) => void;
   highlight?: string;
 }) {
-  const { openTask, undoable } = useActions();
+  const { openTask, undoable, act, toast, settings, projectTicket } = useActions();
   const done = 'done_at' in task;
   const [editingDate, setEditingDate] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -47,6 +49,29 @@ export function TaskRow({
   const priority = usePriority(task);
   // Report : r ; sur une tâche à reporter, l'identifiant est demandé dans la ligne.
   const report = useReport(task);
+  // Créer le ticket d'une tâche à reporter : + (ou clic) demande, un 2e appui crée.
+  const [confirmCreate, setConfirmCreate] = useState(false);
+  const epic = projectTicket(task.project_id);
+  const canCreate = report.state === 'wanted' && !report.asking;
+  const creating = useRef(false);
+  const create = async () => {
+    if (!canCreate || creating.current) return;
+    const missing = jiraCreateBlocker(jiraReady(settings), epic);
+    if (missing) return toast(missing);
+    if (!confirmCreate) return setConfirmCreate(true);
+    setConfirmCreate(false);
+    creating.current = true;
+    try {
+      const { key } = await api.createJiraTask(epic!, jiraFieldsOf(task));
+      // Création irréversible (le ticket reste dans Jira) : hors historique.
+      await act(() => api.updateTask(task.id, { bugtracker_ticket: key }), { stay: true });
+      toast(`Ticket ${key} créé dans Jira, rattaché à ${epic}.`);
+    } catch (err) {
+      toast((err as Error).message);
+    } finally {
+      creating.current = false;
+    }
+  };
 
   // Modification annulable (u) et rejouable (U) : before = valeurs d'avant.
   const change = (label: string, patch: TaskPatch, before: TaskPatch, stay = false) =>
@@ -81,10 +106,18 @@ export function TaskRow({
     if (direction && onMove) {
       e.preventDefault();
       setConfirmDelete(false);
+      setConfirmCreate(false);
       onMove(direction);
       return;
     }
     if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === '+' && canCreate) {
+      e.preventDefault();
+      setConfirmDelete(false);
+      void create();
+      return;
+    }
+    setConfirmCreate(false); // toute autre touche annule la création demandée
     if (e.key === 'x' || e.key === 'Delete') {
       e.preventDefault();
       if (confirmDelete) void remove();
@@ -95,7 +128,7 @@ export function TaskRow({
       setConfirmDelete(false);
       return;
     }
-    if ((confirmDelete || report.unlinking) && e.key === 'Escape') e.stopPropagation();
+    if ((confirmDelete || confirmCreate || report.unlinking) && e.key === 'Escape') e.stopPropagation();
     setConfirmDelete(false); // toute autre touche annule la demande
     if (e.key !== 'r') report.cancelUnlink();
     if (priority.onKey(e)) return;
@@ -119,6 +152,7 @@ export function TaskRow({
   const onBlur = (e: FocusEvent<HTMLLIElement>) => {
     if (e.currentTarget.contains(e.relatedTarget)) return;
     setConfirmDelete(false);
+    setConfirmCreate(false);
     report.cancelUnlink();
   };
 
@@ -192,6 +226,8 @@ export function TaskRow({
           ) : (
             <>
               <ReportBadge task={task} />
+              {canCreate && <JiraCreateButton confirming={confirmCreate} onClick={() => void create()} />}
+              {confirmCreate && epic && <CreateWarning epicKey={epic} />}
               {report.unlinking && <UnlinkWarning ticketKey={task.bugtracker_key} />}
             </>
           )}

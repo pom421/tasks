@@ -18,7 +18,15 @@ import { PriorityButton, usePriority } from './Priority';
 import { TagInput } from './TagInput';
 import { SprintInput } from './SprintInput';
 import { ReportControl, useReport } from './Report';
-import { JiraButtons, JiraCompare, JiraCreate, jiraBlocker, sameJira, type JiraDirection } from './Jira';
+import {
+  JiraButtons,
+  JiraCompare,
+  JiraCreate,
+  jiraBlocker,
+  jiraCreateBlocker,
+  sameJira,
+  type JiraDirection,
+} from './Jira';
 
 interface TaskDialogProps {
   task: Task | DoneTask;
@@ -226,11 +234,14 @@ export function TaskDialog({
     sprint: saved.current.sprint.trim() || null,
   });
 
-  // Création du ticket : confirmation (valeurs envoyées), puis identifiant enregistré.
-  const canCreate = !ticketKey && Boolean(projectTicket) && !done;
+  // Création du ticket (tâche à reporter) : confirmation (valeurs envoyées), puis
+  // identifiant enregistré. PAT ou ticket du projet manquant : dit au clic.
+  const canCreate = !ticketKey && report.state === 'wanted';
   const [creating, setCreating] = useState<JiraFields | null>(null);
   const startCreate = async () => {
     if (!canCreate || jiraBusy) return;
+    const missing = jiraCreateBlocker(jira, projectTicket);
+    if (missing) return setJiraStatus({ error: missing });
     setJiraStatus({});
     if (await persist()) setCreating(localJira());
   };
@@ -349,7 +360,7 @@ export function TaskDialog({
     }
     if (e.key === '+' && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault();
-      if (jira) void startCreate();
+      void startCreate();
       return;
     }
     if (e.key === 'r' && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {

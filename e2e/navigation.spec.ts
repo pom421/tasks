@@ -304,13 +304,16 @@ test('ligne de tâche : icônes alignées à droite, clic n’importe où sur la
   const une = page.locator('#projects li.task').first();
   const box = async (sel: string) => (await une.locator(sel).boundingBox())!;
   const rowBox = (await une.boundingBox())!;
-  // ☀ Aujourd’hui puis priorité collées au bord droit de la 1re ligne ; report juste avant.
+  // ☀ Aujourd’hui puis priorité collées au bord droit de la 1re ligne ; report juste avant,
+  // suivi de « + » (créer le ticket, tâche à reporter).
   const sun = await box('.day-toggle');
   const priority = await box('button.priority');
   const report = await box('.report');
+  const create = await box('button.jira-create');
   expect(rowBox.x + rowBox.width - (priority.x + priority.width)).toBeLessThan(10);
   expect(priority.x - (sun.x + sun.width)).toBeLessThan(10);
-  expect(sun.x - (report.x + report.width)).toBeLessThan(10);
+  expect(sun.x - (create.x + create.width)).toBeLessThan(10);
+  expect(create.x - (report.x + report.width)).toBeLessThan(10);
   // 🗒 juste après le titre.
   const name = await box('.name');
   expect((await box('.details')).x - (name.x + name.width)).toBeLessThan(10);

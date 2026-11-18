@@ -172,6 +172,7 @@ export function App() {
   const actions: Actions = {
     toast,
     settings: data.settings,
+    projectTicket: (id) => data.projects.find((p) => p.id === id)?.bugtracker_key ?? null,
     navigate,
     undoable: ({ label, focus, run, undo, redo = run, stay }) =>
       actions.act(
