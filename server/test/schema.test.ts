@@ -33,8 +33,10 @@ test('schéma : schema.ts correspond à la base migrée', () => {
     )
       .map((c) => ({ name: c.name, type: c.type.toLowerCase(), notNull: c.pk ? true : Boolean(c.notnull), default: c.dflt_value, pk: Boolean(c.pk) }))
       .sort((a, b) => a.name.localeCompare(b.name));
+    // Clé primaire : d'une colonne (primaryKey()) ou composée (primaryKey({ columns })).
+    const composite = new Set(config.primaryKeys.flatMap((k) => k.columns.map((c) => c.name)));
     const expected = config.columns
-      .map((c) => ({ name: c.name, type: c.getSQLType(), notNull: c.notNull, default: defaultOf(c.default), pk: c.primary }))
+      .map((c) => ({ name: c.name, type: c.getSQLType(), notNull: c.notNull, default: defaultOf(c.default), pk: c.primary || composite.has(c.name) }))
       .sort((a, b) => a.name.localeCompare(b.name));
     assert.deepEqual(columns, expected, `colonnes de ${name}`);
 

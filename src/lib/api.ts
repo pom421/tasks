@@ -1,4 +1,4 @@
-import type { ImportResult, BugtrackerState, JiraFields, Priority, TimerAction, Journal, JournalFilter, Settings, SettingsPatch, State } from '../../shared/types.ts';
+import type { DoneTask, ImportResult, BugtrackerState, JiraFields, Priority, TimerAction, Journal, JournalFilter, Settings, SettingsPatch, State, Summaries, Task } from '../../shared/types.ts';
 
 // Le serveur exige un Content-Type précis par route (protection CSRF).
 async function request<T>(method: string, url: string, body?: unknown): Promise<T> {
@@ -53,7 +53,10 @@ export const api = {
     return request<Journal>('GET', `/api/journal?${params}`);
   },
   createProject: (name: string) => request<{ id: number }>('POST', '/api/projects', { name }),
-  updateProject: (id: number, patch: { name?: string; archived?: boolean; favorite?: boolean; bugtracker_ticket?: string | null; notes?: string | null }) =>
+  summaries: (id: number, day: string) => request<Summaries>('GET', `/api/projects/${id}/summaries?day=${day}`),
+  getTask: (id: number) => request<Task | DoneTask>('GET', `/api/tasks/${id}`),
+  // notes = synthèse : day (journée du navigateur) date sa version.
+  updateProject: (id: number, patch: { name?: string; archived?: boolean; favorite?: boolean; bugtracker_ticket?: string | null; notes?: string | null; day?: string }) =>
     request('PATCH', `/api/projects/${id}`, patch),
   // Renvoie le projet supprimé et ses tâches, à passer à restoreProject pour annuler.
   deleteProject: (id: number) => request<Record<string, unknown>>('DELETE', `/api/projects/${id}`),

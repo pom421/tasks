@@ -83,6 +83,15 @@ export function bugtrackerState(t: Pick<Task, 'bugtracker_wanted_at' | 'bugtrack
 
 export interface Project extends Pick<ProjectRow, 'id' | 'name' | 'archived_at' | 'favorite_at' | 'bugtracker_key' | 'notes'> {
   tasks: Task[]; // tâches à faire uniquement
+  summary_day: string | null; // jour de la dernière version de la synthèse ('YYYY-MM-DD')
+  done_today: boolean; // une tâche du projet faite le jour demandé : synthèse à mettre à jour
+}
+
+// Synthèse d'un projet : ses versions (la plus récente d'abord) et les tâches
+// faites depuis la version d'avant, pour « fait récemment ».
+export interface Summaries {
+  versions: { day: string; content: string }[];
+  recent: { id: number; title: string; done_at: string }[];
 }
 
 export interface DoneTask extends Task {

@@ -4,6 +4,8 @@ import type { Project, Settings, Task } from '../../shared/types.ts';
 // Ouverture de la fiche (tâche ou projet) : lecture (notes) ou édition complète (edit, focus sur
 // le titre).
 export type TaskField = 'notes' | 'edit';
+// Fiche d'un projet : en plus, summary = édition directe de la synthèse (s).
+export type ProjectField = TaskField | 'summary';
 
 // Action annulable (u) et rejouable (U). run peut renvoyer { focus: clé }
 // comme pour act. redo : run par défaut (actions qui fixent une valeur).
@@ -26,7 +28,7 @@ export interface Actions {
   toast: (message: string) => void;
   setLastProject: (id: number) => void;
   openTask: (task: Task, field?: TaskField) => void;
-  openProject: (project: Project, field?: TaskField) => void; // fiche du projet, mêmes champs
+  openProject: (project: Project, field?: ProjectField) => void; // fiche du projet, mêmes champs (+ synthèse)
   // Comme act, puis inscrit l'action dans l'historique si elle a réussi.
   undoable: (action: Undoable) => Promise<void>;
   settings: Settings;

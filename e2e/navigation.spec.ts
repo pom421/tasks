@@ -881,7 +881,7 @@ test('fiche du projet : o lit, e édite (nom → Tab → ticket → contenu), Ct
   await expect(dialog.locator('.reader')).toBeFocused();
   await expect(dialog.getByText('Projet · 2 tâches à faire')).toBeVisible();
   await expect(dialog.locator('.ticket-value')).toHaveText('aucun');
-  await expect(dialog.locator('.notes-preview')).toHaveText('Aucun contenu');
+  await expect(dialog.locator('.notes-preview')).toHaveText('Aucune synthèse');
   // Pas de tags ni de dates pour un projet.
   await expect(dialog.getByText('Tags :')).toHaveCount(0);
   await expect(dialog.getByText('Échéance :')).toHaveCount(0);
@@ -895,7 +895,7 @@ test('fiche du projet : o lit, e édite (nom → Tab → ticket → contenu), Ct
   await expect(dialog.getByLabel('Ticket', { exact: true })).toBeFocused();
   await page.keyboard.type('epic-7');
   await page.keyboard.press('Tab');
-  const editor = dialog.getByLabel('Contenu');
+  const editor = dialog.getByLabel('Synthèse');
   await expect(editor).toBeFocused();
   // Les raccourcis de la liste ne s'appliquent pas dans la fiche (x, f, a…).
   await page.keyboard.type('## Objectif\nLivrer x f a **vite**');
@@ -931,13 +931,13 @@ test('fiche du projet : Maj+Entrée et clic sur 🗒 (au survol sans contenu) ; 
   const icon = head.getByRole('button', { name: 'Fiche du projet' });
   await expect(icon).toBeHidden(); // sans contenu : au survol seulement
   await head.hover();
-  await expect(icon).toHaveAttribute('title', 'Ouvrir la fiche du projet (o ou Maj+Entrée)');
+  await expect(icon).toHaveAttribute('title', 'Ouvrir la fiche du projet (o ou Maj+Entrée ; s : écrire la synthèse)');
   await icon.click();
   const dialog = page.getByRole('dialog', { name: 'Beta' });
   await expect(dialog.getByText('Projet · 1 tâche à faire')).toBeVisible();
   // Double-clic sur le contenu : édition directement dedans.
   await dialog.locator('.notes-preview').dblclick();
-  await expect(dialog.getByLabel('Contenu')).toBeFocused();
+  await expect(dialog.getByLabel('Synthèse')).toBeFocused();
   await page.keyboard.type('Contexte');
   await page.keyboard.press('Shift+Tab'); // ticket
   await page.keyboard.type('pas un ticket');

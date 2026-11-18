@@ -58,3 +58,11 @@ index, clés étrangères).
   migrations restent écrites à la main (sauvegarde, suivi, vieilles bases).
 - Changer de version de `drizzle-orm` (1.0 RC, épinglée) sans relancer
   `pnpm test` et `pnpm test:e2e`.
+
+## Piège : sous-requête corrélée
+
+Dans une requête sur une seule table, Drizzle écrit `${project.id}` sans le nom
+de la table (`"id"`). Dans une sous-requête sur une autre table qui a aussi une
+colonne `id`, SQLite le lit comme la colonne de la sous-requête : résultat faux
+sans erreur. Écrire la colonne extérieure en entier : `sql.raw('"project"."id"')`
+(voir `done_today` dans `server/db.ts`).

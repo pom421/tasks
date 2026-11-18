@@ -1,32 +1,48 @@
-import { useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { BUGTRACKER_KEY_RE, bugtrackerLink, isValidTicket, type Project } from '../../shared/types.ts';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
+import { ListChecks } from 'lucide-react';
+import { BUGTRACKER_KEY_RE, bugtrackerLink, isValidTicket, type Project, type Summaries } from '../../shared/types.ts';
 import { api } from '@/lib/api';
-import { useActions, type TaskField } from '@/lib/actions';
+import { useActions, type ProjectField } from '@/lib/actions';
 import { record } from '@/lib/history';
 import { focusByKey } from '@/lib/nav';
-import { renderMarkdown } from '@/lib/markdown';
+import { TASK_LINK, renderMarkdown } from '@/lib/markdown';
+import { formatDay, localToday } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { PriorityIcon } from './Priority';
 
 interface ProjectDialogProps {
   project: Project;
-  field: TaskField;
+  field: ProjectField;
   open: boolean;
   // changed : quelque chose a été enregistré (les données sont à recharger).
   onClose: (changed: boolean) => void;
+  onOpenTask: (id: number) => void; // lien de la synthèse vers une tâche
 }
+
+// Lignes de liste Markdown, une par tâche : titre lié à sa fiche (#tache-12).
+const taskLines = (tasks: { id: number; title: string }[]) =>
+  tasks.map((t) => `- [${t.title.replace(/[[\]]/g, '\\$&')}](#tache-${t.id})`).join('\n');
+
+// Structure proposée d'une synthèse vide (texte d'aide du champ, pas du contenu).
+const SUMMARY_HINT = '## Le projet\nCe qu’il est, liens utiles…\n\n## Fait récemment\n\n## Prochaines étapes';
 
 type Field = 'name' | 'ticket' | 'notes';
 
 // Fiche d'un projet, comme celle d'une tâche (même clavier, même disposition) :
-// lecture seule par défaut ; e passe en édition (nom, puis Tab : ticket, contenu
-// Markdown) ; Ctrl+Entrée enregistre et repasse en lecture ; un second
-// Ctrl+Entrée (ou Échap) ferme. Enregistrement automatique, annulable (u).
-export function ProjectDialog({ project, field, open, onClose }: ProjectDialogProps) {
+// lecture seule par défaut ; e passe en édition (nom, puis Tab : ticket,
+// synthèse) ; s ouvre directement la synthèse en édition ; Ctrl+Entrée
+// enregistre et repasse en lecture ; un second Ctrl+Entrée (ou Échap) ferme.
+// Enregistrement automatique, annulable (u).
+// Synthèse : Markdown libre (le projet et ses liens, fait récemment, prochaines
+// étapes), une version par jour ; en édition, deux boutons insèrent les tâches
+// faites depuis la version d'avant et les P1, en liens vers leur fiche ; en
+// lecture, les versions passées se consultent et se restaurent.
+export function ProjectDialog({ project, field, open, onClose, onOpenTask }: ProjectDialogProps) {
   const id = useId();
   const { settings } = useActions();
   const [values, setValues] = useState({
@@ -34,7 +50,15 @@ export function ProjectDialog({ project, field, open, onClose }: ProjectDialogPr
     ticket: project.bugtracker_key ?? '',
     notes: project.notes ?? '',
   });
-  const [editing, setEditing] = useState(field === 'edit');
+  const [editing, setEditing] = useState(field !== 'notes');
+  // Versions de la synthèse et tâches faites depuis la version d'avant (lues à l'ouverture).
+  const today = useMemo(localToday, []);
+  const [summaries, setSummaries] = useState<Summaries>({ versions: [], recent: [] });
+  useEffect(() => {
+    api.summaries(project.id, today).then(setSummaries, () => {});
+  }, [project.id, today]);
+  // Version affichée en lecture : '' = la plus récente (celle qu'on modifie).
+  const [shownDay, setShownDay] = useState('');
   const [error, setError] = useState<{ field: Field; message: string } | null>(null);
   const saved = useRef({ ...values, changed: false });
   const refs = {
@@ -43,7 +67,6 @@ export function ProjectDialog({ project, field, open, onClose }: ProjectDialogPr
     notes: useRef<HTMLTextAreaElement>(null),
   };
   const reader = useRef<HTMLDivElement>(null);
-  const html = useMemo(() => renderMarkdown(values.notes), [values.notes]);
   // Copie toujours à jour des valeurs saisies (voir TaskDialog).
   const latest = useRef(values);
   const set = (key: Field) => (e: { target: { value: string } }) => {
@@ -94,6 +117,11 @@ export function ProjectDialog({ project, field, open, onClose }: ProjectDialogPr
     if ('name' in patch) before.name = saved.current.name;
     if ('bugtracker_ticket' in patch) before.bugtracker_ticket = saved.current.ticket || null;
     if ('notes' in patch) before.notes = saved.current.notes.trim() || null;
+    // La synthèse est datée du jour : sa version du jour (annuler y revient aussi).
+    if ('notes' in patch) {
+      Object.assign(patch, { day: today });
+      Object.assign(before, { day: today });
+    }
     try {
       await api.updateProject(project.id, patch);
       record({
@@ -146,6 +174,45 @@ export function ProjectDialog({ project, field, open, onClose }: ProjectDialogPr
     }
   };
 
+  // Insère du texte à la place de la sélection de la synthèse (ou au curseur).
+  const insert = (text: string) => {
+    const area = refs.notes.current;
+    const value = latest.current.notes;
+    const [start, end] = area ? [area.selectionStart, area.selectionEnd] : [value.length, value.length];
+    const before = value.slice(0, start);
+    const block = (before && !before.endsWith('\n') ? '\n' : '') + text + '\n';
+    latest.current = { ...latest.current, notes: before + block + value.slice(end) };
+    setValues(latest.current);
+    const cursor = start + block.length;
+    requestAnimationFrame(() => {
+      area?.focus();
+      area?.setSelectionRange(cursor, cursor);
+    });
+  };
+  const p1 = project.tasks.filter((t) => t.priority === 1);
+
+  // Lien vers une tâche (#tache-12) : ouvre sa fiche, après avoir enregistré.
+  const onPreviewClick = async (e: MouseEvent<HTMLDivElement>) => {
+    const link = (e.target as HTMLElement).closest('a');
+    const id = link?.getAttribute('href')?.match(TASK_LINK)?.[1];
+    if (!id) return;
+    e.preventDefault();
+    if (await persist()) onOpenTask(Number(id));
+  };
+
+  // Version passée affichée : son contenu, sans modification possible ; « Restaurer »
+  // en fait la synthèse du jour (annulable, u).
+  const shown = shownDay ? summaries.versions.find((v) => v.day === shownDay) : undefined;
+  const shownNotes = shown ? shown.content : values.notes;
+  const shownHtml = useMemo(() => renderMarkdown(shownNotes), [shownNotes]);
+  const restore = async () => {
+    if (!shown) return;
+    latest.current = { ...latest.current, notes: shown.content };
+    setValues(latest.current);
+    setShownDay('');
+    await persist();
+  };
+
   const ticketKey = values.ticket.trim().toUpperCase();
   const ticketLink = BUGTRACKER_KEY_RE.test(ticketKey) ? bugtrackerLink({ bugtracker_key: ticketKey }, settings) : null;
   const count = project.tasks.length;
@@ -172,7 +239,7 @@ export function ProjectDialog({ project, field, open, onClose }: ProjectDialogPr
         }}
         onOpenAutoFocus={(e) => {
           e.preventDefault();
-          ({ notes: reader, edit: refs.name }[field].current as HTMLElement | null)?.focus();
+          ({ notes: reader, edit: refs.name, summary: refs.notes }[field].current as HTMLElement | null)?.focus();
         }}
         // À la fermeture, retour sur le projet dans la liste.
         onCloseAutoFocus={(e) => {
@@ -219,11 +286,39 @@ export function ProjectDialog({ project, field, open, onClose }: ProjectDialogPr
               </div>
             </div>
             <div className="grid min-h-0 flex-1 gap-1.5">
-              <Label htmlFor={`${id}-notes`}>Contenu</Label>
+              <div className="flex items-center gap-1.5">
+                <Label htmlFor={`${id}-notes`} className="mr-auto">
+                  Synthèse
+                </Label>
+                {/* Seulement s'il y a quelque chose à insérer. */}
+                {summaries.recent.length > 0 && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="insert-done h-7 text-xs text-muted-foreground"
+                    title="Insérer les tâches faites depuis la version d’avant, en liens vers leur fiche"
+                    onClick={() => insert(taskLines(summaries.recent))}
+                  >
+                    <ListChecks aria-hidden /> Tâches faites ({summaries.recent.length})
+                  </Button>
+                )}
+                {p1.length > 0 && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="insert-p1 h-7 text-xs text-muted-foreground"
+                    title="Insérer les tâches à faire de priorité 1, en liens vers leur fiche"
+                    onClick={() => insert(taskLines(p1))}
+                  >
+                    <PriorityIcon priority={null} /> Priorités 1 ({p1.length})
+                  </Button>
+                )}
+              </div>
               <Textarea
                 ref={refs.notes}
                 id={`${id}-notes`}
                 className="min-h-[35vh] font-mono text-sm"
+                placeholder={SUMMARY_HINT}
                 value={values.notes}
                 onChange={set('notes')}
                 aria-describedby={`${id}-hint`}
@@ -251,13 +346,41 @@ export function ProjectDialog({ project, field, open, onClose }: ProjectDialogPr
                 )}
               </dd>
             </dl>
+            {/* Versions : seulement s'il y en a une d'avant à consulter. */}
+            {summaries.versions.length > 1 && (
+              <div className="flex items-center gap-2 text-sm">
+                <label htmlFor={`${id}-version`} className="text-muted-foreground">
+                  Synthèse
+                </label>
+                <select
+                  id={`${id}-version`}
+                  className="summary-version rounded-md border bg-background px-1.5 py-0.5"
+                  value={shownDay}
+                  onChange={(e) => setShownDay(e.target.value)}
+                >
+                  {summaries.versions.map((v, i) => (
+                    <option key={v.day} value={i === 0 ? '' : v.day}>
+                      {formatDay(v.day)}
+                      {i === 0 ? ' (actuelle)' : ''}
+                    </option>
+                  ))}
+                </select>
+                {shown && (
+                  <Button type="button" size="sm" className="summary-restore h-7 text-xs" title="Faire de cette version la synthèse du jour (annulable : u)" onClick={restore}>
+                    Restaurer cette version
+                  </Button>
+                )}
+              </div>
+            )}
             <div
               className={cn(
                 'notes-preview markdown min-h-[35vh] overflow-y-auto rounded-md border px-3 py-2 text-sm',
-                !values.notes.trim() && 'flex items-center justify-center text-base text-muted-foreground',
+                shown && 'border-dashed',
+                !shownNotes.trim() && 'flex items-center justify-center text-base text-muted-foreground',
               )}
-              onDoubleClick={() => startEditing('notes')}
-              {...(values.notes.trim() ? { dangerouslySetInnerHTML: { __html: html } } : { children: 'Aucun contenu' })}
+              onClick={onPreviewClick}
+              onDoubleClick={() => !shown && startEditing('notes')}
+              {...(shownNotes.trim() ? { dangerouslySetInnerHTML: { __html: shownHtml } } : { children: 'Aucune synthèse' })}
             />
           </div>
         )}
