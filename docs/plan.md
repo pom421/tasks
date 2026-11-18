@@ -24,6 +24,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
+- [x] Jira : « + » sur la ligne d'une tâche à reporter (faite ou non) pour créer son ticket, en deux appuis (`+` `+`, ou deux clics) ; dans la fiche aussi ; message si PAT ou ticket du projet manquant
 - [x] Formatage à 120 colonnes, comme csp-cli
 - [x] Vite+ (comme csp-cli) : `vp dev` / `vp build`, tests unitaires sous Vitest (`vp test`), `vp check` (formatage oxfmt, lint oxlint avec les types, TypeScript) ; code reformaté ; `pnpm ready` en local et en CI
 - [x] README : installer pnpm sans corepack (absent de Node 25 et plus) : `npm install -g pnpm@12.19.0` (PR #20)

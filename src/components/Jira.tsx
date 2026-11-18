@@ -20,10 +20,61 @@ export function jiraBlocker(ticketKey: string | null, ready: boolean): string | 
   return null;
 }
 
-// Icônes Jira de la fiche : seulement celles qui servent (cliquables), sans
-// URL ni PAT aucune. Avec un identifiant : ☁↑ pousser, ☁↓ récupérer. Sans
-// identifiant mais avec un ticket de projet (l'epic) : un seul bouton « + » qui
-// crée le ticket dans Jira.
+// Création d'un ticket (tâche à reporter) : ce qui manque, sinon null.
+export function jiraCreateBlocker(ready: boolean, projectTicket: string | null): string | null {
+  if (!ready) return 'Créer le ticket : renseigner l’URL des tickets et le PAT dans les Réglages';
+  if (!projectTicket) return 'Créer le ticket : le projet n’a pas de ticket (r sur le projet), auquel le rattacher';
+  return null;
+}
+
+// Champs envoyés à Jira pour une tâche.
+export const jiraFieldsOf = (t: {
+  title: string;
+  notes: string | null;
+  due_at: string | null;
+  sprint: string | null;
+}) => ({
+  title: t.title,
+  notes: t.notes,
+  due_at: t.due_at,
+  sprint: t.sprint,
+});
+
+// « + » : créer le ticket d'une tâche à reporter (ligne et fiche). Toujours
+// visible sur une tâche à reporter ; ce qui manque (PAT, ticket du projet) est
+// dit au clic. confirming : 1er appui fait sur la ligne, le 2e crée.
+export function JiraCreateButton({ confirming = false, onClick }: { confirming?: boolean; onClick: () => void }) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon-xs"
+      tabIndex={-1}
+      className={cn('jira-create flex-none', confirming ? 'text-destructive' : 'text-muted-foreground')}
+      aria-label={confirming ? 'Confirmer la création du ticket' : 'Créer le ticket dans Jira'}
+      title={
+        confirming
+          ? 'Confirmer : créer le ticket dans Jira (+)'
+          : 'Créer le ticket dans Jira : une tâche rattachée au ticket du projet (+, puis + pour confirmer)'
+      }
+      onClick={onClick}
+    >
+      <TicketPlus aria-hidden />
+    </Button>
+  );
+}
+
+// Avertissement avant de créer le ticket depuis la ligne (2e appui : création).
+export function CreateWarning({ epicKey }: { epicKey: string }) {
+  return (
+    <span className="confirm-create min-w-0 flex-none text-xs text-destructive" role="alert">
+      + à nouveau : créer le ticket dans Jira (rattaché à {epicKey}) · Échap : annuler
+    </span>
+  );
+}
+
+// Icônes Jira de la fiche : seulement celles qui servent. Avec un identifiant
+// (et l'URL et le PAT) : ☁↑ pousser, ☁↓ récupérer. Sans identifiant, tâche à
+// reporter : « + » qui crée le ticket dans Jira.
 export function JiraButtons({
   ready,
   ticketKey,
@@ -37,22 +88,8 @@ export function JiraButtons({
   onClick: (d: JiraDirection) => void;
   onCreate: () => void;
 }) {
+  if (!ticketKey) return canCreate ? <JiraCreateButton onClick={onCreate} /> : null;
   if (!ready) return null;
-  if (!ticketKey) {
-    return canCreate ? (
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        tabIndex={-1}
-        className="jira-create flex-none text-muted-foreground"
-        aria-label="Créer le ticket dans Jira"
-        title="Créer le ticket dans Jira : une tâche rattachée au ticket du projet (+)"
-        onClick={onCreate}
-      >
-        <TicketPlus aria-hidden />
-      </Button>
-    ) : null;
-  }
   return (['push', 'pull'] as const).map((d) => {
     const { label, key, Icon } = ACTIONS[d];
     return (
