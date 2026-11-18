@@ -24,6 +24,7 @@ interface Data {
   settings: Settings;
   dates: string[]; // jours du Log ayant des entrées
   logTags: string[]; // tags des tâches faites
+  logReportPending: number; // tâches faites à reporter
   dayDone: number; // Aujourd’hui : tâches du plan déjà faites
 }
 
@@ -44,6 +45,7 @@ export function App() {
     settings: { bugtracker_base_url: null, day_capacity: DEFAULT_DAY_CAPACITY, jira_pat_set: false },
     dates: [],
     logTags: [],
+    logReportPending: 0,
     dayDone: 0,
   });
   // Pages, sans routeur : quatre onglets, Projets (/), Aujourd’hui (/plan),
@@ -109,6 +111,7 @@ export function App() {
       settings: state.settings,
       dates: journal.dates,
       logTags: journal.tags,
+      logReportPending: journal.bugtrackerPending,
       dayDone: state.dayDone,
     });
   }, []);
@@ -262,8 +265,13 @@ export function App() {
         n: focusAdd,
         d: () => focusLog('filter-date'),
         '/': () => focusLog('log-search'),
-        // Filtres de la zone des projets : seulement dans l'onglet Projets.
-        R: () => projectsView && cycleBugtrackerFilter(),
+        // R : report, dans la zone de l'onglet courant (Projets : cycle ; Log : à reporter / tous).
+        R: () => {
+          if (!logView) return projectsView && cycleBugtrackerFilter();
+          const f = filterRef.current;
+          if (f.report || data.logReportPending > 0) changeFilter({ ...f, report: !f.report });
+        },
+        // Autres filtres de la zone des projets : seulement dans l'onglet Projets.
         F: () => projectsView && setFavoritesOnly((v) => !v),
         A: () => projectsView && setArchivedOnly((v) => !v),
         '!': () => projectsView && cyclePriorityFilter(),
@@ -408,7 +416,7 @@ export function App() {
             )}
             {dayView && <DayView projects={data.projects} dayDone={data.dayDone} capacity={data.settings.day_capacity} />}
             {upcomingView && <UpcomingView projects={data.projects} />}
-            {logView && <Journal days={data.days} dates={data.dates} tags={data.logTags} projects={data.projects} filter={filter} onFilter={changeFilter} />}
+            {logView && <Journal days={data.days} dates={data.dates} tags={data.logTags} reportPending={data.logReportPending} projects={data.projects} filter={filter} onFilter={changeFilter} />}
             {projectsView && (
               <ProjectList projects={data.projects} archivedOnly={archivedOnly} bugtrackerFilter={bugtrackerFilter} priorityFilter={priorityFilter} favoritesOnly={favoritesOnly} tagFilter={tagFilter} />
             )}

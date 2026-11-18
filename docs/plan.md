@@ -8,13 +8,11 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-- [ ] Log : indicateur des tâches **faites** à reporter (le compteur ne les compte plus)
 - [ ] Jira : créer le ticket depuis une tâche sans identifiant, enfant d'un ticket représentant le projet ; icônes distinctes de « remonter » (☁↑)
 - [ ] Projet : bouton qui propose de réordonner ses tâches par priorité (à la place d'un tri automatique)
 
 ## Décisions attendues
 
-- [?] Indicateur Log des tâches faites à reporter : où et quelle icône ? (décision prise : oui, à concevoir)
 - [?] Jira, créer le ticket depuis la tâche : type de ticket, projet Jira, lien du ticket enfant (décision prise : oui, à concevoir)
 - [?] Bouton « réordonner par priorité » au niveau du projet : icône et touche ?
 
@@ -32,6 +30,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
+- [x] Log : bouton « N tâches à reporter » (drapeau, `R` dans l'onglet Log) : seulement les tâches faites à reporter, que le compteur des projets ne compte plus ([PR #15](https://github.com/pom421/tasks/pull/15))
 - [x] Décisions tranchées : Log sans entrée non réaffiché ; chrono unique, retard compté dans « 3/5 », `Tab` natif dans les dates, tri automatique par priorité refusé (remplacé par un bouton) ; filtre « Archivés » actif en remplissage gris clair ; compteur du plan orange à 5/5, rouge au-delà ([PR #14](https://github.com/pom421/tasks/pull/14))
 - [x] Audit : faille `picomatch` (GHSA-fc5q-39xc-vjpf, haute, sans correctif) ignorée avec sa raison : dépendance de développement (Vite), motifs jamais saisis par un utilisateur ; à retirer quand un correctif sort ([PR #18](https://github.com/pom421/tasks/pull/18))
 - [x] Dépendances : cooldown 7 jours avec exceptions par version précise (skill `dependances-securite`), `pnpm audit` en CI (PR + chaque jour, seuil `high`), 12 failles corrigées, toutes les dépendances, pnpm 12.19.0 et Node 26 et actions GitHub (`checkout` / `setup-node` v7) mis à jour dans le respect du cooldown ([PR #13](https://github.com/pom421/tasks/pull/13))
