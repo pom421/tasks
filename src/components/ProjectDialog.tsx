@@ -7,9 +7,10 @@ import {
   useState,
   type KeyboardEvent,
   type MouseEvent,
+  type ReactNode,
 } from 'react';
-import { ListChecks } from 'lucide-react';
-import { BUGTRACKER_KEY_RE, bugtrackerLink, isValidTicket, type Project, type Summaries } from '../../shared/types.ts';
+import { ChevronLeft, ChevronRight, ListChecks, Plus } from 'lucide-react';
+import { BUGTRACKER_KEY_RE, bugtrackerLink, isValidTicket, type Project, type Reviews } from '../../shared/types.ts';
 import { api } from '@/lib/api';
 import { useActions, type ProjectField } from '@/lib/actions';
 import { record } from '@/lib/history';
@@ -27,53 +28,57 @@ import { PriorityIcon } from './Priority';
 interface ProjectDialogProps {
   project: Project;
   field: ProjectField;
+  day?: string | null; // bilan affiché à l'ouverture (sinon le plus récent)
   open: boolean;
   // changed : quelque chose a été enregistré (les données sont à recharger).
   onClose: (changed: boolean) => void;
-  onOpenTask: (id: number) => void; // lien de la synthèse vers une tâche
+  // Lien de la synthèse vers une tâche ; day : bilan affiché, pour y revenir.
+  onOpenTask: (id: number, day: string | null) => void;
 }
 
-// Lignes de liste Markdown, une par tâche : titre lié à sa fiche (#tache-12).
+// Lien Markdown vers la fiche d'une tâche (#tache-12).
+const taskLink = (id: number) => `(#tache-${id})`;
+// Lignes de liste Markdown, une par tâche : titre lié à sa fiche.
 const taskLines = (tasks: { id: number; title: string }[]) =>
-  tasks.map((t) => `- [${t.title.replace(/[[\]]/g, '\\$&')}](#tache-${t.id})`).join('\n');
+  tasks.map((t) => `- [${t.title.replace(/[[\]]/g, '\\$&')}]${taskLink(t.id)}`).join('\n');
 
-// Structure proposée d'une synthèse vide (texte d'aide du champ, pas du contenu).
-const SUMMARY_HINT = '## Le projet\nCe qu’il est, liens utiles…\n\n## Fait récemment\n\n## Prochaines étapes';
-
-type Field = 'name' | 'ticket' | 'notes';
+type Field = 'name' | 'ticket' | 'notes' | 'done' | 'next';
+type Values = Record<Field, string>;
 
 // Fiche d'un projet, comme celle d'une tâche (même clavier, même disposition) :
 // lecture seule par défaut ; e passe en édition (nom, puis Tab : ticket,
-// synthèse) ; s ouvre directement la synthèse en édition ; Ctrl+Entrée
-// enregistre et repasse en lecture ; un second Ctrl+Entrée (ou Échap) ferme.
-// Enregistrement automatique, annulable (u).
-// Synthèse : Markdown libre (le projet et ses liens, fait récemment, prochaines
-// étapes), une version par jour ; en édition, deux boutons insèrent les tâches
-// faites depuis la version d'avant et les P1, en liens vers leur fiche ; en
-// lecture, les versions passées se consultent et se restaurent.
-export function ProjectDialog({ project, field, open, onClose, onOpenTask }: ProjectDialogProps) {
+// repères, bilan) ; Ctrl+Entrée enregistre et repasse en lecture ; un second
+// Ctrl+Entrée (ou Échap) ferme. Enregistrement automatique, annulable (u).
+// Synthèse = repères (le projet, ses liens : toujours là, non datés) + bilans
+// datés, créés au besoin (« Nouveau bilan » ou s : celui du jour), un par jour
+// au plus : « Fait dernièrement » et « Bientôt », modifiables ensemble ; ← → (ou
+// les flèches) passent d'un bilan à l'autre. Boutons d'insertion : tâches faites
+// depuis le bilan d'avant, P1 à faire, en liens vers leur fiche.
+export function ProjectDialog({ project, field, day: dayProp, open, onClose, onOpenTask }: ProjectDialogProps) {
   const id = useId();
   const { settings } = useActions();
-  const [values, setValues] = useState({
+  const today = useMemo(localToday, []);
+  const [values, setValues] = useState<Values>({
     name: project.name,
     ticket: project.bugtracker_key ?? '',
     notes: project.notes ?? '',
+    done: '',
+    next: '',
   });
   const [editing, setEditing] = useState(field !== 'notes');
-  // Versions de la synthèse et tâches faites depuis la version d'avant (lues à l'ouverture).
-  const today = useMemo(localToday, []);
-  const [summaries, setSummaries] = useState<Summaries>({ versions: [], recent: [] });
-  useEffect(() => {
-    api.summaries(project.id, today).then(setSummaries, () => {});
-  }, [project.id, today]);
-  // Version affichée en lecture : '' = la plus récente (celle qu'on modifie).
-  const [shownDay, setShownDay] = useState('');
+  // Bilans enregistrés (du plus ancien au plus récent), lus à l'ouverture.
+  const [data, setData] = useState<Reviews | null>(null);
+  // Bilan affiché : null = aucun ; un jour sans bilan enregistré = nouveau bilan (brouillon).
+  const [day, setDay] = useState<string | null>(null);
   const [error, setError] = useState<{ field: Field; message: string } | null>(null);
-  const saved = useRef({ ...values, changed: false });
+  // Dernières valeurs enregistrées ; day : jour du bilan qu'elles concernent.
+  const saved = useRef({ ...values, day: null as string | null, changed: false });
   const refs = {
     name: useRef<HTMLInputElement>(null),
     ticket: useRef<HTMLInputElement>(null),
     notes: useRef<HTMLTextAreaElement>(null),
+    done: useRef<HTMLTextAreaElement>(null),
+    next: useRef<HTMLTextAreaElement>(null),
   };
   const reader = useRef<HTMLDivElement>(null);
   // Copie toujours à jour des valeurs saisies (voir TaskDialog).
@@ -89,13 +94,36 @@ export function ProjectDialog({ project, field, open, onClose, onOpenTask }: Pro
   useLayoutEffect(() => {
     const target = focusNext.current;
     if (!target) return;
+    const element = target === 'reader' ? reader.current : refs[target].current;
+    if (!element) return; // zone pas encore affichée (bilans en cours de lecture)
     focusNext.current = null;
-    (target === 'reader' ? reader.current : refs[target].current)?.focus();
+    element.focus();
   });
   const focusSoon = (target: Field | 'reader') => {
     focusNext.current = target;
     rerender((n) => n + 1);
   };
+
+  // Affiche le bilan d'un jour (null : aucun), sans rien enregistrer.
+  const show = (d: string | null, reviews = data?.reviews ?? []) => {
+    const review = reviews.find((r) => r.day === d);
+    const zones = { done: review?.done ?? '', next: review?.next ?? '' };
+    saved.current = { ...saved.current, ...zones, day: d };
+    latest.current = { ...latest.current, ...zones };
+    setValues(latest.current);
+    setDay(d);
+  };
+
+  // Ouverture : bilan demandé (retour depuis une tâche), celui du jour (s), sinon le plus récent.
+  useEffect(() => {
+    api.reviews(project.id).then(
+      (loaded) => {
+        setData(loaded);
+        show(field === 'summary' ? today : (dayProp ?? loaded.reviews.at(-1)?.day ?? null), loaded.reviews);
+      },
+      () => setData({ reviews: [], done: [] }),
+    );
+  }, [project.id]); // une seule lecture, à l'ouverture
 
   const fail = (f: Field, message: string) => {
     setError({ field: f, message });
@@ -107,13 +135,15 @@ export function ProjectDialog({ project, field, open, onClose, onOpenTask }: Pro
   const queue = useRef<Promise<boolean>>(Promise.resolve(true));
   const persist = (): Promise<boolean> => (queue.current = queue.current.then(save, save));
 
-  // Enregistre ce qui a changé. false en cas d'erreur (la fiche reste ouverte).
+  // Enregistre ce qui a changé (projet, bilan affiché). false en cas d'erreur (la fiche reste ouverte).
   const save = async (): Promise<boolean> => {
     const values = latest.current;
     const next = {
       name: values.name.trim(),
       ticket: values.ticket.trim().toUpperCase(), // normalisé comme côté serveur (proj-5 → PROJ-5)
       notes: values.notes.trim(),
+      done: values.done.trim(),
+      next: values.next.trim(),
     };
     if (!next.name) return fail('name', 'Le nom est obligatoire');
     if (!isValidTicket(next.ticket)) return fail('ticket', 'Identifiant attendu, ex. PROJ-123');
@@ -121,25 +151,39 @@ export function ProjectDialog({ project, field, open, onClose, onOpenTask }: Pro
     if (next.name !== saved.current.name) patch.name = next.name;
     if (next.ticket !== saved.current.ticket) patch.bugtracker_ticket = next.ticket || null;
     if (next.notes !== saved.current.notes.trim()) patch.notes = next.notes || null;
-    if (!Object.keys(patch).length) return true;
+    const reviewDay = saved.current.day;
+    const reviewChanged =
+      reviewDay !== null && (next.done !== saved.current.done.trim() || next.next !== saved.current.next.trim());
+    if (!Object.keys(patch).length && !reviewChanged) return true;
     const before: typeof patch = {};
     if ('name' in patch) before.name = saved.current.name;
     if ('bugtracker_ticket' in patch) before.bugtracker_ticket = saved.current.ticket || null;
     if ('notes' in patch) before.notes = saved.current.notes.trim() || null;
-    // La synthèse est datée du jour : sa version du jour (annuler y revient aussi).
-    if ('notes' in patch) {
-      Object.assign(patch, { day: today });
-      Object.assign(before, { day: today });
-    }
+    const review = reviewChanged ? { day: reviewDay, done: next.done, next: next.next } : null;
+    const reviewBefore = reviewChanged
+      ? { day: reviewDay, done: saved.current.done.trim(), next: saved.current.next.trim() }
+      : null;
+    const write = async (p: typeof patch, r: typeof review) => {
+      if (Object.keys(p).length) await api.updateProject(project.id, p);
+      if (r) await api.saveReview(project.id, r);
+    };
     try {
-      await api.updateProject(project.id, patch);
+      await write(patch, review);
       record({
         label: 'modification de la fiche du projet',
         focus: `project:${project.id}`,
-        undo: () => api.updateProject(project.id, before),
-        redo: () => api.updateProject(project.id, patch),
+        undo: () => write(before, reviewBefore),
+        redo: () => write(patch, review),
       });
-      saved.current = { ...next, changed: true };
+      if (review) {
+        // Bilan aux deux zones vides : retiré (le serveur fait de même).
+        setData((d) => {
+          const others = (d?.reviews ?? []).filter((r) => r.day !== review.day);
+          const kept = review.done || review.next ? [...others, review] : others;
+          return { done: d?.done ?? [], reviews: kept.sort((a, b) => a.day.localeCompare(b.day)) };
+        });
+      }
+      saved.current = { ...saved.current, ...next, changed: true };
       latest.current = { ...latest.current, ticket: next.ticket };
       setValues(latest.current);
       setError(null);
@@ -162,6 +206,27 @@ export function ProjectDialog({ project, field, open, onClose, onOpenTask }: Pro
     await persist();
   };
 
+  // Bilans à parcourir : ceux enregistrés, plus le nouveau bilan affiché.
+  const days = useMemo(() => {
+    const saved = (data?.reviews ?? []).map((r) => r.day);
+    return day && !saved.includes(day) ? [...saved, day].sort() : saved;
+  }, [data, day]);
+  const index = day ? days.indexOf(day) : -1;
+  const previousDay = index > 0 ? days[index - 1] : null;
+  const nextDay = index >= 0 && index < days.length - 1 ? days[index + 1] : null;
+  // Change de bilan, après avoir enregistré celui affiché.
+  const goTo = async (d: string | null) => {
+    if (!d || d === day || !(await persist())) return;
+    show(d);
+    if (editing) focusSoon('done');
+  };
+  // Bilan du jour (s, « Nouveau bilan ») : en édition, curseur dans « Fait dernièrement ».
+  const reviewToday = async () => {
+    if (!data || !(await persist())) return;
+    if (day !== today) show(today);
+    startEditing('done');
+  };
+
   // Entrée dans le nom ou le ticket : comme Ctrl+Entrée.
   const onInputEnter = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter' || e.ctrlKey || e.metaKey) return;
@@ -170,10 +235,21 @@ export function ProjectDialog({ project, field, open, onClose, onOpenTask }: Pro
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    const inField = (e.target as HTMLElement).matches('input, textarea');
-    if (e.key === 'e' && !editing && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    const inField = (e.target as HTMLElement).matches('input, textarea, select');
+    const plain = !inField && !e.ctrlKey && !e.metaKey && !e.altKey;
+    if (plain && e.key === 'e' && !editing) {
       e.preventDefault();
       startEditing();
+      return;
+    }
+    if (plain && e.key === 's') {
+      e.preventDefault();
+      void reviewToday();
+      return;
+    }
+    if (plain && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      e.preventDefault();
+      void goTo(e.key === 'ArrowLeft' ? previousDay : nextDay);
       return;
     }
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
@@ -183,14 +259,14 @@ export function ProjectDialog({ project, field, open, onClose, onOpenTask }: Pro
     }
   };
 
-  // Insère du texte à la place de la sélection de la synthèse (ou au curseur).
-  const insert = (text: string) => {
-    const area = refs.notes.current;
-    const value = latest.current.notes;
+  // Insère du texte à la place de la sélection d'une zone (ou au curseur).
+  const insert = (zone: 'done' | 'next', text: string) => {
+    const area = refs[zone].current;
+    const value = latest.current[zone];
     const [start, end] = area ? [area.selectionStart, area.selectionEnd] : [value.length, value.length];
     const before = value.slice(0, start);
     const block = (before && !before.endsWith('\n') ? '\n' : '') + text + '\n';
-    latest.current = { ...latest.current, notes: before + block + value.slice(end) };
+    latest.current = { ...latest.current, [zone]: before + block + value.slice(end) };
     setValues(latest.current);
     const cursor = start + block.length;
     requestAnimationFrame(() => {
@@ -198,29 +274,42 @@ export function ProjectDialog({ project, field, open, onClose, onOpenTask }: Pro
       area?.setSelectionRange(cursor, cursor);
     });
   };
-  const p1 = project.tasks.filter((t) => t.priority === 1);
+  // Tâches proposées, sans celles déjà dans la zone : faites depuis le bilan
+  // d'avant (sans bilan d'avant : aucune), P1 à faire.
+  const since = day ? (data?.reviews ?? []).filter((r) => r.day < day).at(-1)?.day : undefined;
+  const recent =
+    day && since
+      ? (data?.done ?? []).filter((t) => t.done_at > since && t.done_at <= day && !values.done.includes(taskLink(t.id)))
+      : [];
+  const p1 = project.tasks.filter((t) => t.priority === 1 && !values.next.includes(taskLink(t.id)));
 
   // Lien vers une tâche (#tache-12) : ouvre sa fiche, après avoir enregistré.
   const onPreviewClick = async (e: MouseEvent<HTMLDivElement>) => {
     const link = (e.target as HTMLElement).closest('a');
-    const id = link?.getAttribute('href')?.match(TASK_LINK)?.[1];
-    if (!id) return;
+    const taskId = link?.getAttribute('href')?.match(TASK_LINK)?.[1];
+    if (!taskId) return;
     e.preventDefault();
-    if (await persist()) onOpenTask(Number(id));
+    if (await persist()) onOpenTask(Number(taskId), saved.current.day);
   };
 
-  // Version passée affichée : son contenu, sans modification possible ; « Restaurer »
-  // en fait la synthèse du jour (annulable, u).
-  const shown = shownDay ? summaries.versions.find((v) => v.day === shownDay) : undefined;
-  const shownNotes = shown ? shown.content : values.notes;
-  const shownHtml = useMemo(() => renderMarkdown(shownNotes), [shownNotes]);
-  const restore = async () => {
-    if (!shown) return;
-    latest.current = { ...latest.current, notes: shown.content };
-    setValues(latest.current);
-    setShownDay('');
-    await persist();
+  const html = {
+    notes: useMemo(() => renderMarkdown(values.notes), [values.notes]),
+    done: useMemo(() => renderMarkdown(values.done), [values.done]),
+    next: useMemo(() => renderMarkdown(values.next), [values.next]),
   };
+  // Aperçu Markdown d'une zone en lecture ; double-clic : la modifier.
+  const preview = (zone: 'notes' | 'done' | 'next', empty: string, className?: string) => (
+    <div
+      className={cn(
+        `${zone}-preview markdown overflow-y-auto rounded-md border px-3 py-2 text-sm`,
+        !values[zone].trim() && 'flex items-center justify-center text-muted-foreground',
+        className,
+      )}
+      onClick={onPreviewClick}
+      onDoubleClick={() => startEditing(zone)}
+      {...(values[zone].trim() ? { dangerouslySetInnerHTML: { __html: html[zone] } } : { children: empty })}
+    />
+  );
 
   const ticketKey = values.ticket.trim().toUpperCase();
   const ticketLink = BUGTRACKER_KEY_RE.test(ticketKey) ? bugtrackerLink({ bugtracker_key: ticketKey }, settings) : null;
@@ -239,6 +328,77 @@ export function ProjectDialog({ project, field, open, onClose, onOpenTask }: Pro
     'aria-describedby': error?.field === f ? `${id}-${f}-error` : undefined,
   });
 
+  // En-tête des bilans (lecture et édition) : ← → en haut à gauche, date, nouveau bilan.
+  const reviewHeader = (
+    <div className="flex min-h-7 items-center gap-1">
+      {days.length > 1 && (
+        <>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            tabIndex={-1}
+            className="review-previous text-muted-foreground"
+            aria-label="Bilan précédent"
+            title="Bilan précédent (←)"
+            disabled={!previousDay}
+            onClick={() => void goTo(previousDay)}
+          >
+            <ChevronLeft aria-hidden />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            tabIndex={-1}
+            className="review-next text-muted-foreground"
+            aria-label="Bilan suivant"
+            title="Bilan suivant (→)"
+            disabled={!nextDay}
+            onClick={() => void goTo(nextDay)}
+          >
+            <ChevronRight aria-hidden />
+          </Button>
+        </>
+      )}
+      <h3 className="review-day ml-1 text-sm font-medium first-letter:uppercase">
+        {day ? `Bilan du ${formatDay(day)}` : data ? 'Aucun bilan' : ''}
+      </h3>
+      {data && day !== today && !days.includes(today) && (
+        <Button
+          type="button"
+          size="sm"
+          tabIndex={-1}
+          className="new-review ml-auto h-7 text-xs text-muted-foreground"
+          title="Nouveau bilan, daté d’aujourd’hui (s)"
+          onClick={() => void reviewToday()}
+        >
+          <Plus aria-hidden /> Nouveau bilan
+        </Button>
+      )}
+    </div>
+  );
+
+  // Une zone du bilan en édition : libellé, bouton d'insertion (s'il y a quelque chose à insérer), champ.
+  const zone = (name: 'done' | 'next', label: string, action: ReactNode) => (
+    <div className="grid min-w-0 content-start gap-1.5">
+      <div className="flex min-h-7 flex-wrap items-center gap-1.5">
+        <Label htmlFor={`${id}-${name}`} className="mr-auto">
+          {label}
+        </Label>
+        {action}
+      </div>
+      <Textarea
+        ref={refs[name]}
+        id={`${id}-${name}`}
+        className="min-h-[22vh] font-mono text-sm"
+        value={values[name]}
+        onChange={set(name)}
+        aria-describedby={`${id}-hint`}
+      />
+    </div>
+  );
+
   return (
     <Dialog open={open} onOpenChange={(value) => !value && close()}>
       <DialogContent
@@ -250,7 +410,9 @@ export function ProjectDialog({ project, field, open, onClose, onOpenTask }: Pro
         }}
         onOpenAutoFocus={(e) => {
           e.preventDefault();
-          ({ notes: reader, edit: refs.name, summary: refs.notes }[field].current as HTMLElement | null)?.focus();
+          // s : « Fait dernièrement », une fois les bilans lus.
+          if (field === 'summary') focusSoon('done');
+          else ({ notes: reader, edit: refs.name }[field].current as HTMLElement | null)?.focus();
         }}
         // À la fermeture, retour sur le projet dans la liste.
         onCloseAutoFocus={(e) => {
@@ -279,7 +441,7 @@ export function ProjectDialog({ project, field, open, onClose, onOpenTask }: Pro
         <DialogDescription>Projet · {state}</DialogDescription>
 
         {editing ? (
-          <>
+          <div className="-mx-1 grid min-h-0 flex-1 content-start gap-4 overflow-y-auto px-1 pb-1">
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="grid content-start gap-1.5">
                 <Label htmlFor={`${id}-ticket`}>Ticket</Label>
@@ -296,51 +458,61 @@ export function ProjectDialog({ project, field, open, onClose, onOpenTask }: Pro
                 {errorFor('ticket')}
               </div>
             </div>
-            <div className="grid min-h-0 flex-1 gap-1.5">
-              <div className="flex items-center gap-1.5">
-                <Label htmlFor={`${id}-notes`} className="mr-auto">
-                  Synthèse
-                </Label>
-                {/* Seulement s'il y a quelque chose à insérer. */}
-                {summaries.recent.length > 0 && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="insert-done h-7 text-xs text-muted-foreground"
-                    title="Insérer les tâches faites depuis la version d’avant, en liens vers leur fiche"
-                    onClick={() => insert(taskLines(summaries.recent))}
-                  >
-                    <ListChecks aria-hidden /> Tâches faites ({summaries.recent.length})
-                  </Button>
-                )}
-                {p1.length > 0 && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="insert-p1 h-7 text-xs text-muted-foreground"
-                    title="Insérer les tâches à faire de priorité 1, en liens vers leur fiche"
-                    onClick={() => insert(taskLines(p1))}
-                  >
-                    <PriorityIcon priority={null} /> Priorités 1 ({p1.length})
-                  </Button>
-                )}
-              </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor={`${id}-notes`}>Repères</Label>
               <Textarea
                 ref={refs.notes}
                 id={`${id}-notes`}
-                className="min-h-[35vh] font-mono text-sm"
-                placeholder={SUMMARY_HINT}
+                className="min-h-[12vh] font-mono text-sm"
+                placeholder="Ce qu’est le projet, liens utiles… (affichés avec chaque bilan)"
                 value={values.notes}
                 onChange={set('notes')}
                 aria-describedby={`${id}-hint`}
               />
             </div>
-          </>
+            <div className="grid gap-1.5">
+              {reviewHeader}
+              {day && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {zone(
+                    'done',
+                    'Fait dernièrement',
+                    recent.length > 0 && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="insert-done h-7 text-xs text-muted-foreground"
+                        title="Ajouter les tâches faites depuis le bilan d’avant, en liens vers leur fiche"
+                        onClick={() => insert('done', taskLines(recent))}
+                      >
+                        <ListChecks aria-hidden /> Ajouter les dernières tâches ({recent.length})
+                      </Button>
+                    ),
+                  )}
+                  {zone(
+                    'next',
+                    'Bientôt',
+                    p1.length > 0 && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="insert-p1 h-7 text-xs text-muted-foreground"
+                        title="Ajouter les tâches à faire de priorité 1, en liens vers leur fiche"
+                        onClick={() => insert('next', taskLines(p1))}
+                      >
+                        <PriorityIcon priority={null} /> Ajouter les prochaines tâches prioritaires ({p1.length})
+                      </Button>
+                    ),
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         ) : (
           <div
             ref={reader}
             tabIndex={-1}
-            className="reader grid min-h-0 flex-1 gap-4 outline-none"
+            className="reader -mx-1 grid min-h-0 flex-1 content-start gap-4 overflow-y-auto px-1 pb-1 outline-none"
             aria-describedby={`${id}-hint`}
           >
             {/* Comme la fiche d'une tâche : libellés atténués, valeur absente aussi. */}
@@ -362,50 +534,25 @@ export function ProjectDialog({ project, field, open, onClose, onOpenTask }: Pro
                 )}
               </dd>
             </dl>
-            {/* Versions : seulement s'il y en a une d'avant à consulter. */}
-            {summaries.versions.length > 1 && (
-              <div className="flex items-center gap-2 text-sm">
-                <label htmlFor={`${id}-version`} className="text-muted-foreground">
-                  Synthèse
-                </label>
-                <select
-                  id={`${id}-version`}
-                  className="summary-version rounded-md border bg-background px-1.5 py-0.5"
-                  value={shownDay}
-                  onChange={(e) => setShownDay(e.target.value)}
-                >
-                  {summaries.versions.map((v, i) => (
-                    <option key={v.day} value={i === 0 ? '' : v.day}>
-                      {formatDay(v.day)}
-                      {i === 0 ? ' (actuelle)' : ''}
-                    </option>
-                  ))}
-                </select>
-                {shown && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="summary-restore h-7 text-xs"
-                    title="Faire de cette version la synthèse du jour (annulable : u)"
-                    onClick={restore}
-                  >
-                    Restaurer cette version
-                  </Button>
-                )}
-              </div>
-            )}
-            <div
-              className={cn(
-                'notes-preview markdown min-h-[35vh] overflow-y-auto rounded-md border px-3 py-2 text-sm',
-                shown && 'border-dashed',
-                !shownNotes.trim() && 'flex items-center justify-center text-base text-muted-foreground',
+            <section className="grid gap-1.5" aria-label="Repères">
+              <h3 className="text-sm font-medium">Repères</h3>
+              {preview('notes', 'Aucun repère', 'max-h-[30vh] min-h-12')}
+            </section>
+            <section className="grid gap-1.5" aria-label="Bilan">
+              {reviewHeader}
+              {day && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid min-w-0 content-start gap-1.5">
+                    <h4 className="text-sm text-muted-foreground">Fait dernièrement</h4>
+                    {preview('done', 'Rien', 'min-h-[22vh]')}
+                  </div>
+                  <div className="grid min-w-0 content-start gap-1.5">
+                    <h4 className="text-sm text-muted-foreground">Bientôt</h4>
+                    {preview('next', 'Rien', 'min-h-[22vh]')}
+                  </div>
+                </div>
               )}
-              onClick={onPreviewClick}
-              onDoubleClick={() => !shown && startEditing('notes')}
-              {...(shownNotes.trim()
-                ? { dangerouslySetInnerHTML: { __html: shownHtml } }
-                : { children: 'Aucune synthèse' })}
-            />
+            </section>
           </div>
         )}
 
@@ -413,7 +560,7 @@ export function ProjectDialog({ project, field, open, onClose, onOpenTask }: Pro
           <p id={`${id}-hint`} className="text-xs text-muted-foreground">
             {editing
               ? 'Tab : champ suivant · Ctrl+Entrée : enregistrer et repasser en lecture'
-              : 'e : modifier · Ctrl+Entrée ou Échap : fermer'}
+              : 'e : modifier · s : bilan du jour · ← → : bilans · Ctrl+Entrée ou Échap : fermer'}
           </p>
           <DialogFooter>
             <Button type="button" onClick={close}>

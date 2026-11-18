@@ -107,8 +107,8 @@ function ProjectCard({ project: p, onMove, onSortPriority, onMoveProject }: Proj
     }
   };
   // Synthèse : cercle à droite les jours où une tâche du projet a été faite ;
-  // vide tant que la synthèse n'a pas été mise à jour ce jour-là, plein ensuite.
-  const summaryDone = p.summary_day === localToday();
+  // vide tant qu'il n'y a pas de bilan ce jour-là, plein ensuite.
+  const summaryDone = p.review_day === localToday();
 
   // Le focus quitte l'en-tête : la demande de suppression est abandonnée.
   const onBlur = (e: FocusEvent<HTMLDivElement>) => {
@@ -177,7 +177,7 @@ function ProjectCard({ project: p, onMove, onSortPriority, onMoveProject }: Proj
             title={
               p.notes
                 ? 'Voir la synthèse (o ou Maj+Entrée ; s : la modifier)'
-                : 'Ouvrir la fiche du projet (o ou Maj+Entrée ; s : écrire la synthèse)'
+                : 'Ouvrir la fiche du projet (o ou Maj+Entrée ; s : bilan du jour)'
             }
             onClick={() => openProject(p, 'notes')}
           >
@@ -263,8 +263,8 @@ function ProjectCard({ project: p, onMove, onSortPriority, onMoveProject }: Proj
             aria-label={summaryDone ? 'Synthèse à jour' : 'Synthèse à mettre à jour'}
             title={
               summaryDone
-                ? 'Synthèse mise à jour aujourd’hui (s)'
-                : 'Synthèse à mettre à jour : une tâche du projet faite aujourd’hui (s)'
+                ? 'Synthèse à jour : bilan du jour fait (s)'
+                : 'Synthèse à mettre à jour : une tâche du projet faite aujourd’hui, pas encore de bilan du jour (s)'
             }
             onClick={() => openProject(p, 'summary')}
           >

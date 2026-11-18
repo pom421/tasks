@@ -23,7 +23,7 @@ export const project = sqliteTable('project', {
   favorite_at: text(), // favori depuis
   position: integer().notNull().default(0), // ordre d'affichage des projets
   bugtracker_key: text(), // ticket du projet (epic, PROJ-123), lien construit avec bugtracker_base_url
-  notes: text(), // synthèse : sa version la plus récente, en Markdown (historique : project_summary)
+  notes: text(), // synthèse : repères (le projet, ses liens), en Markdown, non versionnés (bilans : project_review)
 });
 
 export const task = sqliteTable(
@@ -60,17 +60,17 @@ export const task = sqliteTable(
   (t) => [index('task_project').on(t.project_id), index('task_done_at').on(t.done_at)],
 );
 
-// Synthèse d'un projet, une version par jour (la dernière modification du jour
-// l'emporte) ; la plus récente est aussi dans project.notes. Une version
-// identique à la précédente n'est pas gardée.
-export const projectSummary = sqliteTable(
-  'project_summary',
+// Bilans d'un projet (synthèse) : bilan et prospective à une date, créés au
+// besoin, un par jour au plus. Un bilan aux deux zones vides n'est pas gardé.
+export const projectReview = sqliteTable(
+  'project_review',
   {
     project_id: integer()
       .notNull()
       .references(() => project.id, { onDelete: 'cascade' }),
     day: text().notNull(), // 'YYYY-MM-DD' (journée du navigateur)
-    content: text().notNull(), // Markdown ; '' = synthèse vidée ce jour-là
+    done: text().notNull(), // « Fait dernièrement », en Markdown
+    next: text().notNull(), // « Bientôt », en Markdown
   },
   (t) => [primaryKey({ columns: [t.project_id, t.day] })],
 );
@@ -90,8 +90,8 @@ export const schemaMigration = sqliteTable('schema_migration', {
   applied_at: text(), // NULL = appliquée avant l'existence de cette table
 });
 
-export const tables = [project, task, projectSummary, setting, schemaMigration];
+export const tables = [project, task, projectReview, setting, schemaMigration];
 
 export type ProjectRow = typeof project.$inferSelect;
 export type TaskRow = typeof task.$inferSelect;
-export type SummaryRow = typeof projectSummary.$inferSelect;
+export type ReviewRow = typeof projectReview.$inferSelect;

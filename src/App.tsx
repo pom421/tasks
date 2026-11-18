@@ -83,12 +83,16 @@ export function App() {
     null,
   );
   // Fiche d'un projet : mêmes principes.
+  // day : bilan affiché à l'ouverture (retour depuis une tâche de la synthèse).
   const [openProject, setOpenProject] = useState<{
     id: number;
     field: ProjectField;
     open: boolean;
     opening: number;
+    day?: string | null;
   } | null>(null);
+  // Fiche de tâche ouverte depuis un lien de la synthèse : projet et bilan où revenir.
+  const [backTo, setBackTo] = useState<{ projectId: number; day: string | null } | null>(null);
   // Tâche lue à part (lien de la synthèse vers une tâche faite hors de la fenêtre du Log).
   const [looseTask, setLooseTask] = useState<Task | DoneTask | null>(null);
   const [filter, setFilter] = useState<Filter>(NO_FILTER);
@@ -386,8 +390,25 @@ export function App() {
             open={openTask.open}
             onClose={(changed) => {
               setOpenTask({ ...openTask, open: false });
+              setBackTo(null);
               if (changed) void actions.act(async () => ({ focus: `task:${current.id}` }));
             }}
+            onBack={
+              backTo
+                ? async (changed) => {
+                    setOpenTask({ ...openTask, open: false });
+                    setBackTo(null);
+                    if (changed) await actions.act(async () => ({ focus: `project:${backTo.projectId}` }));
+                    setOpenProject((o) => ({
+                      id: backTo.projectId,
+                      field: 'notes',
+                      day: backTo.day,
+                      open: true,
+                      opening: (o?.opening ?? 0) + 1,
+                    }));
+                  }
+                : undefined
+            }
           />
         )}
         {currentProject && (
@@ -395,14 +416,16 @@ export function App() {
             key={openProject.opening}
             project={currentProject}
             field={openProject.field}
+            day={openProject.day}
             open={openProject.open}
             onClose={(changed) => {
               setOpenProject({ ...openProject, open: false });
               if (changed) void actions.act(async () => ({ focus: `project:${currentProject.id}` }));
             }}
             // Lien de la synthèse vers une tâche : la fiche du projet se ferme, celle de la tâche s'ouvre.
-            onOpenTask={async (id) => {
+            onOpenTask={async (id, day) => {
               setOpenProject({ ...openProject, open: false });
+              setBackTo({ projectId: currentProject.id, day });
               const known = allTasks.find((t) => t.id === id);
               if (known) return actions.openTask(known);
               try {
