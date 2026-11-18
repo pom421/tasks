@@ -16,7 +16,7 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
           ['↑', '↓'],
           ['k', 'j'],
         ],
-        'Élément précédent / suivant (5 voisins restent visibles)',
+        'Élément précédent / suivant',
       ],
       [
         [
@@ -42,10 +42,12 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
     'Fiche',
     [
       [[['Maj+Entrée'], ['o']], 'Lire (tâche ou projet)'],
-      [[['e']], 'Ouvrir en édition (titre, Tab : ticket, sprint, dates…)'],
+      [[['e']], 'Ouvrir en édition'],
       [[['Ctrl+Entrée']], 'Enregistrer et lire ; en lecture, fermer'],
       [[['r', 'c', 'C', 't', '1', '2', '3']], 'Comme sur la tâche'],
       [[['>'], ['<'], ['+']], 'Jira : pousser / récupérer / créer le ticket (puis confirmer)'],
+      [[['←', '→']], 'Bilan précédent / suivant'],
+      [[['Retour\u00a0arrière']], 'Retour à la synthèse'],
     ],
   ],
   [
@@ -70,7 +72,7 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
       [[['f']], 'Favori / plus favori'],
       [[['a']], 'Archiver / désarchiver'],
       [[['r']], 'Ticket du projet (epic…) : saisir, modifier, vider pour le retirer'],
-      [[['s']], 'Synthèse : la modifier'],
+      [[['s']], 'Synthèse : bilan du jour'],
       [[['x x']], 'Supprimer avec ses tâches (ou Suppr)'],
     ],
   ],

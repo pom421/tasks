@@ -1,3 +1,4 @@
+import { ArrowLeft } from 'lucide-react';
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { DoneTask, JiraFields, Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
@@ -30,6 +31,8 @@ interface TaskDialogProps {
   open: boolean;
   // changed : quelque chose a été enregistré (les données sont à recharger).
   onClose: (changed: boolean) => void;
+  // Fiche ouverte depuis un lien de la synthèse : « Retour à la synthèse ».
+  onBack?: (changed: boolean) => void;
 }
 
 type Field = 'title' | 'sprint' | 'day' | 'due' | 'notes';
@@ -64,6 +67,7 @@ export function TaskDialog({
   projectTicket,
   open,
   onClose,
+  onBack,
 }: TaskDialogProps) {
   const id = useId();
   const { act } = useActions();
@@ -315,6 +319,9 @@ export function TaskDialog({
   const close = async () => {
     if (await persist()) onClose(saved.current.changed);
   };
+  const back = async () => {
+    if (onBack && (await persist())) onBack(saved.current.changed);
+  };
 
   const startEditing = (focus: Field = 'title') => {
     setEditing(true);
@@ -355,6 +362,11 @@ export function TaskDialog({
     if (e.key === 'r' && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault();
       report.cycle();
+      return;
+    }
+    if (e.key === 'Backspace' && onBack && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      void back();
       return;
     }
     if (e.key === 'e' && !editing && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -422,6 +434,18 @@ export function TaskDialog({
             croix), puis projet et icônes. En édition, le champ prend la place du
             titre, qui reste annoncé par Radix. */}
         {/* Bordure invisible : même hauteur que le champ du titre (édition). */}
+        {onBack && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            className="back-to-summary -mb-2 -ml-2 self-start text-muted-foreground"
+            title="Retour à la synthèse du projet (Retour arrière)"
+            onClick={back}
+          >
+            <ArrowLeft aria-hidden /> Retour à la synthèse
+          </Button>
+        )}
         <DialogTitle
           className={cn('border-b border-transparent pr-6 leading-snug [overflow-wrap:anywhere]', editing && 'sr-only')}
         >

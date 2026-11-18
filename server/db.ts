@@ -1,10 +1,10 @@
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
-import { and, count, desc, eq, getColumns, gte, isNotNull, isNull, lt, lte, ne, or, sql, type SQL } from 'drizzle-orm';
+import { and, count, desc, eq, getColumns, gt, gte, isNotNull, isNull, lte, ne, or, sql, type SQL } from 'drizzle-orm';
 import { drizzle, type NodeSQLiteDatabase } from 'drizzle-orm/node-sqlite';
 import type { SQLiteUpdateSetSource } from 'drizzle-orm/sqlite-core';
-import { project, projectSummary, setting, task, type ProjectRow, type SummaryRow, type TaskRow } from './schema.ts';
+import { project, projectReview, setting, task, type ProjectRow, type ReviewRow, type TaskRow } from './schema.ts';
 import type {
   DoneTask,
   ImportResult,
@@ -17,7 +17,8 @@ import type {
   Settings,
   SettingsPatch,
   State,
-  Summaries,
+  Review,
+  Reviews,
   Task,
   TimerAction,
 } from '../shared/types.ts';
@@ -59,7 +60,7 @@ const { done_at: _doneAt, position: _position, created_at: _createdAt, ...TASK }
 export interface DeletedProject {
   project: ProjectRow;
   tasks: TaskRow[];
-  summaries: SummaryRow[]; // versions de la synthèse
+  reviews: ReviewRow[]; // bilans de la synthèse
 }
 
 export interface ProjectPatch {
@@ -67,20 +68,10 @@ export interface ProjectPatch {
   archived?: boolean;
   favorite?: boolean;
   bugtrackerKey?: string | null; // ticket : identifiant (PROJ-123)
-  notes?: string | null; // synthèse (Markdown) : enregistrée aussi comme version du jour `day`
-  day?: string; // journée du navigateur ('YYYY-MM-DD'), pour la version de la synthèse
+  notes?: string | null; // synthèse : repères (Markdown)
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-
-// Journée locale du serveur ('YYYY-MM-DD'), quand le navigateur ne donne pas la sienne.
-const localDay = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
-// 'YYYY-MM-DD' décalé de n jours.
-const addDays = (day: string, n: number) =>
-  new Date(Date.parse(`${day}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 
 export function isDate(s: unknown): s is string {
   return typeof s === 'string' && DATE_RE.test(s) && !Number.isNaN(Date.parse(s));
@@ -167,20 +158,20 @@ export class Store {
   // compter les tâches choisies déjà faites.
   state(day?: string): State {
     const { id, name, archived_at, favorite_at, bugtracker_key, notes } = getColumns(project);
-    // Synthèse : jour de sa dernière version ; done_today : une tâche du projet faite ce jour-là.
+    // Synthèse : jour du dernier bilan ; done_today : une tâche du projet faite ce jour-là.
     // "project"."id" écrit en entier : dans une requête sur une seule table, Drizzle
     // n'écrit que "id", que la sous-requête sur task prendrait pour task.id.
     const projectId = sql.raw('"project"."id"');
-    const summary_day = sql<
+    const review_day = sql<
       string | null
-    >`(SELECT MAX(${projectSummary.day}) FROM ${projectSummary} WHERE ${projectSummary.project_id} = ${projectId})`;
+    >`(SELECT MAX(${projectReview.day}) FROM ${projectReview} WHERE ${projectReview.project_id} = ${projectId})`;
     const done_today = day
       ? sql<boolean>`EXISTS (SELECT 1 FROM ${task} WHERE ${task.project_id} = ${projectId} AND ${task.done_at} = ${day})`.mapWith(
           Boolean,
         )
       : sql<boolean>`0`.mapWith(Boolean);
     const projects = this.orm
-      .select({ id, name, archived_at, favorite_at, bugtracker_key, notes, summary_day, done_today })
+      .select({ id, name, archived_at, favorite_at, bugtracker_key, notes, review_day, done_today })
       .from(project)
       .orderBy(project.position, project.id)
       .all();
@@ -291,13 +282,10 @@ export class Store {
     return this.orm.insert(project).values({ name, position: nextProjectPosition() }).returning().get();
   }
 
-  updateProject(id: number, { name, archived, favorite, bugtrackerKey, notes, day }: ProjectPatch) {
+  updateProject(id: number, { name, archived, favorite, bugtrackerKey, notes }: ProjectPatch) {
     const set: SQLiteUpdateSetSource<typeof project> = {};
     if (name !== undefined) set.name = name;
-    if (notes !== undefined && this.project(id)) {
-      set.notes = notes;
-      this.saveSummary(id, day ?? localDay(), notes ?? '');
-    }
+    if (notes !== undefined) set.notes = notes;
     if (bugtrackerKey !== undefined) set.bugtracker_key = bugtrackerKey;
     if (archived !== undefined) set.archived_at = archived ? NOW : null;
     if (favorite !== undefined) set.favorite_at = favorite ? NOW : null;
@@ -305,47 +293,42 @@ export class Store {
     return this.project(id);
   }
 
-  // Version du jour de la synthèse. Identique à la version précédente (ou vide
-  // sans version précédente) : pas de version ce jour-là, ce qui rend aussi
-  // l'annulation (u) exacte.
-  private saveSummary(projectId: number, day: string, content: string) {
-    const key = and(eq(projectSummary.project_id, projectId), eq(projectSummary.day, day));
-    const previous = this.orm
-      .select({ content: projectSummary.content })
-      .from(projectSummary)
-      .where(and(eq(projectSummary.project_id, projectId), lt(projectSummary.day, day)))
-      .orderBy(desc(projectSummary.day))
-      .get();
-    if ((previous?.content ?? '') === content) {
-      this.orm.delete(projectSummary).where(key).run();
+  // Bilan du jour `day` : enregistré, ou retiré si ses deux zones sont vides
+  // (ce qui rend aussi l'annulation d'un nouveau bilan exacte).
+  saveReview(projectId: number, { day, done, next }: Review) {
+    if (!done.trim() && !next.trim()) {
+      this.orm
+        .delete(projectReview)
+        .where(and(eq(projectReview.project_id, projectId), eq(projectReview.day, day)))
+        .run();
       return;
     }
     this.orm
-      .insert(projectSummary)
-      .values({ project_id: projectId, day, content })
-      .onConflictDoUpdate({ target: [projectSummary.project_id, projectSummary.day], set: { content } })
+      .insert(projectReview)
+      .values({ project_id: projectId, day, done, next })
+      .onConflictDoUpdate({ target: [projectReview.project_id, projectReview.day], set: { done, next } })
       .run();
   }
 
-  // Versions de la synthèse (la plus récente d'abord) et tâches faites depuis
-  // la dernière version d'avant `day` (sans version : les 7 derniers jours),
-  // proposées pour « fait récemment ». undefined si le projet n'existe pas.
-  summaries(projectId: number, day: string): Summaries | undefined {
+  // Bilans (du plus ancien au plus récent) et tâches faites depuis le premier,
+  // proposées pour « Fait dernièrement ». undefined si le projet n'existe pas.
+  reviews(projectId: number): Reviews | undefined {
     if (!this.project(projectId)) return undefined;
-    const versions = this.orm
-      .select({ day: projectSummary.day, content: projectSummary.content })
-      .from(projectSummary)
-      .where(eq(projectSummary.project_id, projectId))
-      .orderBy(desc(projectSummary.day))
+    const reviews = this.orm
+      .select({ day: projectReview.day, done: projectReview.done, next: projectReview.next })
+      .from(projectReview)
+      .where(eq(projectReview.project_id, projectId))
+      .orderBy(projectReview.day)
       .all();
-    const since = versions.find((v) => v.day < day)?.day ?? addDays(day, -7);
-    const recent = this.orm
-      .select({ id: task.id, title: task.title, done_at: task.done_at })
-      .from(task)
-      .where(and(eq(task.project_id, projectId), sql`${task.done_at} > ${since}`, lte(task.done_at, day)))
-      .orderBy(desc(task.done_at), task.id)
-      .all() as Summaries['recent'];
-    return { versions, recent };
+    const done = reviews.length
+      ? (this.orm
+          .select({ id: task.id, title: task.title, done_at: task.done_at })
+          .from(task)
+          .where(and(eq(task.project_id, projectId), gt(task.done_at, reviews[0].day)))
+          .orderBy(task.done_at, task.id)
+          .all() as Reviews['done'])
+      : [];
+    return { reviews, done };
   }
 
   // Une tâche (à faire ou faite), avec le nom de son projet : fiche ouverte
@@ -364,31 +347,31 @@ export class Store {
     const row = this.project(id);
     if (!row) return undefined;
     const tasks = this.orm.select().from(task).where(eq(task.project_id, id)).orderBy(task.id).all();
-    const summaries = this.orm
+    const reviews = this.orm
       .select()
-      .from(projectSummary)
-      .where(eq(projectSummary.project_id, id))
-      .orderBy(projectSummary.day)
+      .from(projectReview)
+      .where(eq(projectReview.project_id, id))
+      .orderBy(projectReview.day)
       .all();
     this.orm.delete(project).where(eq(project.id, id)).run();
-    return { project: row, tasks, summaries };
+    return { project: row, tasks, reviews };
   }
 
   // Annulation d'une suppression : réinsère le projet et ses tâches à
   // l'identique (mêmes id), tout ou rien.
-  restoreProject({ project: p, tasks, summaries }: DeletedProject): DeletedProject {
+  restoreProject({ project: p, tasks, reviews }: DeletedProject): DeletedProject {
     this.orm.transaction((tx) => {
       tx.insert(project).values(p).run();
       for (const t of tasks) tx.insert(task).values(t).run();
-      for (const s of summaries) tx.insert(projectSummary).values(s).run();
+      for (const r of reviews) tx.insert(projectReview).values(r).run();
     });
     const restored = this.orm
       .select()
-      .from(projectSummary)
-      .where(eq(projectSummary.project_id, p.id))
-      .orderBy(projectSummary.day)
+      .from(projectReview)
+      .where(eq(projectReview.project_id, p.id))
+      .orderBy(projectReview.day)
       .all();
-    return { project: this.project(p.id)!, tasks: tasks.map((t) => this.task(t.id)!), summaries: restored };
+    return { project: this.project(p.id)!, tasks: tasks.map((t) => this.task(t.id)!), reviews: restored };
   }
 
   // --- Tâches --------------------------------------------------------------

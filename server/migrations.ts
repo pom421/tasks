@@ -168,6 +168,20 @@ export const MIGRATIONS: Migration[] = [
       INSERT INTO project_summary (project_id, day, content)
         SELECT id, date('now', 'localtime'), notes FROM project WHERE notes IS NOT NULL AND notes <> '';`,
   },
+  {
+    // project.notes (dernière version) devient les repères ; les versions sont abandonnées.
+    version: 20,
+    name: 'bilans des projets (remplacent les versions de la synthèse)',
+    sql: `
+      DROP TABLE project_summary;
+      CREATE TABLE project_review (
+        project_id INTEGER NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+        day TEXT NOT NULL,
+        done TEXT NOT NULL,
+        next TEXT NOT NULL,
+        PRIMARY KEY (project_id, day)
+      );`,
+  },
 ];
 
 export const LATEST_VERSION = MIGRATIONS.at(-1)!.version;

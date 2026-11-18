@@ -10,7 +10,8 @@ import type {
   Settings,
   SettingsPatch,
   State,
-  Summaries,
+  Review,
+  Reviews,
   Task,
 } from '../../shared/types.ts';
 
@@ -67,9 +68,11 @@ export const api = {
     return request<Journal>('GET', `/api/journal?${params}`);
   },
   createProject: (name: string) => request<{ id: number }>('POST', '/api/projects', { name }),
-  summaries: (id: number, day: string) => request<Summaries>('GET', `/api/projects/${id}/summaries?day=${day}`),
+  reviews: (id: number) => request<Reviews>('GET', `/api/projects/${id}/reviews`),
+  saveReview: (id: number, { day, done, next }: Review) =>
+    request('PUT', `/api/projects/${id}/reviews/${day}`, { done, next }),
   getTask: (id: number) => request<Task | DoneTask>('GET', `/api/tasks/${id}`),
-  // notes = synthèse : day (journée du navigateur) date sa version.
+  // notes = repères de la synthèse (Markdown).
   updateProject: (
     id: number,
     patch: {
@@ -78,7 +81,6 @@ export const api = {
       favorite?: boolean;
       bugtracker_ticket?: string | null;
       notes?: string | null;
-      day?: string;
     },
   ) => request('PATCH', `/api/projects/${id}`, patch),
   // Renvoie le projet supprimé et ses tâches, à passer à restoreProject pour annuler.
