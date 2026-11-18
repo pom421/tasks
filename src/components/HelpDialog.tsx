@@ -56,7 +56,7 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
       [[[`${MOD}+Maj+↑/↓`]], 'Monter / descendre, jusque dans le projet voisin'],
       [[['1', '2', '3']], 'Priorité ; le même chiffre la retire'],
       [[['r']], 'Report : à reporter → ticket (Entrée) → rien (délier : r r)'],
-      [[['+ +']], 'À reporter : créer son ticket dans Jira (Échap annule)'],
+      [[['+ +']], 'À reporter : créer le ticket Jira'],
       [[['c']], 'Chrono : lancer / mettre en pause'],
       [[['C']], 'Chrono à zéro'],
       [[['t']], 'Aujourd’hui : ajouter / retirer'],
