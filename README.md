@@ -5,11 +5,12 @@ SPA React + TypeScript (Vite, Tailwind, shadcn/ui), petit serveur Node + SQLite 
 
 ## Lancer en local
 
-1. Installer **Node.js 22.18 ou plus** (24 conseillé) : https://nodejs.org. Vérifier avec `node --version`.
-2. Activer pnpm (livré avec Node via corepack) :
+1. Installer **Node.js 22.18 ou plus** (26 conseillé, voir `.nvmrc`) : https://nodejs.org. Vérifier avec `node --version`.
+2. Installer pnpm, dans la version épinglée par le projet (`packageManager` de `package.json`, toute autre version est refusée) :
    ```sh
-   corepack enable
+   npm install -g pnpm@12.19.0
    ```
+   Node 25 et plus ne fournit plus corepack, donc `corepack enable` ne marche plus. Si pnpm est déjà installé : `pnpm self-update 12.19.0`.
 3. Récupérer le code et installer :
    ```sh
    git clone https://github.com/pom421/tasks.git

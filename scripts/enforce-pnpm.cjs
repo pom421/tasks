@@ -6,7 +6,7 @@ const userAgent = process.env.npm_config_user_agent || "";
 if (!userAgent.startsWith("pnpm/")) {
   console.error(
     "\nCe projet utilise exclusivement pnpm (voir package.json > packageManager).\n" +
-      'Installez avec : corepack enable && pnpm install\n' +
+      'Installez avec : npm install -g pnpm@12.19.0 && pnpm install\n' +
       `(gestionnaire détecté : ${userAgent || "inconnu"})\n`,
   );
   process.exit(1);
