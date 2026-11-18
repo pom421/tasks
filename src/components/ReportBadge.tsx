@@ -25,7 +25,12 @@ function TicketPill({
   color?: string;
   children: ReactNode;
 }) {
-  if (!href) return <span className={cn(REPORT_BASE, color, className)} title={title}>{children}</span>;
+  if (!href)
+    return (
+      <span className={cn(REPORT_BASE, color, className)} title={title}>
+        {children}
+      </span>
+    );
   return (
     <a
       className={cn(REPORT_BASE, color, 'report-link hover:underline', className)}
@@ -49,11 +54,7 @@ export function ReportBadge({ task }: { task: Task }) {
   if (state === 'none') return null;
 
   if (state === 'wanted') {
-    return (
-      <span className={cn(REPORT_BASE, REPORT_WANTED)}>
-        à reporter
-      </span>
-    );
+    return <span className={cn(REPORT_BASE, REPORT_WANTED)}>à reporter</span>;
   }
 
   return (

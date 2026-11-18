@@ -44,7 +44,10 @@ export function DayView({ projects, dayDone, capacity }: DayViewProps) {
   return (
     <section id="day" aria-label="Aujourd’hui">
       <p
-        className={cn('day-count mt-3 text-sm', over ? 'font-medium text-destructive' : full ? 'font-medium text-orange-600 dark:text-orange-400' : 'text-muted-foreground')}
+        className={cn(
+          'day-count mt-3 text-sm',
+          over ? 'font-medium text-destructive' : full ? 'font-medium text-orange-600 dark:text-orange-400' : 'text-muted-foreground',
+        )}
         title={`Maximum : ${capacity} ${plural(capacity, 'tâche')} par jour (Réglages) ; les tâches en retard comptent`}
       >
         {total}/{capacity} {plural(total, 'tâche')}
@@ -57,11 +60,7 @@ export function DayView({ projects, dayDone, capacity }: DayViewProps) {
         </div>
       )}
       <ByProject projects={projects} keep={(t) => t.day_at === today} />
-      {!todo && (
-        <p className="empty mt-3 italic text-muted-foreground">
-          {dayDone ? 'Tout est fait.' : 'Rien de prévu.'}
-        </p>
-      )}
+      {!todo && <p className="empty mt-3 italic text-muted-foreground">{dayDone ? 'Tout est fait.' : 'Rien de prévu.'}</p>}
     </section>
   );
 }

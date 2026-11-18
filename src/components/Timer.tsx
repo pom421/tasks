@@ -41,8 +41,8 @@ export function useTimer(task: Task) {
 
   // Touches du chrono ; true si la touche a été traitée.
   const onKey = (e: KeyboardEvent) => {
-    if (e.key === 'c') toggle();
-    else if (e.key === 'C' && (running || seconds > 0)) reset();
+    if (e.key === 'c') void toggle();
+    else if (e.key === 'C' && (running || seconds > 0)) void reset();
     else return false;
     e.preventDefault();
     return true;

@@ -1,8 +1,11 @@
-import { test } from 'node:test';
+import { test } from 'vite-plus/test';
 import assert from 'node:assert/strict';
 import { splitMatches } from './highlight.ts';
 
-const marked = (text: string, q: string) => splitMatches(text, q).map((p) => (p.match ? `[${p.text}]` : p.text)).join('');
+const marked = (text: string, q: string) =>
+  splitMatches(text, q)
+    .map((p) => (p.match ? `[${p.text}]` : p.text))
+    .join('');
 
 test('recherche soulignée : toutes les occurrences, casse et accents ignorés', () => {
   assert.equal(marked('Déploiement du déploiement', 'DEPLOI'), '[Déploi]ement du [déploi]ement');

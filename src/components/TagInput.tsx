@@ -24,7 +24,19 @@ interface TagInputProps {
 // autocomplétion : ↑ / ↓ parcourent les propositions, Entrée (ou virgule)
 // ajoute, Retour arrière dans le champ vide retire le dernier, Échap vide le
 // champ et ferme la liste.
-export function TagInput({ id, tags, suggestions, onChange, label, title, placeholder, create, removeLabel, readOnly, className }: TagInputProps) {
+export function TagInput({
+  id,
+  tags,
+  suggestions,
+  onChange,
+  label,
+  title,
+  placeholder,
+  create,
+  removeLabel,
+  readOnly,
+  className,
+}: TagInputProps) {
   const listId = useId();
   const [text, setText] = useState('');
   const [open, setOpen] = useState(false);
@@ -130,7 +142,12 @@ export function TagInput({ id, tags, suggestions, onChange, label, title, placeh
         onBlur={() => (create && text.trim() ? addTyped() : add(null))}
       />
       {shown && (
-        <ul id={listId} role="listbox" aria-label={label} className="absolute top-full left-0 z-50 mt-1 min-w-full rounded-md border bg-background py-1 shadow-md">
+        <ul
+          id={listId}
+          role="listbox"
+          aria-label={label}
+          className="absolute top-full left-0 z-50 mt-1 min-w-full rounded-md border bg-background py-1 shadow-md"
+        >
           {options.map((tag, i) => (
             <li
               key={tag}

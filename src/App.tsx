@@ -1,6 +1,17 @@
 import { flushSync } from 'react-dom';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { DEFAULT_DAY_CAPACITY, allTags, jiraReady, type BugtrackerState, type DoneTask, type JournalDay, type Priority, type Project, type Settings, type Task } from '../shared/types.ts';
+import {
+  DEFAULT_DAY_CAPACITY,
+  allTags,
+  jiraReady,
+  type BugtrackerState,
+  type DoneTask,
+  type JournalDay,
+  type Priority,
+  type Project,
+  type Settings,
+  type Task,
+} from '../shared/types.ts';
 import { api } from '@/lib/api';
 import { ActionsContext, type Actions, type ProjectField, type TaskField } from '@/lib/actions';
 import { record, useHistory } from '@/lib/history';
@@ -103,10 +114,7 @@ export function App() {
   }, [message]);
 
   const load = useCallback(async (f: Filter = filterRef.current) => {
-    const [state, journal] = await Promise.all([
-      api.state(localToday()),
-      api.journal(journalQuery(f)),
-    ]);
+    const [state, journal] = await Promise.all([api.state(localToday()), api.journal(journalQuery(f))]);
     setData({
       projects: state.projects,
       days: journal.days,
@@ -163,8 +171,7 @@ export function App() {
         },
         { stay },
       ),
-    openTask: (task, field = 'notes') =>
-      setOpenTask((o) => ({ id: task.id, field, open: true, opening: (o?.opening ?? 0) + 1 })),
+    openTask: (task, field = 'notes') => setOpenTask((o) => ({ id: task.id, field, open: true, opening: (o?.opening ?? 0) + 1 })),
     openProject: (project, field = 'notes') =>
       setOpenProject((o) => ({ id: project.id, field, open: true, opening: (o?.opening ?? 0) + 1 })),
     setLastProject: (id) => (lastProject.current = id),
@@ -252,7 +259,7 @@ export function App() {
         lastN.current = Date.now();
         const here = target.closest('#projects .project')?.id.replace('project-', '');
         const inputs = [...document.querySelectorAll<HTMLInputElement>('#projects input.add')];
-        const find = (id: unknown) => inputs.find((i) => i.dataset.navKey === `add:${id}`);
+        const find = (id: string | number | null | undefined) => inputs.find((i) => i.dataset.navKey === `add:${id}`);
         const field = find(here) ?? find(lastProject.current) ?? inputs[0] ?? document.getElementById('new-project');
         // Déjà dessus en lecture : on repasse par le focus pour écrire.
         if (field === document.activeElement) field?.blur();
@@ -334,10 +341,7 @@ export function App() {
   }, []);
 
   // Tâche ouverte dans la fiche : relue dans les données à jour (liste ou journal).
-  const allTasks: (Task & { project_name?: string })[] = [
-    ...data.projects.flatMap((p) => p.tasks),
-    ...data.days.flatMap((d) => d.tasks),
-  ];
+  const allTasks: (Task & { project_name?: string })[] = [...data.projects.flatMap((p) => p.tasks), ...data.days.flatMap((d) => d.tasks)];
   // Tâche hors des données chargées (faite il y a longtemps, ouverte depuis un lien de la synthèse).
   const current = openTask && (allTasks.find((t) => t.id === openTask.id) ?? (looseTask?.id === openTask.id ? looseTask : undefined));
   const currentProject = openProject && data.projects.find((p) => p.id === openProject.id);
@@ -351,101 +355,124 @@ export function App() {
   return (
     <ActionsContext.Provider value={actions}>
       <TooltipProvider>
-      {current && (
-        <TaskDialog
-          key={openTask.opening}
-          task={current}
-          projectName={projectName(current)}
-          field={openTask.field}
-          jira={jiraReady(data.settings)}
-          projectTicket={data.projects.find((p) => p.id === current.project_id)?.bugtracker_key ?? null}
-          tagSuggestions={[...new Set([...allTags(data.projects.flatMap((p) => p.tasks)), ...data.logTags])].sort((a, b) => a.localeCompare(b, 'fr'))}
-          open={openTask.open}
-          onClose={(changed) => {
-            setOpenTask({ ...openTask, open: false });
-            if (changed) actions.act(async () => ({ focus: `task:${current.id}` }));
-          }}
-        />
-      )}
-      {currentProject && (
-        <ProjectDialog
-          key={openProject.opening}
-          project={currentProject}
-          field={openProject.field}
-          open={openProject.open}
-          onClose={(changed) => {
-            setOpenProject({ ...openProject, open: false });
-            if (changed) actions.act(async () => ({ focus: `project:${currentProject.id}` }));
-          }}
-          // Lien de la synthèse vers une tâche : la fiche du projet se ferme, celle de la tâche s'ouvre.
-          onOpenTask={async (id) => {
-            setOpenProject({ ...openProject, open: false });
-            const known = allTasks.find((t) => t.id === id);
-            if (known) return actions.openTask(known);
-            try {
-              const { done_at, ...rest } = (await api.getTask(id)) as Task & { done_at: string | null };
-              const found = (done_at ? { ...rest, done_at } : rest) as Task | DoneTask;
-              setLooseTask(found);
-              actions.openTask(found);
-            } catch (err) {
-              toast((err as Error).message);
-            }
-          }}
-        />
-      )}
-      {/* Une colonne : un onglet à la fois (Projets, Aujourd’hui ou Log). */}
-      <div className="mx-auto max-w-2xl px-4">
-        <Toolbar helpOpen={helpOpen} onHelpOpen={setHelpOpen} />
-        <main className="pb-16">
-          <div className="min-w-0">
-            <div data-nav-header role="tablist" aria-label="Vue" className="mt-3 flex h-[26px] items-center gap-4 lg:mt-5">
-              {TABS.map((tab) => (
-                <button
-                  key={tab.to}
-                  type="button"
-                  role="tab"
-                  aria-selected={tab.selected}
-                  title={`${tab.label} (${tab.key})`}
-                  className={cn(
-                    'border-b-2 font-semibold',
-                    tab.selected ? 'border-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
-                  )}
-                  onClick={() => navigate(tab.to)}
-                >
-                  {tab.label}
-                </button>
-              ))}
+        {current && (
+          <TaskDialog
+            key={openTask.opening}
+            task={current}
+            projectName={projectName(current)}
+            field={openTask.field}
+            jira={jiraReady(data.settings)}
+            projectTicket={data.projects.find((p) => p.id === current.project_id)?.bugtracker_key ?? null}
+            tagSuggestions={[...new Set([...allTags(data.projects.flatMap((p) => p.tasks)), ...data.logTags])].sort((a, b) =>
+              a.localeCompare(b, 'fr'),
+            )}
+            open={openTask.open}
+            onClose={(changed) => {
+              setOpenTask({ ...openTask, open: false });
+              if (changed) void actions.act(async () => ({ focus: `task:${current.id}` }));
+            }}
+          />
+        )}
+        {currentProject && (
+          <ProjectDialog
+            key={openProject.opening}
+            project={currentProject}
+            field={openProject.field}
+            open={openProject.open}
+            onClose={(changed) => {
+              setOpenProject({ ...openProject, open: false });
+              if (changed) void actions.act(async () => ({ focus: `project:${currentProject.id}` }));
+            }}
+            // Lien de la synthèse vers une tâche : la fiche du projet se ferme, celle de la tâche s'ouvre.
+            onOpenTask={async (id) => {
+              setOpenProject({ ...openProject, open: false });
+              const known = allTasks.find((t) => t.id === id);
+              if (known) return actions.openTask(known);
+              try {
+                const { done_at, ...rest } = (await api.getTask(id)) as Task & { done_at: string | null };
+                const found = (done_at ? { ...rest, done_at } : rest) as Task | DoneTask;
+                setLooseTask(found);
+                actions.openTask(found);
+              } catch (err) {
+                toast((err as Error).message);
+              }
+            }}
+          />
+        )}
+        {/* Une colonne : un onglet à la fois (Projets, Aujourd’hui ou Log). */}
+        <div className="mx-auto max-w-2xl px-4">
+          <Toolbar helpOpen={helpOpen} onHelpOpen={setHelpOpen} />
+          <main className="pb-16">
+            <div className="min-w-0">
+              <div data-nav-header role="tablist" aria-label="Vue" className="mt-3 flex h-[26px] items-center gap-4 lg:mt-5">
+                {TABS.map((tab) => (
+                  <button
+                    key={tab.to}
+                    type="button"
+                    role="tab"
+                    aria-selected={tab.selected}
+                    title={`${tab.label} (${tab.key})`}
+                    className={cn(
+                      'border-b-2 font-semibold',
+                      tab.selected ? 'border-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
+                    )}
+                    onClick={() => navigate(tab.to)}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+              {/* Filtres de l'onglet Projets : sous les onglets, alignés à droite. */}
+              {projectsView && (
+                <ProjectFilters
+                  projects={data.projects}
+                  bugtrackerFilter={bugtrackerFilter}
+                  onBugtrackerFilter={cycleBugtrackerFilter}
+                  priorityFilter={priorityFilter}
+                  onPriorityFilter={cyclePriorityFilter}
+                  favoritesOnly={favoritesOnly}
+                  onFavoritesOnly={() => setFavoritesOnly((v) => !v)}
+                  archivedOnly={archivedOnly}
+                  onArchivedOnly={() => setArchivedOnly((v) => !v)}
+                  tagFilter={tagFilter}
+                  onTagFilter={setTagFilter}
+                />
+              )}
+              {dayView && <DayView projects={data.projects} dayDone={data.dayDone} capacity={data.settings.day_capacity} />}
+              {upcomingView && <UpcomingView projects={data.projects} />}
+              {logView && (
+                <Journal
+                  days={data.days}
+                  dates={data.dates}
+                  tags={data.logTags}
+                  reportPending={data.logReportPending}
+                  projects={data.projects}
+                  filter={filter}
+                  onFilter={changeFilter}
+                />
+              )}
+              {projectsView && (
+                <ProjectList
+                  projects={data.projects}
+                  archivedOnly={archivedOnly}
+                  bugtrackerFilter={bugtrackerFilter}
+                  priorityFilter={priorityFilter}
+                  favoritesOnly={favoritesOnly}
+                  tagFilter={tagFilter}
+                />
+              )}
             </div>
-            {/* Filtres de l'onglet Projets : sous les onglets, alignés à droite. */}
-            {projectsView && (
-              <ProjectFilters
-                projects={data.projects}
-                bugtrackerFilter={bugtrackerFilter}
-                onBugtrackerFilter={cycleBugtrackerFilter}
-                priorityFilter={priorityFilter}
-                onPriorityFilter={cyclePriorityFilter}
-                favoritesOnly={favoritesOnly}
-                onFavoritesOnly={() => setFavoritesOnly((v) => !v)}
-                archivedOnly={archivedOnly}
-                onArchivedOnly={() => setArchivedOnly((v) => !v)}
-                tagFilter={tagFilter}
-                onTagFilter={setTagFilter}
-              />
-            )}
-            {dayView && <DayView projects={data.projects} dayDone={data.dayDone} capacity={data.settings.day_capacity} />}
-            {upcomingView && <UpcomingView projects={data.projects} />}
-            {logView && <Journal days={data.days} dates={data.dates} tags={data.logTags} reportPending={data.logReportPending} projects={data.projects} filter={filter} onFilter={changeFilter} />}
-            {projectsView && (
-              <ProjectList projects={data.projects} archivedOnly={archivedOnly} bugtrackerFilter={bugtrackerFilter} priorityFilter={priorityFilter} favoritesOnly={favoritesOnly} tagFilter={tagFilter} />
-            )}
-          </div>
-        </main>
-      </div>
-      {message && (
-        <div id="toast" role="status" className="fixed bottom-4 left-1/2 -translate-x-1/2 rounded-md bg-foreground px-3.5 py-1.5 text-sm text-background">
-          {message}
+          </main>
         </div>
-      )}
+        {message && (
+          <div
+            id="toast"
+            role="status"
+            className="fixed bottom-4 left-1/2 -translate-x-1/2 rounded-md bg-foreground px-3.5 py-1.5 text-sm text-background"
+          >
+            {message}
+          </div>
+        )}
       </TooltipProvider>
     </ActionsContext.Provider>
   );

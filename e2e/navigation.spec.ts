@@ -44,8 +44,14 @@ const test = base.extend<{ data: ReturnType<typeof seed> }>({
 test('↑/↓ parcourent projets, tâches et champs d’ajout ; Début/Fin', async ({ page, data }) => {
   const { alpha, beta, tasks } = data;
   const expected = [
-    `project:${alpha.id}`, `task:${tasks.une.id}`, `task:${tasks.deux.id}`, `add:${alpha.id}`,
-    `project:${beta.id}`, `task:${tasks.trois.id}`, `add:${beta.id}`, 'new-project',
+    `project:${alpha.id}`,
+    `task:${tasks.une.id}`,
+    `task:${tasks.deux.id}`,
+    `add:${alpha.id}`,
+    `project:${beta.id}`,
+    `task:${tasks.trois.id}`,
+    `add:${beta.id}`,
+    'new-project',
   ];
   for (const key of expected) {
     await page.keyboard.press('ArrowDown');
@@ -127,7 +133,9 @@ test('Entrée sur une tâche puis Échap : annule, focus sur la tâche, navigati
   expect(await current(page)).toBe(`task:${data.tasks.deux.id}`);
 });
 
-test('édition du titre : la fenêtre perd le focus (Alt+Tab, Ctrl sous Linux) = saisie et sélection gardées ; clic ailleurs = annulée', async ({ page }) => {
+test('édition du titre : la fenêtre perd le focus (Alt+Tab, Ctrl sous Linux) = saisie et sélection gardées ; clic ailleurs = annulée', async ({
+  page,
+}) => {
   await pressDown(page, 2);
   await page.keyboard.press('Enter');
   const input = page.locator('input.edit');
@@ -138,6 +146,7 @@ test('édition du titre : la fenêtre perd le focus (Alt+Tab, Ctrl sous Linux) =
   // Fenêtre inactive : le champ perd le focus, puis le retrouve au retour.
   await page.evaluate(() => {
     const field = document.activeElement as HTMLInputElement;
+    // oxlint-disable-next-line typescript/unbound-method -- remis tel quel sur document plus bas
     const hasFocus = document.hasFocus;
     document.hasFocus = () => false;
     field.blur();
@@ -405,7 +414,12 @@ test('nouveau projet : le focus va sur la saisie de sa première tâche', async 
   await page.keyboard.type('Première tâche');
   await page.keyboard.press('Enter');
   await expect(page.locator(`#project-${gamma.id} .name`, { hasText: 'Première tâche' })).toBeVisible();
-  expect(store.state().projects.find((p) => p.id === gamma.id)!.tasks.map((t) => t.title)).toEqual(['Première tâche']);
+  expect(
+    store
+      .state()
+      .projects.find((p) => p.id === gamma.id)!
+      .tasks.map((t) => t.title),
+  ).toEqual(['Première tâche']);
   await expect(page.locator(`[data-nav-key="add:${gamma.id}"]`)).toBeFocused();
 });
 
@@ -496,7 +510,12 @@ test('vers un projet vide ; les projets archivés masqués sont sautés', async 
   await pressDown(page, 3); // « Deux »
   await page.keyboard.press('Control+Shift+ArrowDown');
   await expect(page.locator(`#project-${gamma.id} .name`)).toHaveText(['Gamma', 'Deux']);
-  expect(store.state().projects.find((p) => p.id === gamma.id)!.tasks.map((t) => t.title)).toEqual(['Deux']);
+  expect(
+    store
+      .state()
+      .projects.find((p) => p.id === gamma.id)!
+      .tasks.map((t) => t.title),
+  ).toEqual(['Deux']);
 });
 
 // --- Favoris, archive, suppression ---------------------------------------
@@ -712,7 +731,11 @@ test('clavier sur un projet : f favori, a archiver, x x supprimer, u annule tout
 
 const row = (page: Page, taskId: number) => page.locator(`li.task:has([data-nav-key="task:${taskId}"])`);
 
-test('r fait tourner : à reporter (contour) → ticket demandé dans la ligne (Échap : retour à rien) → reportée → rien', async ({ page, store, data }) => {
+test('r fait tourner : à reporter (contour) → ticket demandé dans la ligne (Échap : retour à rien) → reportée → rien', async ({
+  page,
+  store,
+  data,
+}) => {
   const une = row(page, data.tasks.une.id);
   await pressDown(page, 2);
   await page.keyboard.press('r');
@@ -871,7 +894,11 @@ test('ticket du projet : pas d’icône ; vidé, il est retiré ; lien refusé ;
   await expect(page.locator('.project-ticket')).toHaveCount(0);
 });
 
-test('fiche du projet : o lit, e édite (nom → Tab → ticket → contenu), Ctrl+Entrée lecture puis fermeture, u annule', async ({ page, store, data }) => {
+test('fiche du projet : o lit, e édite (nom → Tab → ticket → contenu), Ctrl+Entrée lecture puis fermeture, u annule', async ({
+  page,
+  store,
+  data,
+}) => {
   store.updateSettings({ bugtracker_base_url: 'https://entreprise.tickets.fr' });
   await reload(page);
   const head = page.locator(`#project-${data.alpha.id} .project-head`);
@@ -913,7 +940,11 @@ test('fiche du projet : o lit, e édite (nom → Tab → ticket → contenu), Ct
   // Contenu : icône 🗒 toujours visible, sans survol.
   await expect(head.getByRole('button', { name: 'Fiche du projet' })).toBeVisible();
   await expect.poll(() => current(page)).toBe(`project:${data.alpha.id}`);
-  expect(store.state().projects[0]).toMatchObject({ name: 'Alpha 2', bugtracker_key: 'EPIC-7', notes: '## Objectif\nLivrer x f a **vite**' });
+  expect(store.state().projects[0]).toMatchObject({
+    name: 'Alpha 2',
+    bugtracker_key: 'EPIC-7',
+    notes: '## Objectif\nLivrer x f a **vite**',
+  });
   // Rien d'autre n'a bougé : ni favori, ni archive, tâches intactes.
   expect(store.state().projects[0]).toMatchObject({ favorite_at: null, archived_at: null });
   expect(store.state().projects[0].tasks.map((t) => t.title)).toEqual(['Une', 'Deux']);
@@ -926,7 +957,11 @@ test('fiche du projet : o lit, e édite (nom → Tab → ticket → contenu), Ct
   expect(store.state().projects[0]).toMatchObject({ name: 'Alpha', bugtracker_key: null, notes: null });
 });
 
-test('fiche du projet : Maj+Entrée et clic sur 🗒 (au survol sans contenu) ; Échap ferme en enregistrant ; ticket invalide refusé', async ({ page, store, data }) => {
+test('fiche du projet : Maj+Entrée et clic sur 🗒 (au survol sans contenu) ; Échap ferme en enregistrant ; ticket invalide refusé', async ({
+  page,
+  store,
+  data,
+}) => {
   const head = page.locator(`#project-${data.beta.id} .project-head`);
   const icon = head.getByRole('button', { name: 'Fiche du projet' });
   await expect(icon).toBeHidden(); // sans contenu : au survol seulement
@@ -958,7 +993,10 @@ test('fiche du projet : Maj+Entrée et clic sur 🗒 (au survol sans contenu) ; 
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 
-test('non-régression : o / e sur une tâche ouvrent toujours la fiche de la tâche ; dans le nom du projet en édition, o s’écrit', async ({ page, data }) => {
+test('non-régression : o / e sur une tâche ouvrent toujours la fiche de la tâche ; dans le nom du projet en édition, o s’écrit', async ({
+  page,
+  data,
+}) => {
   await pressDown(page, 2); // « Une »
   await page.keyboard.press('e');
   await expect(page.getByRole('dialog', { name: 'Une' }).getByLabel('Titre')).toBeFocused();
@@ -1007,7 +1045,11 @@ test('r r : identifiant invalide ou vide, retour à rien ; u rend « à reporter
   await expect(une.locator('.report')).toHaveCount(0);
 });
 
-test('fiche : ticket en un contrôle, aucun → à reporter → identifiant ; Échap ou invalide : retour à aucun ; ✕ et u', async ({ page, store, data }) => {
+test('fiche : ticket en un contrôle, aucun → à reporter → identifiant ; Échap ou invalide : retour à aucun ; ✕ et u', async ({
+  page,
+  store,
+  data,
+}) => {
   const une = row(page, data.tasks.une.id);
   await pressDown(page, 2);
   await page.keyboard.press('o');
@@ -1058,7 +1100,10 @@ test('fiche : ticket en un contrôle, aucun → à reporter → identifiant ; É
   await expect(une.locator('.report-done')).toHaveText('reporté · PROJ-2');
 });
 
-test('fiche : r comme sur la ligne (lecture et édition hors champ) ; clic ailleurs = retour à aucun ; r dans le titre = une lettre', async ({ page, store }) => {
+test('fiche : r comme sur la ligne (lecture et édition hors champ) ; clic ailleurs = retour à aucun ; r dans le titre = une lettre', async ({
+  page,
+  store,
+}) => {
   await pressDown(page, 2);
   await page.keyboard.press('o');
   const dialog = page.getByRole('dialog', { name: 'Une' });
@@ -1094,7 +1139,11 @@ test('fiche : r comme sur la ligne (lecture et édition hors champ) ; clic aille
   await expect(control).toHaveText('aucun');
 });
 
-test('fiche Markdown : e édite (titre → Tab → ticket → dates → tags → contenu), Ctrl+Entrée lecture puis fermeture', async ({ page, store, data }) => {
+test('fiche Markdown : e édite (titre → Tab → ticket → dates → tags → contenu), Ctrl+Entrée lecture puis fermeture', async ({
+  page,
+  store,
+  data,
+}) => {
   await pressDown(page, 3); // « Deux »
   await page.keyboard.press('Shift+Enter');
   const dialog = page.getByRole('dialog', { name: 'Deux' });
@@ -1363,7 +1412,8 @@ test('bouton « tâches à reporter » : place réservée, rien ne bouge quand i
 });
 
 test('titre long : « … » sur une ligne, titre complet au survol ou au focus clavier', async ({ page, store, data }) => {
-  const long = 'Préparer la présentation trimestrielle pour le comité de direction avec les chiffres consolidés de toutes les équipes produit';
+  const long =
+    'Préparer la présentation trimestrielle pour le comité de direction avec les chiffres consolidés de toutes les équipes produit';
   store.updateTask(data.tasks.une.id, { title: long, bugtracker: 'done', bugtrackerKey: 'PROJ-1234' });
   await reload(page);
   const name = page.locator(`[data-nav-key="task:${data.tasks.une.id}"]`);
@@ -1390,7 +1440,8 @@ test('titre long : « … » sur une ligne, titre complet au survol ou au focus 
 });
 
 test('titre long au clavier : info-bulle après un court délai, rien si on passe vite dessus', async ({ page, store, data }) => {
-  const long = 'Préparer la présentation trimestrielle pour le comité de direction avec les chiffres consolidés de toutes les équipes produit';
+  const long =
+    'Préparer la présentation trimestrielle pour le comité de direction avec les chiffres consolidés de toutes les équipes produit';
   store.updateTask(data.tasks.une.id, { title: long });
   await reload(page);
   await page.mouse.move(0, 0); // pas de survol
@@ -1421,7 +1472,11 @@ test('ligne épurée et fiche ordonnée : titre, ticket et sprint, dates et temp
   expect(labels).toEqual(['Ticket', 'Sprint', 'Date prévue', 'Échéance', 'Temps passé', 'Tags', 'Contenu']);
 });
 
-test('ligne : temps passé (sablier, « 3 min ») sur la 2e ligne (au bout du titre dans le Log) ; rien sans temps', async ({ page, store, data }) => {
+test('ligne : temps passé (sablier, « 3 min ») sur la 2e ligne (au bout du titre dans le Log) ; rien sans temps', async ({
+  page,
+  store,
+  data,
+}) => {
   store.updateTask(data.tasks.une.id, { timeSpent: 180 });
   await reload(page);
   const une = row(page, data.tasks.une.id);
@@ -1572,7 +1627,11 @@ test('une colonne : le Log, dans son onglet, prend la place des projets (écran 
   }
 });
 
-test('onglets : chacun garde la position du curseur (L, T ou clic) ; L sur une tâche n’ouvre plus la fiche', async ({ page, store, data }) => {
+test('onglets : chacun garde la position du curseur (L, T ou clic) ; L sur une tâche n’ouvre plus la fiche', async ({
+  page,
+  store,
+  data,
+}) => {
   const quatre = store.createTask(data.beta.id, 'Quatre');
   const cinq = store.createTask(data.beta.id, 'Cinq');
   store.updateTask(data.tasks.une.id, { doneAt: '2026-09-25' });
@@ -1645,7 +1704,11 @@ test('zone « Log » : un cadre par jour', async ({ page, store, data }) => {
 
 // --- Annulation (u) ----------------------------------------------------------
 
-test('u annule les actions une à une, U les rejoue ; une nouvelle action efface ce qui pouvait être rejoué', async ({ page, store, data }) => {
+test('u annule les actions une à une, U les rejoue ; une nouvelle action efface ce qui pouvait être rejoué', async ({
+  page,
+  store,
+  data,
+}) => {
   const titles = () => store.state().projects[0].tasks.map((t) => t.title);
   const une = page.locator(`[data-nav-key="task:${data.tasks.une.id}"]`);
   await pressDown(page, 2); // « Une »
@@ -1900,7 +1963,8 @@ test('Échap Échap : retire tous les filtres (projets et Log) ; un seul Échap 
   await page.keyboard.press('!');
   await page.keyboard.press('F');
   const pressed = (id: string) => page.locator(id);
-  for (const id of ['#bugtracker-pending', '#priority-filter', '#favorites-only']) await expect(pressed(id)).toHaveAttribute('aria-pressed', 'true');
+  for (const id of ['#bugtracker-pending', '#priority-filter', '#favorites-only'])
+    await expect(pressed(id)).toHaveAttribute('aria-pressed', 'true');
   await page.keyboard.press('A');
   await expect(pressed('#archived-only')).toHaveAttribute('aria-pressed', 'true');
 
@@ -1929,7 +1993,15 @@ test('aide ? : raccourcis groupés, tout visible sur écran courant, liste qui d
   await reload(page);
   await page.keyboard.press('?');
   const dialog = page.getByRole('dialog', { name: 'Raccourcis' });
-  await expect(dialog.getByRole('heading', { level: 3 })).toHaveText(['Navigation', 'Fiche', 'Tâche', 'Projet', 'Filtres des projets', 'Log', 'Général']);
+  await expect(dialog.getByRole('heading', { level: 3 })).toHaveText([
+    'Navigation',
+    'Fiche',
+    'Tâche',
+    'Projet',
+    'Filtres des projets',
+    'Log',
+    'Général',
+  ]);
   // Raccourcis ajoutés au ménage : déplacement d'un projet, Suppr, fermeture de la fiche.
   await expect(dialog.getByText('Monter / descendre le projet')).toBeVisible();
   await expect(dialog.getByText('Supprimer avec ses tâches (ou Suppr)')).toBeVisible();
@@ -2016,7 +2088,12 @@ test('↑/↓ : 5 éléments visibles avant et après l’élément courant', as
       const items = [...document.querySelectorAll('[data-nav]')];
       const index = items.indexOf(document.activeElement as Element);
       const j = index + header.length - 5;
-      return { index, headers: header.length, top: window.scrollY, ok: j <= 0 ? window.scrollY === 0 : window.scrollY > 0 && visible([...header, ...items][j]) };
+      return {
+        index,
+        headers: header.length,
+        top: window.scrollY,
+        ok: j <= 0 ? window.scrollY === 0 : window.scrollY > 0 && visible([...header, ...items][j]),
+      };
     });
   const seen = new Set<number>();
   for (let s = await state(); s.index > 0; s = await state()) {

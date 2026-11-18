@@ -157,7 +157,7 @@ export function ProjectDialog({ project, field, open, onClose, onOpenTask }: Pro
   const onInputEnter = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter' || e.ctrlKey || e.metaKey) return;
     e.preventDefault();
-    stopEditing();
+    void stopEditing();
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
@@ -169,8 +169,8 @@ export function ProjectDialog({ project, field, open, onClose, onOpenTask }: Pro
     }
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
-      if (editing) stopEditing();
-      else close();
+      if (editing) void stopEditing();
+      else void close();
     }
   };
 
@@ -235,7 +235,7 @@ export function ProjectDialog({ project, field, open, onClose, onOpenTask }: Pro
         onKeyDown={onKeyDown}
         onEscapeKeyDown={(e) => {
           e.preventDefault();
-          close();
+          void close();
         }}
         onOpenAutoFocus={(e) => {
           e.preventDefault();
@@ -247,9 +247,7 @@ export function ProjectDialog({ project, field, open, onClose, onOpenTask }: Pro
           focusByKey(`project:${project.id}`);
         }}
       >
-        <DialogTitle className={cn('pr-6 leading-snug [overflow-wrap:anywhere]', editing && 'sr-only')}>
-          {values.name}
-        </DialogTitle>
+        <DialogTitle className={cn('pr-6 leading-snug [overflow-wrap:anywhere]', editing && 'sr-only')}>{values.name}</DialogTitle>
         {editing && (
           <div className="grid gap-1.5 pr-6">
             <Input
@@ -366,7 +364,13 @@ export function ProjectDialog({ project, field, open, onClose, onOpenTask }: Pro
                   ))}
                 </select>
                 {shown && (
-                  <Button type="button" size="sm" className="summary-restore h-7 text-xs" title="Faire de cette version la synthèse du jour (annulable : u)" onClick={restore}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="summary-restore h-7 text-xs"
+                    title="Faire de cette version la synthèse du jour (annulable : u)"
+                    onClick={restore}
+                  >
                     Restaurer cette version
                   </Button>
                 )}

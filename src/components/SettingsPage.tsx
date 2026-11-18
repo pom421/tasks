@@ -79,7 +79,10 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
     setStatus({});
     try {
       // PAT vide : celui enregistré est gardé.
-      const saved = await api.updateSettings({ bugtracker_base_url: bugtrackerBaseUrl.trim() || null, ...(pat.trim() && { jira_pat: pat.trim() }) });
+      const saved = await api.updateSettings({
+        bugtracker_base_url: bugtrackerBaseUrl.trim() || null,
+        ...(pat.trim() && { jira_pat: pat.trim() }),
+      });
       setBugtrackerBaseUrl(saved.bugtracker_base_url ?? '');
       setPat('');
       setPatSet(saved.jira_pat_set);
@@ -168,13 +171,11 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
             )}
           </div>
           <p id={`${id}-pat-hint`} className="text-xs text-muted-foreground">
-            Jira Data Center : profil → Jetons d’accès personnels. Sert à pousser une tâche vers son ticket et à la récupérer depuis Jira (fiche, &gt; et &lt;). Gardé
-            sur ce poste, jamais réaffiché ni exporté.
+            Jira Data Center : profil → Jetons d’accès personnels. Sert à pousser une tâche vers son ticket et à la récupérer depuis Jira
+            (fiche, &gt; et &lt;). Gardé sur ce poste, jamais réaffiché ni exporté.
           </p>
           <div className="mt-2 flex items-center gap-3">
-            <Button type="submit">
-              Enregistrer
-            </Button>
+            <Button type="submit">Enregistrer</Button>
             <p role="status" className="text-sm text-muted-foreground">
               {status.ok}
             </p>
@@ -239,9 +240,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
           >
             Importer .sqlite
           </Button>
-          <Button onClick={() => mdInput.current?.click()}>
-            Importer .md
-          </Button>
+          <Button onClick={() => mdInput.current?.click()}>Importer .md</Button>
           <input ref={dbInput} type="file" accept=".sqlite,.db,.sqlite3" hidden onChange={pick(importDb)} />
           <input ref={mdInput} type="file" accept=".md,.markdown,.txt" hidden onChange={pick(importMd)} />
         </div>

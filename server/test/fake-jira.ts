@@ -22,18 +22,26 @@ const sprintText = (s: (typeof SPRINTS)[number]) =>
   `com.atlassian.greenhopper.service.sprint.Sprint@1a2b[id=${s.id},rapidViewId=1,state=${s.state},name=${s.name},startDate=<null>,sequence=${s.id}]`;
 
 export async function fakeJira(issues: Record<string, FakeIssue>) {
-  const json = (res: http.ServerResponse, body: unknown) => res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify(body));
+  const json = (res: http.ServerResponse, body: unknown) =>
+    res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify(body));
   const server = http.createServer(async (req, res) => {
     if (req.headers.authorization !== 'Bearer secret') return res.writeHead(401).end();
     const url = req.url!;
-    if (url === '/rest/api/2/field') return json(res, [
-      { id: 'summary' },
-      { id: SPRINT_FIELD, schema: { custom: 'com.pyxis.greenhopper.jira:gh-sprint' } },
-      { id: EPIC_FIELD, schema: { custom: 'com.pyxis.greenhopper.jira:gh-epic-link' } },
-    ]);
+    if (url === '/rest/api/2/field')
+      return json(res, [
+        { id: 'summary' },
+        { id: SPRINT_FIELD, schema: { custom: 'com.pyxis.greenhopper.jira:gh-sprint' } },
+        { id: EPIC_FIELD, schema: { custom: 'com.pyxis.greenhopper.jira:gh-epic-link' } },
+      ]);
     // Types du projet (noms en français) : la tâche est choisie par son nom.
     if (/^\/rest\/api\/2\/project\/[A-Z]+$/.test(url)) {
-      return json(res, { issueTypes: [{ id: '1', name: 'Epic' }, { id: '3', name: 'Tâche' }, { id: '5', name: 'Sous-tâche', subtask: true }] });
+      return json(res, {
+        issueTypes: [
+          { id: '1', name: 'Epic' },
+          { id: '3', name: 'Tâche' },
+          { id: '5', name: 'Sous-tâche', subtask: true },
+        ],
+      });
     }
     // Création : projet, type Tâche, Epic Link ; la clé est numérotée à partir de 100.
     if (req.method === 'POST' && url === '/rest/api/2/issue') {
@@ -45,7 +53,13 @@ export async function fakeJira(issues: Record<string, FakeIssue>) {
       }
       const created = `${fields.project.key}-${100 + Object.keys(issues).length}`;
       const sprint = SPRINT_FIELD in fields ? (SPRINTS.find((s) => s.id === fields[SPRINT_FIELD])?.name ?? null) : null;
-      issues[created] = { summary: fields.summary, description: fields.description ?? null, duedate: fields.duedate ?? null, sprint, epic: fields[EPIC_FIELD] };
+      issues[created] = {
+        summary: fields.summary,
+        description: fields.description ?? null,
+        duedate: fields.duedate ?? null,
+        sprint,
+        epic: fields[EPIC_FIELD],
+      };
       return res.writeHead(201, { 'Content-Type': 'application/json' }).end(JSON.stringify({ id: '1', key: created }));
     }
     // Deux tableaux Scrum (le sprint actif est sur les deux) ; fermés jamais demandés.
@@ -53,7 +67,9 @@ export async function fakeJira(issues: Record<string, FakeIssue>) {
     const board = url.match(/^\/rest\/agile\/1\.0\/board\/(\d)\/sprint\?state=active,future/)?.[1];
     if (board) {
       const open = SPRINTS.filter((s) => s.state !== 'CLOSED').reverse(); // à venir d'abord : le tri est au serveur
-      return json(res, { values: (board === '1' ? open : open.slice(-1)).map(({ id, name, state }) => ({ id, name, state: state.toLowerCase() })) });
+      return json(res, {
+        values: (board === '1' ? open : open.slice(-1)).map(({ id, name, state }) => ({ id, name, state: state.toLowerCase() })),
+      });
     }
     const key = url.match(/\/rest\/api\/2\/issue\/([^?]+)/)?.[1] ?? '';
     const issue = issues[key];
@@ -62,7 +78,8 @@ export async function fakeJira(issues: Record<string, FakeIssue>) {
       const chunks: Buffer[] = [];
       for await (const c of req) chunks.push(c as Buffer);
       const { fields } = JSON.parse(Buffer.concat(chunks).toString());
-      if (!fields.summary) return res.writeHead(400, { 'Content-Type': 'application/json' }).end(JSON.stringify({ errors: { summary: 'obligatoire' } }));
+      if (!fields.summary)
+        return res.writeHead(400, { 'Content-Type': 'application/json' }).end(JSON.stringify({ errors: { summary: 'obligatoire' } }));
       const sprint = SPRINT_FIELD in fields ? (SPRINTS.find((s) => s.id === fields[SPRINT_FIELD])?.name ?? null) : (issue.sprint ?? null);
       issues[key] = { ...issue, summary: fields.summary, description: fields.description, duedate: fields.duedate, sprint };
       return res.writeHead(204).end();

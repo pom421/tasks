@@ -26,7 +26,11 @@ const open = async (page: Page) => {
 
 const toggle = (page: Page, title: string) => row(page, title).getByRole('button', { name: 'Chrono', exact: true });
 
-test('bouton Chrono : lance (icône pause pleine, toujours visible) puis met en pause ; temps passé sur la 2e ligne', async ({ page, store, data }) => {
+test('bouton Chrono : lance (icône pause pleine, toujours visible) puis met en pause ; temps passé sur la 2e ligne', async ({
+  page,
+  store,
+  data,
+}) => {
   await open(page);
   const une = row(page, 'Une');
   await expect(toggle(page, 'Une')).toBeHidden();

@@ -26,6 +26,7 @@ Présenter 2 ou 3 options, la recommandée en premier, avec les conflits et ce
 qu'il faudrait déplacer. Attendre le choix avant de coder.
 
 Convention en place :
+
 - minuscule = action sur l'élément courant (`f`, `a`, `r`, `t`, `c`, `x x`…) ;
 - majuscule = onglet ou filtre (`P` `T` `S` `L` ; `R` `F` `A`) ;
 - symbole = filtre spécial (`!`, `#` tags) ou champ (`/`) ;

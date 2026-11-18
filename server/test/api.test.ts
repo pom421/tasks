@@ -1,4 +1,4 @@
-import { test, before, after } from 'node:test';
+import { test, beforeAll as before, afterAll as after } from 'vite-plus/test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import fs from 'node:fs';
@@ -37,7 +37,12 @@ function contentType(body: unknown) {
 
 // body: any : réponses JSON lues librement dans les assertions.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function call(method: string, url: string, body?: unknown, headers: Record<string, string> = {}): Promise<{ status: number; body: any }> {
+async function call(
+  method: string,
+  url: string,
+  body?: unknown,
+  headers: Record<string, string> = {},
+): Promise<{ status: number; body: any }> {
   const json = body !== undefined && contentType(body) === 'application/json';
   const res = await fetch(base + url, {
     method,
@@ -58,7 +63,10 @@ test('projets et tâches : création, édition, complétion, journal', async () 
 
   let { body: state } = await call('GET', '/api/state');
   assert.equal(state.projects[0].name, 'Alpha bis');
-  assert.deepEqual(state.projects[0].tasks.map((t: any) => t.title), ['Une bis', 'Deux']);
+  assert.deepEqual(
+    state.projects[0].tasks.map((t: any) => t.title),
+    ['Une bis', 'Deux'],
+  );
 
   await call('PATCH', `/api/tasks/${t1.id}`, { done: true, done_at: '2026-09-20' });
   await call('PATCH', `/api/tasks/${t2.id}`, { done: true, done_at: '2026-09-22' });
@@ -68,24 +76,39 @@ test('projets et tâches : création, édition, complétion, journal', async () 
 
   // Sans filtre : dernière journée seulement.
   let { body: j } = await call('GET', '/api/journal');
-  assert.deepEqual(j.days.map((d: any) => d.date), ['2026-09-22']);
+  assert.deepEqual(
+    j.days.map((d: any) => d.date),
+    ['2026-09-22'],
+  );
 
   // Par projet : toutes les dates, plus récente d'abord.
   ({ body: j } = await call('GET', `/api/journal?project=${p.id}`));
-  assert.deepEqual(j.days.map((d: any) => d.date), ['2026-09-22', '2026-09-20']);
+  assert.deepEqual(
+    j.days.map((d: any) => d.date),
+    ['2026-09-22', '2026-09-20'],
+  );
 
   // Même date de début et de fin : toute la journée.
   ({ body: j } = await call('GET', '/api/journal?from=2026-09-20&to=2026-09-20'));
-  assert.deepEqual(j.days.map((d: any) => d.date), ['2026-09-20']);
+  assert.deepEqual(
+    j.days.map((d: any) => d.date),
+    ['2026-09-20'],
+  );
   assert.equal(j.days[0].tasks[0].title, 'Une bis');
 
   // Période : bornes incluses.
   ({ body: j } = await call('GET', '/api/journal?from=2026-09-20&to=2026-09-22'));
-  assert.deepEqual(j.days.map((d: any) => d.date), ['2026-09-22', '2026-09-20']);
+  assert.deepEqual(
+    j.days.map((d: any) => d.date),
+    ['2026-09-22', '2026-09-20'],
+  );
   ({ body: j } = await call('GET', '/api/journal?from=2026-09-21&to=2026-09-21'));
   assert.deepEqual(j.days, []);
   ({ body: j } = await call('GET', '/api/journal?from=2026-09-21'));
-  assert.deepEqual(j.days.map((d: any) => d.date), ['2026-09-22']);
+  assert.deepEqual(
+    j.days.map((d: any) => d.date),
+    ['2026-09-22'],
+  );
 
   // Décocher : retour dans le projet.
   await call('PATCH', `/api/tasks/${t1.id}`, { done: false });
@@ -180,7 +203,10 @@ test('import markdown', async () => {
   const { body: j } = await call('GET', '/api/journal?from=2026-09-24&to=2026-09-24');
   assert.deepEqual(
     j.days[0].tasks.map((t: any) => [t.project_name, t.title]),
-    [['Maison', 'Acheter peinture'], ['Sans projet', 'Tâche isolée']],
+    [
+      ['Maison', 'Acheter peinture'],
+      ['Sans projet', 'Tâche isolée'],
+    ],
   );
 });
 
@@ -261,7 +287,22 @@ test('migration : une base v1 (sans colonne de report) est mise à niveau à l�
            PRAGMA user_version = 1;`);
   v1.close();
   const old = new Store(file);
-  assert.deepEqual(old.state().projects[0].tasks[0], { id: 1, project_id: 1, title: 'Tâche v1', bugtracker_wanted_at: null, bugtracker_at: null, bugtracker_key: null, notes: null, time_spent: 0, timer_started_at: null, day_at: null, due_at: null, sprint: null, tags: [], priority: null });
+  assert.deepEqual(old.state().projects[0].tasks[0], {
+    id: 1,
+    project_id: 1,
+    title: 'Tâche v1',
+    bugtracker_wanted_at: null,
+    bugtracker_at: null,
+    bugtracker_key: null,
+    notes: null,
+    time_spent: 0,
+    timer_started_at: null,
+    day_at: null,
+    due_at: null,
+    sprint: null,
+    tags: [],
+    priority: null,
+  });
   assert.ok(old.updateTask(1, { bugtracker: 'done', bugtrackerKey: 'PROJ-1' })?.bugtracker_at);
   old.close();
 });
@@ -360,14 +401,21 @@ test('migrations 4 et 15 : une tâche « reportée » (v3) sans ticket redevient
 });
 
 test('réglages : URL du bugtracker conservée en base, validée', async () => {
-  assert.deepEqual((await call('GET', '/api/settings')).body, { bugtracker_base_url: null, day_capacity: 5, jira_pat_set: false });
+  assert.deepEqual((await call('GET', '/api/settings')).body, {
+    bugtracker_base_url: null,
+    day_capacity: 5,
+    jira_pat_set: false,
+  });
   const { body } = await call('PUT', '/api/settings', { bugtracker_base_url: 'https://entreprise.tickets.fr/' });
   assert.equal(body.bugtracker_base_url, 'https://entreprise.tickets.fr'); // sans « / » final
   assert.equal((await call('GET', '/api/state')).body.settings.bugtracker_base_url, 'https://entreprise.tickets.fr');
   assert.equal((await call('PUT', '/api/settings', { bugtracker_base_url: 'javascript:alert(1)' })).status, 400);
   assert.equal((await call('PUT', '/api/settings', { bugtracker_base_url: '' })).body.bugtracker_base_url, null);
   // Formulaire d'un autre site : refusé comme le reste de l'API.
-  assert.equal((await call('PUT', '/api/settings', { bugtracker_base_url: 'https://x.io' }, { Origin: 'https://evil.example' })).status, 403);
+  assert.equal(
+    (await call('PUT', '/api/settings', { bugtracker_base_url: 'https://x.io' }, { Origin: 'https://evil.example' })).status,
+    403,
+  );
 });
 
 test('détails de la tâche : notes (Markdown), ticket par sa clé', async () => {
@@ -423,7 +471,10 @@ test('migration 12 : colonnes et réglage du ticket renommés (bugtracker), donn
             PRAGMA user_version = 11;`);
   v11.close();
   const store11 = new Store(file);
-  assert.deepEqual(store11.migration.applied.map((m) => m.version), [12, 13, 14, 15, 16, 17, 18, 19]);
+  assert.deepEqual(
+    store11.migration.applied.map((m) => m.version),
+    [12, 13, 14, 15, 16, 17, 18, 19],
+  );
   const [done] = store11.journal({ limit: 5 }).days[0].tasks;
   assert.deepEqual(
     [done.bugtracker_wanted_at, done.bugtracker_at, done.bugtracker_key],
@@ -438,7 +489,12 @@ test('migration 12 : colonnes et réglage du ticket renommés (bugtracker), donn
 test('suppression annulable : DELETE renvoie la tâche, restore la réinsère à l’identique', async () => {
   const { body: p } = await call('POST', '/api/projects', { name: 'Annulation' });
   const { body: t } = await call('POST', '/api/tasks', { project_id: p.id, title: 'À restaurer' });
-  await call('PATCH', `/api/tasks/${t.id}`, { notes: 'Mes notes', bugtracker_ticket: 'ABC-1', done: true, done_at: '2026-09-01' });
+  await call('PATCH', `/api/tasks/${t.id}`, {
+    notes: 'Mes notes',
+    bugtracker_ticket: 'ABC-1',
+    done: true,
+    done_at: '2026-09-01',
+  });
 
   const { status, body: deleted } = await call('DELETE', `/api/tasks/${t.id}`);
   assert.equal(status, 200);
@@ -472,8 +528,14 @@ test('suppression de projet annulable : DELETE renvoie projet et tâches, restor
   const { status, body: deleted } = await call('DELETE', `/api/projects/${p.id}`);
   assert.equal(status, 200);
   assert.equal(deleted.project.name, 'Projet à restaurer');
-  assert.deepEqual(deleted.tasks.map((t: { id: number }) => t.id), [t1.id, t2.id]);
-  assert.equal((await call('GET', '/api/state')).body.projects.some((x: { id: number }) => x.id === p.id), false);
+  assert.deepEqual(
+    deleted.tasks.map((t: { id: number }) => t.id),
+    [t1.id, t2.id],
+  );
+  assert.equal(
+    (await call('GET', '/api/state')).body.projects.some((x: { id: number }) => x.id === p.id),
+    false,
+  );
 
   const { status: restored, body: back } = await call('POST', '/api/projects/restore', deleted);
   assert.equal(restored, 201);
@@ -497,7 +559,11 @@ test('suppression de projet annulable : DELETE renvoie projet et tâches, restor
 test('journal : liste des jours ayant des entrées, filtrée par projet', async () => {
   const { body: a } = await call('POST', '/api/projects', { name: 'Jours A' });
   const { body: b } = await call('POST', '/api/projects', { name: 'Jours B' });
-  for (const [p, d] of [[a.id, '2019-03-01'], [a.id, '2019-03-03'], [b.id, '2019-03-02']]) {
+  for (const [p, d] of [
+    [a.id, '2019-03-01'],
+    [a.id, '2019-03-03'],
+    [b.id, '2019-03-02'],
+  ]) {
     const { body: t } = await call('POST', '/api/tasks', { project_id: p, title: `t ${d}` });
     await call('PATCH', `/api/tasks/${t.id}`, { done: true, done_at: d });
   }
@@ -511,7 +577,10 @@ test('journal : fenêtre des N derniers jours ayant des entrées (limit), filtre
   const { body: p } = await call('POST', '/api/projects', { name: 'Fenêtre' });
   const days = ['2018-01-01', '2018-01-02', '2018-01-04', '2018-01-05', '2018-01-08', '2018-01-09', '2018-01-10'];
   for (const d of days) {
-    const { body: t } = await call('POST', '/api/tasks', { project_id: p.id, title: d === '2018-01-04' ? 'Revue fenêtre' : `f ${d}` });
+    const { body: t } = await call('POST', '/api/tasks', {
+      project_id: p.id,
+      title: d === '2018-01-04' ? 'Revue fenêtre' : `f ${d}`,
+    });
     await call('PATCH', `/api/tasks/${t.id}`, { done: true, done_at: d });
   }
   const shown = async (query: string) =>
@@ -523,7 +592,10 @@ test('journal : fenêtre des N derniers jours ayant des entrées (limit), filtre
   // Recherche : seulement les jours qui ont une tâche correspondante ; dates suivent la recherche.
   const { body: q } = await call('GET', `/api/journal?project=${p.id}&limit=5&q=fenetre`);
   assert.deepEqual(q.dates, ['2018-01-04']);
-  assert.deepEqual(q.days.map((d: any) => d.tasks.map((t: any) => t.title)), [['Revue fenêtre']]);
+  assert.deepEqual(
+    q.days.map((d: any) => d.tasks.map((t: any) => t.title)),
+    [['Revue fenêtre']],
+  );
   // Limite invalide : ignorée.
   assert.equal((await call('GET', `/api/journal?project=${p.id}&limit=-2`)).status, 200);
 });
@@ -536,7 +608,10 @@ test('versions du schéma : base neuve suivie dans schema_migration', async () =
     name: string;
     applied_at: string | null;
   }[];
-  assert.deepEqual(rows.map((r) => r.version), MIGRATIONS.map((m) => m.version));
+  assert.deepEqual(
+    rows.map((r) => r.version),
+    MIGRATIONS.map((m) => m.version),
+  );
   assert.ok(rows.every((r) => r.applied_at));
   assert.equal(fresh.migration.from, 0);
   assert.equal(fresh.migration.backup, null); // rien à sauvegarder
@@ -579,17 +654,35 @@ test('versions du schéma : base v2 → dernière version (3, 4, 5, 6…), sauve
   const store2 = new Store(file);
   const m = store2.migration;
   assert.equal(m.from, 2);
-  assert.deepEqual(m.applied.map((x) => x.version), Array.from({ length: LATEST_VERSION - 2 }, (_, i) => i + 3));
+  assert.deepEqual(
+    m.applied.map((x) => x.version),
+    Array.from({ length: LATEST_VERSION - 2 }, (_, i) => i + 3),
+  );
   // Suivi : versions 1-2 connues (date inconnue), les suivantes datées.
   const rows = store2.db.prepare('SELECT version, applied_at FROM schema_migration ORDER BY version').all() as {
     version: number;
     applied_at: string | null;
   }[];
-  assert.deepEqual(rows.filter((r) => !r.applied_at).map((r) => r.version), [1, 2]);
+  assert.deepEqual(
+    rows.filter((r) => !r.applied_at).map((r) => r.version),
+    [1, 2],
+  );
   // Données conservées et transformées par les migrations.
   assert.deepEqual(store2.state().projects[0].tasks[0], {
-    id: 1, project_id: 1, title: 'Reportée en v2', bugtracker_wanted_at: '2026-01-01 09:00:00',
-    bugtracker_at: null, bugtracker_key: null, notes: null, time_spent: 0, timer_started_at: null, day_at: null, due_at: null, sprint: null, tags: [], priority: null,
+    id: 1,
+    project_id: 1,
+    title: 'Reportée en v2',
+    bugtracker_wanted_at: '2026-01-01 09:00:00',
+    bugtracker_at: null,
+    bugtracker_key: null,
+    notes: null,
+    time_spent: 0,
+    timer_started_at: null,
+    day_at: null,
+    due_at: null,
+    sprint: null,
+    tags: [],
+    priority: null,
   });
   store2.close();
 
@@ -651,8 +744,7 @@ test('recherche dans le Log : titre, contenu, ticket ; casse et accents ignorés
 test('déplacement de projet : index parmi tous les projets', async () => {
   const ids: number[] = [];
   for (const name of ['P1', 'P2', 'P3']) ids.push((await call('POST', '/api/projects', { name })).body.id);
-  const order = async () =>
-    (await call('GET', '/api/state')).body.projects.filter((p: any) => ids.includes(p.id)).map((p: any) => p.name);
+  const order = async () => (await call('GET', '/api/state')).body.projects.filter((p: any) => ids.includes(p.id)).map((p: any) => p.name);
   const all = async () => (await call('GET', '/api/state')).body.projects.map((p: any) => p.id);
   // P3 juste avant P2.
   const before = await all();
@@ -685,7 +777,10 @@ test('chrono : lancer, pause, un seul en marche, tâche faite, remise à zéro, 
   await call('PATCH', `/api/tasks/${b.id}`, { timer: 'start' });
   let { body: state } = await call('GET', '/api/state');
   const running = state.projects.find((x: any) => x.id === p.id).tasks.filter((x: any) => x.timer_started_at);
-  assert.deepEqual(running.map((x: any) => x.title), ['B']);
+  assert.deepEqual(
+    running.map((x: any) => x.title),
+    ['B'],
+  );
 
   // Tâche faite : son chrono s'arrête ; une tâche faite ne se relance pas.
   ({ body: t } = await call('PATCH', `/api/tasks/${b.id}`, { done: true }));
@@ -696,7 +791,10 @@ test('chrono : lancer, pause, un seul en marche, tâche faite, remise à zéro, 
   // Remise à zéro, puis annulation (valeurs précédentes remises telles quelles).
   ({ body: t } = await call('PATCH', `/api/tasks/${a.id}`, { timer: 'reset' }));
   assert.deepEqual([t.time_spent, t.timer_started_at], [0, null]);
-  ({ body: t } = await call('PATCH', `/api/tasks/${a.id}`, { time_spent: 120, timer_started_at: '2026-09-25 08:00:00' }));
+  ({ body: t } = await call('PATCH', `/api/tasks/${a.id}`, {
+    time_spent: 120,
+    timer_started_at: '2026-09-25 08:00:00',
+  }));
   assert.deepEqual([t.time_spent, t.timer_started_at], [120, '2026-09-25 08:00:00']);
 
   assert.equal((await call('PATCH', `/api/tasks/${a.id}`, { timer: 'stop' })).status, 400);
@@ -723,7 +821,10 @@ test('Plan journée : choisir une tâche pour un jour, compte des faites, maximu
   await call('PATCH', `/api/tasks/${b.id}`, { done: true, done_at: '2026-07-01' });
   let { body: state } = await call('GET', '/api/state?day=2026-07-01');
   assert.equal(state.dayDone, 1);
-  assert.deepEqual(state.projects.find((x: any) => x.id === p.id).tasks.map((t: any) => [t.title, t.day_at]), [['A', '2026-07-01']]);
+  assert.deepEqual(
+    state.projects.find((x: any) => x.id === p.id).tasks.map((t: any) => [t.title, t.day_at]),
+    [['A', '2026-07-01']],
+  );
   assert.equal((await call('GET', '/api/state?day=2026-07-02')).body.dayDone, 0);
   assert.equal((await call('GET', '/api/state?day=hier')).status, 400);
 
@@ -770,13 +871,18 @@ test('échéance, sprint et tags : écriture, validation, filtre du Log, restaur
   await call('PATCH', `/api/tasks/${a.id}`, { done: true, done_at: '2026-04-01' });
   await call('PATCH', `/api/tasks/${b.id}`, { done: true, done_at: '2026-04-02' });
   const titles = async (tags: string) =>
-    (await call('GET', `/api/journal?project=${p.id}&tags=${encodeURIComponent(tags)}`)).body.days.flatMap((d: any) => d.tasks.map((x: any) => x.title));
+    (await call('GET', `/api/journal?project=${p.id}&tags=${encodeURIComponent(tags)}`)).body.days.flatMap((d: any) =>
+      d.tasks.map((x: any) => x.title),
+    );
   assert.deepEqual(await titles('client'), ['B', 'A']);
   assert.deepEqual(await titles('client,site-web'), ['A']);
   assert.deepEqual(await titles('autre'), []);
   // Tags des tâches faites, proposés par le filtre du Log.
   const { tags } = (await call('GET', '/api/journal?limit=5')).body;
-  assert.ok(['client', 'site-web'].every((t) => tags.includes(t)), String(tags));
+  assert.ok(
+    ['client', 'site-web'].every((t) => tags.includes(t)),
+    String(tags),
+  );
 
   // Suppression puis restauration : échéance et tags conservés.
   const { body: deleted } = await call('DELETE', `/api/tasks/${a.id}`);
@@ -822,17 +928,38 @@ test('Jira : PAT jamais relu ni exporté, lecture et écriture d’un ticket', a
     assert.ok(!JSON.stringify((await call('GET', '/api/state')).body).includes('secret'));
 
     // Lecture : description sans \r, date seule, sprint actif (pas le fermé d'avant).
-    assert.deepEqual((await call('GET', '/api/jira/JIRA-1')).body, { title: 'Dans Jira', notes: 'Texte\nJira', due_at: '2026-10-12', sprint: 'Sprint 42' });
+    assert.deepEqual((await call('GET', '/api/jira/JIRA-1')).body, {
+      title: 'Dans Jira',
+      notes: 'Texte\nJira',
+      due_at: '2026-10-12',
+      sprint: 'Sprint 42',
+    });
     // Écriture : summary, description, duedate ; sprint inchangé, pas réécrit.
-    assert.equal((await call('PUT', '/api/jira/JIRA-1', { title: 'Depuis Tasks', notes: null, due_at: null, sprint: 'Sprint 42' })).status, 200);
-    assert.deepEqual(issues['JIRA-1'], { summary: 'Depuis Tasks', description: '', duedate: null, sprint: 'Sprint 42' });
+    assert.equal(
+      (await call('PUT', '/api/jira/JIRA-1', { title: 'Depuis Tasks', notes: null, due_at: null, sprint: 'Sprint 42' })).status,
+      200,
+    );
+    assert.deepEqual(issues['JIRA-1'], {
+      summary: 'Depuis Tasks',
+      description: '',
+      duedate: null,
+      sprint: 'Sprint 42',
+    });
     // Sprint changé : trouvé par son nom parmi les sprints actifs ou à venir du projet ; null le retire.
-    assert.equal((await call('PUT', '/api/jira/JIRA-1', { title: 'Depuis Tasks', notes: null, due_at: null, sprint: 'Sprint 43' })).status, 200);
+    assert.equal(
+      (await call('PUT', '/api/jira/JIRA-1', { title: 'Depuis Tasks', notes: null, due_at: null, sprint: 'Sprint 43' })).status,
+      200,
+    );
     assert.equal(issues['JIRA-1'].sprint, 'Sprint 43');
     assert.equal((await call('PUT', '/api/jira/JIRA-1', { title: 'Depuis Tasks', notes: null, due_at: null, sprint: null })).status, 200);
     assert.equal(issues['JIRA-1'].sprint, null);
     assert.equal((await call('GET', '/api/jira/JIRA-1')).body.sprint, null);
-    const closed = await call('PUT', '/api/jira/JIRA-1', { title: 'Depuis Tasks', notes: null, due_at: null, sprint: 'Sprint 41' });
+    const closed = await call('PUT', '/api/jira/JIRA-1', {
+      title: 'Depuis Tasks',
+      notes: null,
+      due_at: null,
+      sprint: 'Sprint 41',
+    });
     assert.equal(closed.status, 502);
     assert.match(closed.body.error, /Sprint « Sprint 41 » introuvable/);
     // Propositions du champ Sprint : actifs puis à venir, sans doublon ni sprint fermé.
@@ -844,15 +971,40 @@ test('Jira : PAT jamais relu ni exporté, lecture et écriture d’un ticket', a
     assert.equal((await call('GET', '/api/jira/jira-1')).status, 404);
 
     // Création : tâche (type trouvé par son nom) rattachée à l'epic, mêmes champs.
-    const made = await call('POST', '/api/jira/JIRA-1/tasks', { title: 'Nouvelle', notes: 'Détail', due_at: '2026-11-30', sprint: 'Sprint 43' });
+    const made = await call('POST', '/api/jira/JIRA-1/tasks', {
+      title: 'Nouvelle',
+      notes: 'Détail',
+      due_at: '2026-11-30',
+      sprint: 'Sprint 43',
+    });
     assert.equal(made.status, 201);
     assert.match(made.body.key, /^JIRA-\d+$/);
-    assert.deepEqual(issues[made.body.key], { summary: 'Nouvelle', description: 'Détail', duedate: '2026-11-30', sprint: 'Sprint 43', epic: 'JIRA-1' });
+    assert.deepEqual(issues[made.body.key], {
+      summary: 'Nouvelle',
+      description: 'Détail',
+      duedate: '2026-11-30',
+      sprint: 'Sprint 43',
+      epic: 'JIRA-1',
+    });
     // Sans contenu, échéance ni sprint : champs absents (pas de valeur vide envoyée).
-    const bare = await call('POST', '/api/jira/JIRA-1/tasks', { title: 'Nue', notes: null, due_at: null, sprint: null });
-    assert.deepEqual(issues[bare.body.key], { summary: 'Nue', description: null, duedate: null, sprint: null, epic: 'JIRA-1' });
+    const bare = await call('POST', '/api/jira/JIRA-1/tasks', {
+      title: 'Nue',
+      notes: null,
+      due_at: null,
+      sprint: null,
+    });
+    assert.deepEqual(issues[bare.body.key], {
+      summary: 'Nue',
+      description: null,
+      duedate: null,
+      sprint: null,
+      epic: 'JIRA-1',
+    });
     assert.equal((await call('POST', '/api/jira/JIRA-1/tasks', { title: '' })).status, 400);
-    assert.equal((await call('POST', '/api/jira/JIRA-1/tasks', { title: 'x', notes: null, due_at: null, sprint: 'Sprint 41' })).status, 502); // fermé
+    assert.equal(
+      (await call('POST', '/api/jira/JIRA-1/tasks', { title: 'x', notes: null, due_at: null, sprint: 'Sprint 41' })).status,
+      502,
+    ); // fermé
     assert.equal((await call('POST', '/api/jira/jira-1/tasks', { title: 'x' })).status, 404);
 
     // Erreurs de Jira renvoyées telles quelles (502).
@@ -875,7 +1027,7 @@ test('Jira : PAT jamais relu ni exporté, lecture et écriture d’un ticket', a
   }
 });
 
-test('ordre des tâches d\'un projet : toutes, une fois chacune ; les faites ignorées', async () => {
+test("ordre des tâches d'un projet : toutes, une fois chacune ; les faites ignorées", async () => {
   const p = (await call('POST', '/api/projects', { name: 'Ordre' })).body;
   const ids: number[] = [];
   for (const title of ['A', 'B', 'C']) ids.push((await call('POST', '/api/tasks', { project_id: p.id, title })).body.id);
@@ -897,17 +1049,25 @@ test('ordre des tâches d\'un projet : toutes, une fois chacune ; les faites ign
 
 test('synthèse : une version par jour, identique = pas de version ; état du cercle ; fait récemment ; suppression et restauration', async () => {
   const p = (await call('POST', '/api/projects', { name: 'Synthèse' })).body;
-  const project = async (day: string) => (await call('GET', `/api/state?day=${day}`)).body.projects.find((x: { id: number }) => x.id === p.id);
+  const project = async (day: string) =>
+    (await call('GET', `/api/state?day=${day}`)).body.projects.find((x: { id: number }) => x.id === p.id);
   const versions = async (day: string) => (await call('GET', `/api/projects/${p.id}/summaries?day=${day}`)).body.versions;
 
   // Sans version : rien, pas de tâche faite ce jour-là.
-  assert.deepEqual(await project('2026-10-01'), { ...(await project('2026-10-01')), summary_day: null, done_today: false });
+  assert.deepEqual(await project('2026-10-01'), {
+    ...(await project('2026-10-01')),
+    summary_day: null,
+    done_today: false,
+  });
 
   // Deux enregistrements le même jour : une seule version (la dernière) ; project.notes suit.
   await call('PATCH', `/api/projects/${p.id}`, { notes: 'v1', day: '2026-10-01' });
   await call('PATCH', `/api/projects/${p.id}`, { notes: 'v1 bis', day: '2026-10-01' });
   await call('PATCH', `/api/projects/${p.id}`, { notes: 'v2', day: '2026-10-03' });
-  assert.deepEqual(await versions('2026-10-03'), [{ day: '2026-10-03', content: 'v2' }, { day: '2026-10-01', content: 'v1 bis' }]);
+  assert.deepEqual(await versions('2026-10-03'), [
+    { day: '2026-10-03', content: 'v2' },
+    { day: '2026-10-01', content: 'v1 bis' },
+  ]);
   assert.equal((await project('2026-10-03')).notes, 'v2');
   assert.equal((await project('2026-10-03')).summary_day, '2026-10-03');
 

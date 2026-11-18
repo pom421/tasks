@@ -26,6 +26,7 @@ async function call(config: JiraConfig, method: 'GET' | 'PUT' | 'POST', path: st
         Accept: 'application/json',
         ...(body ? { 'Content-Type': 'application/json' } : {}),
       },
+      // oxlint-disable-next-line unicorn/no-invalid-fetch-options -- body seulement hors GET (les appelants GET n'en passent pas)
       body: body ? JSON.stringify(body) : undefined,
       signal: AbortSignal.timeout(15_000),
     });
@@ -41,7 +42,8 @@ async function call(config: JiraConfig, method: 'GET' | 'PUT' | 'POST', path: st
   throw new JiraError(`Jira a répondu ${res.status}${details.length ? ` : ${details.join(' ; ')}` : ''}`);
 }
 
-const get = async <T>(config: JiraConfig, path: string, key?: string) => (await (await call(config, 'GET', path, undefined, key)).json()) as T;
+const get = async <T>(config: JiraConfig, path: string, key?: string) =>
+  (await (await call(config, 'GET', path, undefined, key)).json()) as T;
 
 // Identifiant du champ Sprint (customfield_…), null sans Jira Software.
 async function sprintField(config: JiraConfig): Promise<string | null> {
@@ -99,7 +101,10 @@ export async function readIssue(config: JiraConfig, key: string): Promise<JiraFi
 // doublon (un sprint peut être sur plusieurs tableaux). Jira n'a pas d'appel
 // « sprints d'un projet » : on passe par ses tableaux.
 export async function listSprints(config: JiraConfig, project: string): Promise<{ id: number; name: string }[]> {
-  const boards = await get<{ values: { id: number }[] }>(config, `/rest/agile/1.0/board?type=scrum&projectKeyOrId=${encodeURIComponent(project)}`);
+  const boards = await get<{ values: { id: number }[] }>(
+    config,
+    `/rest/agile/1.0/board?type=scrum&projectKeyOrId=${encodeURIComponent(project)}`,
+  );
   const found = new Map<number, { id: number; name: string; active: boolean }>();
   for (const board of boards.values) {
     const sprints = await get<{ values: { id: number; name: string; state: string }[] }>(
@@ -132,10 +137,14 @@ export async function writeIssue(config: JiraConfig, key: string, fields: JiraFi
 
 // Type « tâche » d'un projet : son nom varie avec la langue de Jira.
 async function taskTypeId(config: JiraConfig, project: string): Promise<string> {
-  const data = await get<{ issueTypes?: { id: string; name: string; subtask?: boolean }[] }>(config, `/rest/api/2/project/${encodeURIComponent(project)}`);
+  const data = await get<{ issueTypes?: { id: string; name: string; subtask?: boolean }[] }>(
+    config,
+    `/rest/api/2/project/${encodeURIComponent(project)}`,
+  );
   const types = (data.issueTypes ?? []).filter((t) => !t.subtask);
   const found = types.find((t) => /^(task|tâche|tache)$/i.test(t.name));
-  if (!found) throw new JiraError(`Type « Tâche » introuvable dans le projet ${project} (types : ${types.map((t) => t.name).join(', ') || 'aucun'})`);
+  if (!found)
+    throw new JiraError(`Type « Tâche » introuvable dans le projet ${project} (types : ${types.map((t) => t.name).join(', ') || 'aucun'})`);
   return found.id;
 }
 

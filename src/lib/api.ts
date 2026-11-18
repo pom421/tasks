@@ -1,4 +1,18 @@
-import type { DoneTask, ImportResult, BugtrackerState, JiraFields, Priority, TimerAction, Journal, JournalFilter, Settings, SettingsPatch, State, Summaries, Task } from '../../shared/types.ts';
+import type {
+  DoneTask,
+  ImportResult,
+  BugtrackerState,
+  JiraFields,
+  Priority,
+  TimerAction,
+  Journal,
+  JournalFilter,
+  Settings,
+  SettingsPatch,
+  State,
+  Summaries,
+  Task,
+} from '../../shared/types.ts';
 
 // Le serveur exige un Content-Type précis par route (protection CSRF).
 async function request<T>(method: string, url: string, body?: unknown): Promise<T> {
@@ -56,8 +70,17 @@ export const api = {
   summaries: (id: number, day: string) => request<Summaries>('GET', `/api/projects/${id}/summaries?day=${day}`),
   getTask: (id: number) => request<Task | DoneTask>('GET', `/api/tasks/${id}`),
   // notes = synthèse : day (journée du navigateur) date sa version.
-  updateProject: (id: number, patch: { name?: string; archived?: boolean; favorite?: boolean; bugtracker_ticket?: string | null; notes?: string | null; day?: string }) =>
-    request('PATCH', `/api/projects/${id}`, patch),
+  updateProject: (
+    id: number,
+    patch: {
+      name?: string;
+      archived?: boolean;
+      favorite?: boolean;
+      bugtracker_ticket?: string | null;
+      notes?: string | null;
+      day?: string;
+    },
+  ) => request('PATCH', `/api/projects/${id}`, patch),
   // Renvoie le projet supprimé et ses tâches, à passer à restoreProject pour annuler.
   deleteProject: (id: number) => request<Record<string, unknown>>('DELETE', `/api/projects/${id}`),
   restoreProject: (deleted: Record<string, unknown>) => request('POST', '/api/projects/restore', deleted),
@@ -65,8 +88,7 @@ export const api = {
   updateTask: (id: number, patch: TaskPatch) => request('PATCH', `/api/tasks/${id}`, patch),
   orderTasks: (projectId: number, ids: number[]) => request('POST', `/api/projects/${projectId}/order`, { ids }),
   moveProject: (id: number, index: number) => request('POST', `/api/projects/${id}/move`, { index }),
-  moveTask: (id: number, projectId: number, index: number) =>
-    request('POST', `/api/tasks/${id}/move`, { project_id: projectId, index }),
+  moveTask: (id: number, projectId: number, index: number) => request('POST', `/api/tasks/${id}/move`, { project_id: projectId, index }),
   // Renvoie la tâche supprimée (toutes ses colonnes), à passer à restoreTask pour annuler.
   deleteTask: (id: number) => request<Record<string, unknown>>('DELETE', `/api/tasks/${id}`),
   restoreTask: (row: Record<string, unknown>) => request('POST', '/api/tasks/restore', row),

@@ -146,7 +146,14 @@ export function handleNavKey(e: KeyboardEvent) {
 
 // Touches de déplacement : Ctrl+Maj+↑/↓, ou ⌘+Maj+↑/↓ (sur macOS, Ctrl+Maj+↑/↓ ouvre
 // Mission Control). Pas Alt : Ubuntu le réserve aux fenêtres.
-export function moveDirection(e: { altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean; key: string; target: EventTarget | null }): -1 | 1 | undefined {
+export function moveDirection(e: {
+  altKey: boolean;
+  ctrlKey: boolean;
+  metaKey: boolean;
+  shiftKey: boolean;
+  key: string;
+  target: EventTarget | null;
+}): -1 | 1 | undefined {
   if (!e.shiftKey || e.altKey || !(e.ctrlKey || e.metaKey) || (e.target as HTMLElement).matches('input, textarea')) return undefined;
   return ({ ArrowUp: -1, ArrowDown: 1 } as Record<string, -1 | 1>)[e.key];
 }

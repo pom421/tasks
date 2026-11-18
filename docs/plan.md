@@ -8,9 +8,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## En cours
 
-
 ## Décisions attendues
-
 
 ## Idées / plus tard
 
@@ -21,11 +19,12 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 - [ ] Supprimer les branches distantes fusionnées `ui/taches-icones-a-droite` et `ui/disposition-deux-colonnes` (à faire sur GitHub)
 - [ ] ~~Animations des listes~~ : AutoAnimate essayé puis retiré (rendu jugé pire). Ne pas reproposer sans nouvelle demande.
 - [ ] Corbeille durable (table `trash` : JSON du projet + tâches) si l'annulation
-  `u`, limitée à l'onglet et à une seule action, ne suffit plus
+      `u`, limitée à l'onglet et à une seule action, ne suffit plus
 - [ ] Mémoriser les filtres (projets et Log) entre deux rechargements
 
 ## Fait (récent)
 
+- [x] Vite+ (comme csp-cli) : `vp dev` / `vp build`, tests unitaires sous Vitest (`vp test`), `vp check` (formatage oxfmt, lint oxlint avec les types, TypeScript) ; code reformaté ; `pnpm ready` en local et en CI
 - [x] README : installer pnpm sans corepack (absent de Node 25 et plus) : `npm install -g pnpm@12.19.0` (PR #20)
 - [x] Synthèse d'un projet (remplace son contenu) : Markdown libre (le projet et ses liens, fait récemment, prochaines étapes), une version par jour consultable et restaurable ; boutons « Tâches faites » (depuis la version d'avant) et « Priorités 1 » qui insèrent des liens vers les fiches ; cercle à droite du projet les jours où une tâche est faite (vide, plein une fois la synthèse mise à jour) ; `s` ; migration 19 ([PR #19](https://github.com/pom421/tasks/pull/19))
 - [x] Jira : créer le ticket depuis une tâche sans identifiant (icône « ticket + », seulement si le projet a un ticket, l'epic, et que l'URL et le PAT sont réglés) : tâche enfant de l'epic après confirmation ; ☁↑ / ☁↓ n'apparaissent plus tant qu'ils sont inutilisables ; `+` dans la fiche ; délier une tâche de son ticket en deux temps, avec avertissement (`r r`, ✕ ✕) ([PR #17](https://github.com/pom421/tasks/pull/17))
@@ -95,10 +94,10 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 - [x] Filtres sobres : contour, icône vide / pleine selon l'état (`87f5ede`)
 - [x] Message de liste vide avec plusieurs filtres (`4358d0b`)
 - [x] Filtres combinables en ET, boutons toujours présents ; export / import
-  dans les Réglages (`5341617`)
+      dans les Réglages (`5341617`)
 - [x] Log indépendant des filtres de projets ; une seule date ; filtres sur la
-  ligne du titre ; Archivés = seulement les archivés (`4796d35`, `a0856ec`)
+      ligne du titre ; Archivés = seulement les archivés (`4796d35`, `a0856ec`)
 - [x] Raccourcis projet `f` / `a` / `x x`, annulables par `u` ; `Échap` quitte
-  les Réglages (`7068d17`)
+      les Réglages (`7068d17`)
 - [x] Projets favoris ; archiver / supprimer en icônes (`58ab6eb`)
 - [x] Déplacer un projet, recherche dans le Log, compteur (`a8039f6`)

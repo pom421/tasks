@@ -25,7 +25,7 @@ export function usePlan(task: Task) {
   const onKey = (e: KeyboardEvent) => {
     if (e.key !== 't') return false;
     e.preventDefault();
-    toggle();
+    void toggle();
     return true;
   };
   // Déjà prévue un autre jour (en retard ou plus tard) : ☀ la ramène à aujourd'hui.

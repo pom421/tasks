@@ -36,3 +36,7 @@ auditConfig:
     # développement seulement (vite, tinyglobby), motifs écrits par nous, jamais
     # par un utilisateur. Sans effet sur l'app.
     - GHSA-fc5q-39xc-vjpf
+
+# Vite+ fournit son propre cœur de Vite : toute dépendance qui demande `vite` reçoit celui-là.
+overrides:
+  vite: 'npm:@voidzero-dev/vite-plus-core@1.6.0'

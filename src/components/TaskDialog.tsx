@@ -37,7 +37,6 @@ type Field = 'title' | 'sprint' | 'day' | 'due' | 'notes';
 // Aspect d'un champ (Input) pour les contrôles qui n'en sont pas : ticket, temps passé.
 const BOX = 'flex h-9 items-center rounded-md border border-input px-3 text-sm shadow-xs';
 
-
 // Fiche d'une tâche, façon GitLab : lecture seule par défaut ; e passe tout en
 // édition (titre, puis Tab : ticket, sprint, date prévue, échéance, tags, contenu
 // Markdown). Mêmes champs, à la même place, dans les deux modes : en lecture, ils
@@ -179,7 +178,8 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, pro
       setError(null);
       return true;
     } catch (err) {
-      const f: Field = patch.day_at !== undefined ? 'day' : patch.due_at !== undefined ? 'due' : patch.sprint !== undefined ? 'sprint' : 'title';
+      const f: Field =
+        patch.day_at !== undefined ? 'day' : patch.due_at !== undefined ? 'due' : patch.sprint !== undefined ? 'sprint' : 'title';
       return fail(f, (err as Error).message);
     }
   };
@@ -306,7 +306,7 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, pro
   const onInputEnter = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter' || e.ctrlKey || e.metaKey) return;
     e.preventDefault();
-    stopEditing();
+    void stopEditing();
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
@@ -319,12 +319,12 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, pro
     if (!inField && !e.ctrlKey && !e.metaKey && !e.altKey && priority.onKey(e)) return;
     if ((e.key === '>' || e.key === '<') && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault();
-      startJira(e.key === '>' ? 'push' : 'pull');
+      void startJira(e.key === '>' ? 'push' : 'pull');
       return;
     }
     if (e.key === '+' && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault();
-      if (jira) startCreate();
+      if (jira) void startCreate();
       return;
     }
     if (e.key === 'r' && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -339,8 +339,8 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, pro
     }
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
-      if (editing) stopEditing();
-      else close();
+      if (editing) void stopEditing();
+      else void close();
     }
   };
 
@@ -381,7 +381,7 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, pro
           if ((e.target as HTMLElement).matches('.ticket-input')) return;
           // Échap dans un champ à propositions ouvertes : ferme la liste seulement.
           if ((e.target as HTMLElement).matches('[aria-expanded="true"]')) return;
-          close();
+          void close();
         }}
         onOpenAutoFocus={(e) => {
           e.preventDefault();
