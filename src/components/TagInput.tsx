@@ -95,7 +95,10 @@ export function TagInput({
       )}
       title={title}
     >
-      <Hash aria-hidden className={cn('size-3.5 flex-none', tags.length ? 'text-foreground' : 'text-muted-foreground')} />
+      <Hash
+        aria-hidden
+        className={cn('size-3.5 flex-none', tags.length ? 'text-foreground' : 'text-muted-foreground')}
+      />
       {tags.map((tag) => (
         <span key={tag} className="tag-chip inline-flex items-center rounded-full border pl-1.5 text-xs leading-[18px]">
           {tag}
@@ -104,7 +107,10 @@ export function TagInput({
             variant="ghost"
             size="icon-xs"
             tabIndex={-1}
-            className={cn('size-[18px] rounded-full text-muted-foreground hover:text-foreground [&_svg]:size-3', readOnly && 'invisible')}
+            className={cn(
+              'size-[18px] rounded-full text-muted-foreground hover:text-foreground [&_svg]:size-3',
+              readOnly && 'invisible',
+            )}
             aria-hidden={readOnly || undefined}
             aria-label={removeLabel(tag)}
             title={removeLabel(tag)}

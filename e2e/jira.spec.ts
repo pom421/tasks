@@ -20,7 +20,10 @@ async function openDialog(page: Page) {
   return page.getByRole('dialog', { name: 'Une' });
 }
 
-test('icônes Jira : seulement celles qui servent (identifiant, URL et PAT) ; jamais désactivées', async ({ page, store }) => {
+test('icônes Jira : seulement celles qui servent (identifiant, URL et PAT) ; jamais désactivées', async ({
+  page,
+  store,
+}) => {
   const alpha = store.createProject('Alpha');
   const une = store.createTask(alpha.id, 'Une');
   const dialog = await openDialog(page);
@@ -53,8 +56,13 @@ test('icônes Jira : seulement celles qui servent (identifiant, URL et PAT) ; ja
   await expect(dialog.locator('button.jira-create')).toHaveCount(0); // déjà un ticket : pas de création
 });
 
-test('créer le ticket : tâche enfant du ticket du projet, après confirmation ; identifiant enregistré', async ({ page, store }) => {
-  const issues: Record<string, FakeIssue> = { 'PROJ-9': { summary: 'Epic du projet', description: null, duedate: null } };
+test('créer le ticket : tâche enfant du ticket du projet, après confirmation ; identifiant enregistré', async ({
+  page,
+  store,
+}) => {
+  const issues: Record<string, FakeIssue> = {
+    'PROJ-9': { summary: 'Epic du projet', description: null, duedate: null },
+  };
   const jira = await fakeJira(store, issues);
   const alpha = store.createProject('Alpha');
   store.updateProject(alpha.id, { bugtrackerKey: 'PROJ-9' });
@@ -109,7 +117,10 @@ test('créer le ticket : tâche enfant du ticket du projet, après confirmation 
   }
 });
 
-test('créer le ticket : absent sans ticket de projet, sans URL ni PAT, ou sur une tâche faite', async ({ page, store }) => {
+test('créer le ticket : absent sans ticket de projet, sans URL ni PAT, ou sur une tâche faite', async ({
+  page,
+  store,
+}) => {
   const alpha = store.createProject('Alpha');
   const une = store.createTask(alpha.id, 'Une');
   await fakeJira(store, {}).then((server) => server.close()); // URL et PAT réglés, serveur éteint
@@ -148,7 +159,12 @@ test('pousser : comparaison, confirmation par >, u remet l’ancien Jira', async
     await page.keyboard.press('>');
     const compare = page.getByRole('dialog', { name: 'Pousser vers Jira : PROJ-1' });
     await expect(compare).toBeVisible();
-    await expect(compare.locator('.jira-local')).toHaveText(['Une', /Lundi 12 octobre 2026/i, 'Sprint 43', 'Texte Jira']);
+    await expect(compare.locator('.jira-local')).toHaveText([
+      'Une',
+      /Lundi 12 octobre 2026/i,
+      'Sprint 43',
+      'Texte Jira',
+    ]);
     await expect(compare.locator('.jira-remote')).toHaveText(['Ancien titre', 'aucune', 'Sprint 42', 'Texte Jira']);
     await expect(compare.getByText('(identique)')).toHaveCount(1); // le contenu
     // Les touches de la fiche ne passent pas : c ne lance pas le chrono.
@@ -166,7 +182,12 @@ test('pousser : comparaison, confirmation par >, u remet l’ancien Jira', async
     await expect(compare).toBeVisible();
     await page.keyboard.press('>');
     await expect(dialog.getByRole('status')).toHaveText('Poussé vers Jira (PROJ-1).');
-    expect(issues['PROJ-1']).toEqual({ summary: 'Une', description: 'Texte Jira', duedate: '2026-10-12', sprint: 'Sprint 43' });
+    expect(issues['PROJ-1']).toEqual({
+      summary: 'Une',
+      description: 'Texte Jira',
+      duedate: '2026-10-12',
+      sprint: 'Sprint 43',
+    });
 
     // Plus de différence : pas de comparaison.
     await page.keyboard.press('>');
@@ -186,7 +207,9 @@ test('pousser : comparaison, confirmation par >, u remet l’ancien Jira', async
 });
 
 test('récupérer : comparaison, Entrée confirme, la fiche et la ligne suivent, u annule', async ({ page, store }) => {
-  const issues = { 'PROJ-1': { summary: 'Titre Jira', description: '# Jira\r\nContenu', duedate: '2026-10-12', sprint: 'Sprint 42' } };
+  const issues = {
+    'PROJ-1': { summary: 'Titre Jira', description: '# Jira\r\nContenu', duedate: '2026-10-12', sprint: 'Sprint 42' },
+  };
   const jira = await fakeJira(store, issues);
   const alpha = store.createProject('Alpha');
   const une = store.createTask(alpha.id, 'Une');
@@ -255,7 +278,9 @@ test('sprint : sprints actifs puis à venir de Jira proposés (↓, Entrée, cli
     await expect(sprint).toHaveValue('Sprint 42');
     await page.keyboard.press('Enter');
     await expect(sprint).toHaveAttribute('readonly', '');
-    await expect.poll(() => store.db.prepare('SELECT sprint FROM task WHERE id = ?').get(une.id)).toEqual({ sprint: 'Sprint 42' });
+    await expect
+      .poll(() => store.db.prepare('SELECT sprint FROM task WHERE id = ?').get(une.id))
+      .toEqual({ sprint: 'Sprint 42' });
     // Lecture : pas de liste.
     await sprint.click();
     await expect(dialog.getByRole('listbox')).toHaveCount(0);

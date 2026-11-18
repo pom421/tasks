@@ -47,7 +47,11 @@ interface PendingFocus {
   applied: () => void; // termine l'action une fois le focus appliqué
 }
 
-const NEXT_BUGTRACKER_FILTER: Record<BugtrackerState, BugtrackerState> = { none: 'wanted', wanted: 'done', done: 'none' };
+const NEXT_BUGTRACKER_FILTER: Record<BugtrackerState, BugtrackerState> = {
+  none: 'wanted',
+  wanted: 'done',
+  done: 'none',
+};
 
 export function App() {
   const [data, setData] = useState<Data>({
@@ -75,9 +79,16 @@ export function App() {
   ];
   // Fiche d'une tâche : id, champ focalisé, open à false pendant l'animation de
   // fermeture ; opening numérote les ouvertures (formulaire neuf à chaque fois).
-  const [openTask, setOpenTask] = useState<{ id: number; field: TaskField; open: boolean; opening: number } | null>(null);
+  const [openTask, setOpenTask] = useState<{ id: number; field: TaskField; open: boolean; opening: number } | null>(
+    null,
+  );
   // Fiche d'un projet : mêmes principes.
-  const [openProject, setOpenProject] = useState<{ id: number; field: ProjectField; open: boolean; opening: number } | null>(null);
+  const [openProject, setOpenProject] = useState<{
+    id: number;
+    field: ProjectField;
+    open: boolean;
+    opening: number;
+  } | null>(null);
   // Tâche lue à part (lien de la synthèse vers une tâche faite hors de la fenêtre du Log).
   const [looseTask, setLooseTask] = useState<Task | DoneTask | null>(null);
   const [filter, setFilter] = useState<Filter>(NO_FILTER);
@@ -171,7 +182,8 @@ export function App() {
         },
         { stay },
       ),
-    openTask: (task, field = 'notes') => setOpenTask((o) => ({ id: task.id, field, open: true, opening: (o?.opening ?? 0) + 1 })),
+    openTask: (task, field = 'notes') =>
+      setOpenTask((o) => ({ id: task.id, field, open: true, opening: (o?.opening ?? 0) + 1 })),
     openProject: (project, field = 'notes') =>
       setOpenProject((o) => ({ id: project.id, field, open: true, opening: (o?.opening ?? 0) + 1 })),
     setLastProject: (id) => (lastProject.current = id),
@@ -341,9 +353,13 @@ export function App() {
   }, []);
 
   // Tâche ouverte dans la fiche : relue dans les données à jour (liste ou journal).
-  const allTasks: (Task & { project_name?: string })[] = [...data.projects.flatMap((p) => p.tasks), ...data.days.flatMap((d) => d.tasks)];
+  const allTasks: (Task & { project_name?: string })[] = [
+    ...data.projects.flatMap((p) => p.tasks),
+    ...data.days.flatMap((d) => d.tasks),
+  ];
   // Tâche hors des données chargées (faite il y a longtemps, ouverte depuis un lien de la synthèse).
-  const current = openTask && (allTasks.find((t) => t.id === openTask.id) ?? (looseTask?.id === openTask.id ? looseTask : undefined));
+  const current =
+    openTask && (allTasks.find((t) => t.id === openTask.id) ?? (looseTask?.id === openTask.id ? looseTask : undefined));
   const currentProject = openProject && data.projects.find((p) => p.id === openProject.id);
   const projectName = (t: Task & { project_name?: string }) =>
     t.project_name ?? data.projects.find((p) => p.id === t.project_id)?.name ?? '';
@@ -363,8 +379,8 @@ export function App() {
             field={openTask.field}
             jira={jiraReady(data.settings)}
             projectTicket={data.projects.find((p) => p.id === current.project_id)?.bugtracker_key ?? null}
-            tagSuggestions={[...new Set([...allTags(data.projects.flatMap((p) => p.tasks)), ...data.logTags])].sort((a, b) =>
-              a.localeCompare(b, 'fr'),
+            tagSuggestions={[...new Set([...allTags(data.projects.flatMap((p) => p.tasks)), ...data.logTags])].sort(
+              (a, b) => a.localeCompare(b, 'fr'),
             )}
             open={openTask.open}
             onClose={(changed) => {
@@ -404,7 +420,12 @@ export function App() {
           <Toolbar helpOpen={helpOpen} onHelpOpen={setHelpOpen} />
           <main className="pb-16">
             <div className="min-w-0">
-              <div data-nav-header role="tablist" aria-label="Vue" className="mt-3 flex h-[26px] items-center gap-4 lg:mt-5">
+              <div
+                data-nav-header
+                role="tablist"
+                aria-label="Vue"
+                className="mt-3 flex h-[26px] items-center gap-4 lg:mt-5"
+              >
                 {TABS.map((tab) => (
                   <button
                     key={tab.to}
@@ -414,7 +435,9 @@ export function App() {
                     title={`${tab.label} (${tab.key})`}
                     className={cn(
                       'border-b-2 font-semibold',
-                      tab.selected ? 'border-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
+                      tab.selected
+                        ? 'border-foreground'
+                        : 'border-transparent text-muted-foreground hover:text-foreground',
                     )}
                     onClick={() => navigate(tab.to)}
                   >
@@ -438,7 +461,9 @@ export function App() {
                   onTagFilter={setTagFilter}
                 />
               )}
-              {dayView && <DayView projects={data.projects} dayDone={data.dayDone} capacity={data.settings.day_capacity} />}
+              {dayView && (
+                <DayView projects={data.projects} dayDone={data.dayDone} capacity={data.settings.day_capacity} />
+              )}
               {upcomingView && <UpcomingView projects={data.projects} />}
               {logView && (
                 <Journal

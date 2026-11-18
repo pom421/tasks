@@ -2,7 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 export const TOOLTIP_DELAY = 150;
-export const TOOLTIP_CLASS = 'z-[100] max-w-md rounded-md bg-foreground px-3 py-1.5 text-xs text-balance text-background';
+export const TOOLTIP_CLASS =
+  'z-[100] max-w-md rounded-md bg-foreground px-3 py-1.5 text-xs text-balance text-background';
 
 // Info-bulles de toute l'app : au survol d'un élément qui a un attribut title,
 // la même info-bulle, rapide (l'info-bulle native est lente et pas toujours
@@ -67,7 +68,10 @@ export function TitleTooltips() {
       ref={box}
       role="tooltip"
       className={`title-tooltip pointer-events-none fixed ${TOOLTIP_CLASS}`}
-      style={{ top: below ? tip.rect.bottom + 4 : tip.rect.top - 4, transform: below ? undefined : 'translateY(-100%)' }}
+      style={{
+        top: below ? tip.rect.bottom + 4 : tip.rect.top - 4,
+        transform: below ? undefined : 'translateY(-100%)',
+      }}
     >
       {tip.text}
     </div>,

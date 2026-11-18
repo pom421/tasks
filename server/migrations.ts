@@ -201,7 +201,9 @@ export interface MigrationReport {
 export function migrate(db: DatabaseSync, file?: string): MigrationReport {
   const from = schemaVersion(db);
   if (from > LATEST_VERSION) {
-    throw new Error(`base en version ${from}, plus récente que l'outil (version ${LATEST_VERSION}) : mettre l'outil à jour`);
+    throw new Error(
+      `base en version ${from}, plus récente que l'outil (version ${LATEST_VERSION}) : mettre l'outil à jour`,
+    );
   }
 
   // Suivi : création de la table ; une base plus ancienne y inscrit les
@@ -228,7 +230,9 @@ export function migrate(db: DatabaseSync, file?: string): MigrationReport {
     fs.chmodSync(backup, 0o600);
   }
 
-  const record = db.prepare("INSERT INTO schema_migration (version, name, app_version, applied_at) VALUES (?, ?, ?, datetime('now'))");
+  const record = db.prepare(
+    "INSERT INTO schema_migration (version, name, app_version, applied_at) VALUES (?, ?, ?, datetime('now'))",
+  );
   for (const m of pending) {
     db.exec('BEGIN');
     try {

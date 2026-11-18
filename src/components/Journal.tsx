@@ -47,7 +47,9 @@ function Day({ day, highlight }: { day: JournalDay; highlight: string }) {
   }
   return (
     <div className="day mt-3 rounded-lg border px-3 pt-2 pb-1.5">
-      <h3 className="mb-1 border-b pb-1 text-sm font-semibold text-muted-foreground first-letter:uppercase">{formatDay(day.date)}</h3>
+      <h3 className="mb-1 border-b pb-1 text-sm font-semibold text-muted-foreground first-letter:uppercase">
+        {formatDay(day.date)}
+      </h3>
       {groups.map((g, i) => (
         <div key={`${g.id}-${i}`}>
           <div className="project-label mt-1.5 ml-1 text-sm font-semibold">{g.name}</div>
@@ -245,7 +247,9 @@ export function Journal({ days, dates, tags, reportPending, projects, filter, on
           <Day key={d.date} day={d} highlight={filter.q} />
         ))}
         {!days.length && (
-          <p className="empty mt-3 italic text-muted-foreground">{filtered ? 'Aucune tâche trouvée.' : 'Aucune tâche faite.'}</p>
+          <p className="empty mt-3 italic text-muted-foreground">
+            {filtered ? 'Aucune tâche trouvée.' : 'Aucune tâche faite.'}
+          </p>
         )}
       </div>
     </section>

@@ -18,9 +18,9 @@ function defaultOf(value: unknown): string | null {
 test('schéma : schema.ts correspond à la base migrée', () => {
   const store = new Store(':memory:');
   const db = store.db;
-  const actualTables = (db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all() as { name: string }[]).map(
-    (r) => r.name,
-  );
+  const actualTables = (
+    db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all() as { name: string }[]
+  ).map((r) => r.name);
   assert.deepEqual(actualTables, tables.map((t) => getTableConfig(t).name).sort());
 
   for (const table of tables) {

@@ -88,13 +88,15 @@ export const api = {
   updateTask: (id: number, patch: TaskPatch) => request('PATCH', `/api/tasks/${id}`, patch),
   orderTasks: (projectId: number, ids: number[]) => request('POST', `/api/projects/${projectId}/order`, { ids }),
   moveProject: (id: number, index: number) => request('POST', `/api/projects/${id}/move`, { index }),
-  moveTask: (id: number, projectId: number, index: number) => request('POST', `/api/tasks/${id}/move`, { project_id: projectId, index }),
+  moveTask: (id: number, projectId: number, index: number) =>
+    request('POST', `/api/tasks/${id}/move`, { project_id: projectId, index }),
   // Renvoie la tâche supprimée (toutes ses colonnes), à passer à restoreTask pour annuler.
   deleteTask: (id: number) => request<Record<string, unknown>>('DELETE', `/api/tasks/${id}`),
   restoreTask: (row: Record<string, unknown>) => request('POST', '/api/tasks/restore', row),
   // Ticket Jira (clé PROJ-123) : lecture et écriture des champs synchronisés.
   jiraIssue: (key: string) => request<JiraFields>('GET', `/api/jira/${key}`),
-  createJiraTask: (epicKey: string, fields: JiraFields) => request<{ key: string }>('POST', `/api/jira/${epicKey}/tasks`, fields),
+  createJiraTask: (epicKey: string, fields: JiraFields) =>
+    request<{ key: string }>('POST', `/api/jira/${epicKey}/tasks`, fields),
   updateJiraIssue: (key: string, fields: JiraFields) => request('PUT', `/api/jira/${key}`, fields),
   // Noms des sprints actifs puis à venir du projet (PROJ), propositions du champ Sprint.
   jiraSprints: (project: string) => request<string[]>('GET', `/api/jira/sprints/${project}`),

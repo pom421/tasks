@@ -101,7 +101,11 @@ export function ProjectFilters({
           title="Priorité 1 → 2 → 3 → toutes (!)"
           onClick={onPriorityFilter}
         >
-          <PriorityIcon priority={priorityFilter} noDigit className={cn(priorityFilter && PRIORITY_COLOR[priorityFilter])} />
+          <PriorityIcon
+            priority={priorityFilter}
+            noDigit
+            className={cn(priorityFilter && PRIORITY_COLOR[priorityFilter])}
+          />
           {priorityFilter ? `Priorité ${priorityFilter}` : 'Priorités'}
         </Button>
       )}
@@ -113,7 +117,11 @@ export function ProjectFilters({
           title="Afficher seulement les projets archivés (A)"
           onClick={onArchivedOnly}
         >
-          <Archive aria-hidden className={archivedOnly ? 'fill-muted-foreground/30' : undefined} fill={archivedOnly ? undefined : 'none'} />{' '}
+          <Archive
+            aria-hidden
+            className={archivedOnly ? 'fill-muted-foreground/30' : undefined}
+            fill={archivedOnly ? undefined : 'none'}
+          />{' '}
           Archivés
         </Button>
       )}

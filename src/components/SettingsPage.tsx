@@ -171,8 +171,8 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
             )}
           </div>
           <p id={`${id}-pat-hint`} className="text-xs text-muted-foreground">
-            Jira Data Center : profil → Jetons d’accès personnels. Sert à pousser une tâche vers son ticket et à la récupérer depuis Jira
-            (fiche, &gt; et &lt;). Gardé sur ce poste, jamais réaffiché ni exporté.
+            Jira Data Center : profil → Jetons d’accès personnels. Sert à pousser une tâche vers son ticket et à la
+            récupérer depuis Jira (fiche, &gt; et &lt;). Gardé sur ce poste, jamais réaffiché ni exporté.
           </p>
           <div className="mt-2 flex items-center gap-3">
             <Button type="submit">Enregistrer</Button>
@@ -223,7 +223,8 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
           Données
         </h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          Exporter télécharge la base (.sqlite). Importer .sqlite la remplace entièrement ; importer .md ajoute des projets et des tâches.
+          Exporter télécharge la base (.sqlite). Importer .sqlite la remplace entièrement ; importer .md ajoute des
+          projets et des tâches.
         </p>
         <div className="mt-3 flex flex-wrap gap-1.5">
           <Button asChild>
@@ -246,7 +247,8 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
         </div>
         {confirmImport && (
           <p role="alert" className="mt-2 text-sm text-destructive">
-            Importer .sqlite à nouveau : choisir le fichier qui remplacera toute la base (pensez à exporter avant) · Échap : annuler
+            Importer .sqlite à nouveau : choisir le fichier qui remplacera toute la base (pensez à exporter avant) ·
+            Échap : annuler
           </p>
         )}
         <p id="data-status" role="status" className="mt-2 text-sm text-muted-foreground">

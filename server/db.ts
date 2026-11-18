@@ -79,7 +79,8 @@ const localDay = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 // 'YYYY-MM-DD' décalé de n jours.
-const addDays = (day: string, n: number) => new Date(Date.parse(`${day}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+const addDays = (day: string, n: number) =>
+  new Date(Date.parse(`${day}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 
 export function isDate(s: unknown): s is string {
   return typeof s === 'string' && DATE_RE.test(s) && !Number.isNaN(Date.parse(s));
@@ -115,7 +116,9 @@ export function validateDbFile(file: string) {
   let db: DatabaseSync | undefined;
   try {
     db = new DatabaseSync(file, { readOnly: true });
-    const tables = (db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]).map((r) => r.name);
+    const tables = (db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]).map(
+      (r) => r.name,
+    );
     if (!tables.includes('project') || !tables.includes('task')) {
       throw new Error('tables project/task absentes');
     }
@@ -172,7 +175,9 @@ export class Store {
       string | null
     >`(SELECT MAX(${projectSummary.day}) FROM ${projectSummary} WHERE ${projectSummary.project_id} = ${projectId})`;
     const done_today = day
-      ? sql<boolean>`EXISTS (SELECT 1 FROM ${task} WHERE ${task.project_id} = ${projectId} AND ${task.done_at} = ${day})`.mapWith(Boolean)
+      ? sql<boolean>`EXISTS (SELECT 1 FROM ${task} WHERE ${task.project_id} = ${projectId} AND ${task.done_at} = ${day})`.mapWith(
+          Boolean,
+        )
       : sql<boolean>`0`.mapWith(Boolean);
     const projects = this.orm
       .select({ id, name, archived_at, favorite_at, bugtracker_key, notes, summary_day, done_today })
@@ -184,7 +189,12 @@ export class Store {
     for (const t of tasks) byProject.get(t.project_id)?.tasks.push(t);
     // Tâches du plan faites ce jour-là, prévues pour ce jour ou avant (en retard).
     const dayDone = day ? this.count(and(eq(task.done_at, day), lte(task.day_at, day))) : 0;
-    return { projects: [...byProject.values()], bugtrackerPending: this.count(BUGTRACKER_PENDING), dayDone, settings: this.settings() };
+    return {
+      projects: [...byProject.values()],
+      bugtrackerPending: this.count(BUGTRACKER_PENDING),
+      dayDone,
+      settings: this.settings(),
+    };
   }
 
   private count(where: SQL | undefined): number {
@@ -354,7 +364,12 @@ export class Store {
     const row = this.project(id);
     if (!row) return undefined;
     const tasks = this.orm.select().from(task).where(eq(task.project_id, id)).orderBy(task.id).all();
-    const summaries = this.orm.select().from(projectSummary).where(eq(projectSummary.project_id, id)).orderBy(projectSummary.day).all();
+    const summaries = this.orm
+      .select()
+      .from(projectSummary)
+      .where(eq(projectSummary.project_id, id))
+      .orderBy(projectSummary.day)
+      .all();
     this.orm.delete(project).where(eq(project.id, id)).run();
     return { project: row, tasks, summaries };
   }
@@ -367,7 +382,12 @@ export class Store {
       for (const t of tasks) tx.insert(task).values(t).run();
       for (const s of summaries) tx.insert(projectSummary).values(s).run();
     });
-    const restored = this.orm.select().from(projectSummary).where(eq(projectSummary.project_id, p.id)).orderBy(projectSummary.day).all();
+    const restored = this.orm
+      .select()
+      .from(projectSummary)
+      .where(eq(projectSummary.project_id, p.id))
+      .orderBy(projectSummary.day)
+      .all();
     return { project: this.project(p.id)!, tasks: tasks.map((t) => this.task(t.id)!), summaries: restored };
   }
 
@@ -390,8 +410,21 @@ export class Store {
   // dueAt : échéance, null = aucune ; sprint : nom du sprint, null = aucun ; tags : liste complète (remplace l'ancienne) ;
   // priority : 1 à 3, null = aucune.
   updateTask(id: number, patch: TaskPatch) {
-    const { title, doneAt, bugtracker, bugtrackerKey, notes, timer, timeSpent, timerStartedAt, dayAt, dueAt, sprint, tags, priority } =
-      patch;
+    const {
+      title,
+      doneAt,
+      bugtracker,
+      bugtrackerKey,
+      notes,
+      timer,
+      timeSpent,
+      timerStartedAt,
+      dayAt,
+      dueAt,
+      sprint,
+      tags,
+      priority,
+    } = patch;
     const update = (set: SQLiteUpdateSetSource<typeof task>, where?: SQL) =>
       this.orm
         .update(task)
@@ -416,8 +449,10 @@ export class Store {
     if (title !== undefined) set.title = title;
     if (timeSpent !== undefined) set.time_spent = timeSpent;
     if (timerStartedAt !== undefined) set.timer_started_at = timerStartedAt;
-    if (bugtracker === 'none') Object.assign(set, { bugtracker_wanted_at: null, bugtracker_at: null, bugtracker_key: null });
-    if (bugtracker === 'wanted' || bugtracker === 'done') set.bugtracker_wanted_at = sql`COALESCE(${task.bugtracker_wanted_at}, ${NOW})`;
+    if (bugtracker === 'none')
+      Object.assign(set, { bugtracker_wanted_at: null, bugtracker_at: null, bugtracker_key: null });
+    if (bugtracker === 'wanted' || bugtracker === 'done')
+      set.bugtracker_wanted_at = sql`COALESCE(${task.bugtracker_wanted_at}, ${NOW})`;
     if (bugtracker === 'wanted') set.bugtracker_at = null;
     if (bugtracker === 'done') set.bugtracker_at = sql`COALESCE(${task.bugtracker_at}, ${NOW})`;
     if (bugtrackerKey !== undefined) set.bugtracker_key = bugtrackerKey;
@@ -455,7 +490,9 @@ export class Store {
       .map((r) => r.id);
     ids.splice(Math.min(Math.max(index, 0), ids.length), 0, id);
     this.orm.transaction((tx) => {
-      ids.forEach((taskId, position) => tx.update(task).set({ project_id: projectId, position }).where(eq(task.id, taskId)).run());
+      ids.forEach((taskId, position) =>
+        tx.update(task).set({ project_id: projectId, position }).where(eq(task.id, taskId)).run(),
+      );
     });
     return true;
   }
@@ -469,7 +506,8 @@ export class Store {
       .where(and(eq(task.project_id, projectId), isNull(task.done_at)))
       .all()
       .map((r) => r.id);
-    if (ids.length !== current.length || new Set(ids).size !== ids.length || !ids.every((id) => current.includes(id))) return false;
+    if (ids.length !== current.length || new Set(ids).size !== ids.length || !ids.every((id) => current.includes(id)))
+      return false;
     this.orm.transaction((tx) => {
       ids.forEach((taskId, position) => tx.update(task).set({ position }).where(eq(task.id, taskId)).run());
     });

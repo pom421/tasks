@@ -43,8 +43,14 @@ function ProjectCard({ project: p, onMove, onSortPriority, onMoveProject }: Proj
   // Modification annulable (u) et rejouable (U) : before = valeurs d'avant.
   type Patch = Parameters<typeof api.updateProject>[1];
   const change = (label: string, patch: Patch, before: Patch) =>
-    undoable({ label, focus: navKey, run: () => api.updateProject(p.id, patch), undo: () => api.updateProject(p.id, before) });
-  const toggleFavorite = () => change(favorite ? 'retrait des favoris' : 'ajout aux favoris', { favorite: !favorite }, { favorite });
+    undoable({
+      label,
+      focus: navKey,
+      run: () => api.updateProject(p.id, patch),
+      undo: () => api.updateProject(p.id, before),
+    });
+  const toggleFavorite = () =>
+    change(favorite ? 'retrait des favoris' : 'ajout aux favoris', { favorite: !favorite }, { favorite });
   const toggleArchived = () => change(archived ? 'désarchivage' : 'archivage', { archived: !archived }, { archived });
   const saveTicket = (value: string) =>
     change(
@@ -238,7 +244,10 @@ function ProjectCard({ project: p, onMove, onSortPriority, onMoveProject }: Proj
           <Button
             variant="ghost"
             size="icon-xs"
-            className={cn('delete hover:text-destructive', confirmDelete ? 'text-destructive' : 'text-muted-foreground')}
+            className={cn(
+              'delete hover:text-destructive',
+              confirmDelete ? 'text-destructive' : 'text-muted-foreground',
+            )}
             aria-label={confirmDelete ? 'Confirmer la suppression du projet' : 'Supprimer le projet'}
             title={confirmDelete ? 'Confirmer la suppression (x)' : 'Supprimer le projet (x x)'}
             onClick={() => (confirmDelete ? remove() : setConfirmDelete(true))}
@@ -253,7 +262,9 @@ function ProjectCard({ project: p, onMove, onSortPriority, onMoveProject }: Proj
             className="summary-reminder self-center text-muted-foreground"
             aria-label={summaryDone ? 'Synthèse à jour' : 'Synthèse à mettre à jour'}
             title={
-              summaryDone ? 'Synthèse mise à jour aujourd’hui (s)' : 'Synthèse à mettre à jour : une tâche du projet faite aujourd’hui (s)'
+              summaryDone
+                ? 'Synthèse mise à jour aujourd’hui (s)'
+                : 'Synthèse à mettre à jour : une tâche du projet faite aujourd’hui (s)'
             }
             onClick={() => openProject(p, 'summary')}
           >
@@ -266,7 +277,12 @@ function ProjectCard({ project: p, onMove, onSortPriority, onMoveProject }: Proj
           <TaskRow key={t.id} task={t} onMove={onMove && ((direction) => onMove(t, direction))} />
         ))}
       </ul>
-      <AddInput placeholder="+ Ajouter une tâche (n)" navKey={`add:${p.id}`} onFocus={() => setLastProject(p.id)} onAdd={addTask} />
+      <AddInput
+        placeholder="+ Ajouter une tâche (n)"
+        navKey={`add:${p.id}`}
+        onFocus={() => setLastProject(p.id)}
+        onAdd={addTask}
+      />
     </div>
   );
 }
@@ -280,7 +296,14 @@ interface ProjectListProps {
   tagFilter: string[]; // tâches portant tous ces tags ; [] = aucun filtre
 }
 
-export function ProjectList({ projects, archivedOnly, bugtrackerFilter, priorityFilter, favoritesOnly, tagFilter }: ProjectListProps) {
+export function ProjectList({
+  projects,
+  archivedOnly,
+  bugtrackerFilter,
+  priorityFilter,
+  favoritesOnly,
+  tagFilter,
+}: ProjectListProps) {
   const bugtrackerOnly = bugtrackerFilter !== 'none';
   // Filtres portant sur les tâches (report, priorité, tags), combinés en ET.
   const tagOnly = tagFilter.length > 0;
@@ -300,8 +323,10 @@ export function ProjectList({ projects, archivedOnly, bugtrackerFilter, priority
   // message générique (tâches si un filtre de tâches en fait partie, sinon projets).
   const emptyMessage = () => {
     const active = [bugtrackerOnly, priorityFilter, archivedOnly, favoritesOnly, tagOnly].filter(Boolean).length;
-    if (active > 1) return taskFilter ? 'Aucune tâche avec les filtres demandés.' : 'Aucun projet avec les filtres demandés.';
-    if (bugtrackerOnly) return bugtrackerFilter === 'wanted' ? 'Aucune tâche à faire à reporter.' : 'Aucune tâche à faire reportée.';
+    if (active > 1)
+      return taskFilter ? 'Aucune tâche avec les filtres demandés.' : 'Aucun projet avec les filtres demandés.';
+    if (bugtrackerOnly)
+      return bugtrackerFilter === 'wanted' ? 'Aucune tâche à faire à reporter.' : 'Aucune tâche à faire reportée.';
     if (tagOnly) return `Aucune tâche à faire avec ${tagFilter.map((t) => `#${t}`).join(' et ')}.`;
     if (priorityFilter) return `Aucune tâche à faire de priorité ${priorityFilter}.`;
     if (archivedOnly) return 'Aucun projet archivé.';
@@ -340,7 +365,8 @@ export function ProjectList({ projects, archivedOnly, bugtrackerFilter, priority
     const tasks = visible[pi].tasks;
     const ti = tasks.findIndex((t) => t.id === task.id);
     let target: { projectId: number; index: number } | undefined;
-    if (ti + direction >= 0 && ti + direction < tasks.length) target = { projectId: task.project_id, index: ti + direction };
+    if (ti + direction >= 0 && ti + direction < tasks.length)
+      target = { projectId: task.project_id, index: ti + direction };
     else if (visible[pi + direction]) {
       const neighbour = visible[pi + direction];
       target = { projectId: neighbour.id, index: direction < 0 ? neighbour.tasks.length : 0 };

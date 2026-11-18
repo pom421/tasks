@@ -94,7 +94,10 @@ test('non-régression : priorité gardée dans le Log ; n n sur une tâche = nou
   store.createTask(alpha.id, 'Deux');
   store.updateTask(une.id, { priority: 1, doneAt: '2026-09-25' });
   await page.goto('/log');
-  await expect(page.locator('.day li.task', { hasText: 'Une' }).locator('button.priority')).toHaveAttribute('aria-label', 'Priorité 1');
+  await expect(page.locator('.day li.task', { hasText: 'Une' }).locator('button.priority')).toHaveAttribute(
+    'aria-label',
+    'Priorité 1',
+  );
   await page.keyboard.press('P'); // onglet Projets
   await row(page, 'Deux').locator('.name').focus();
   await page.keyboard.press('n');
@@ -197,7 +200,10 @@ test('projet : bouton « Trier par priorité » : 1, 2, 3, puis sans priorité ;
   await expect(names).toHaveText(['Un', 'Deux', 'Trois', 'Sans']);
 });
 
-test('tri par priorité : stable à priorité égale ; ignore les tâches faites et les autres projets', async ({ page, store }) => {
+test('tri par priorité : stable à priorité égale ; ignore les tâches faites et les autres projets', async ({
+  page,
+  store,
+}) => {
   const alpha = store.createProject('Alpha');
   const beta = store.createProject('Beta');
   const [x, y, z] = ['X', 'Y', 'Z'].map((t) => store.createTask(alpha.id, t));

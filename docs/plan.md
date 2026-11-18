@@ -24,6 +24,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
+- [x] Formatage à 120 colonnes, comme csp-cli
 - [x] Vite+ (comme csp-cli) : `vp dev` / `vp build`, tests unitaires sous Vitest (`vp test`), `vp check` (formatage oxfmt, lint oxlint avec les types, TypeScript) ; code reformaté ; `pnpm ready` en local et en CI
 - [x] README : installer pnpm sans corepack (absent de Node 25 et plus) : `npm install -g pnpm@12.19.0` (PR #20)
 - [x] Synthèse d'un projet (remplace son contenu) : Markdown libre (le projet et ses liens, fait récemment, prochaines étapes), une version par jour consultable et restaurable ; boutons « Tâches faites » (depuis la version d'avant) et « Priorités 1 » qui insèrent des liens vers les fiches ; cercle à droite du projet les jours où une tâche est faite (vide, plein une fois la synthèse mise à jour) ; `s` ; migration 19 ([PR #19](https://github.com/pom421/tasks/pull/19))

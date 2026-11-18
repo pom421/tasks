@@ -36,7 +36,8 @@ export function normalizeTag(input: string): string | null {
 }
 
 // Tous les tags des tâches, triés (autocomplétion).
-export const allTags = (tasks: Pick<Task, 'tags'>[]) => [...new Set(tasks.flatMap((t) => t.tags))].sort((a, b) => a.localeCompare(b, 'fr'));
+export const allTags = (tasks: Pick<Task, 'tags'>[]) =>
+  [...new Set(tasks.flatMap((t) => t.tags))].sort((a, b) => a.localeCompare(b, 'fr'));
 
 export const PRIORITIES = [1, 2, 3] as const;
 export type Priority = (typeof PRIORITIES)[number];
@@ -66,7 +67,8 @@ export const DEFAULT_DAY_CAPACITY = 5;
 
 // Lien du ticket : clé + URL du bugtracker.
 export function bugtrackerLink(t: Pick<Task, 'bugtracker_key'>, settings: Settings): string | null {
-  if (t.bugtracker_key && settings.bugtracker_base_url) return `${settings.bugtracker_base_url}/browse/${t.bugtracker_key}`;
+  if (t.bugtracker_key && settings.bugtracker_base_url)
+    return `${settings.bugtracker_base_url}/browse/${t.bugtracker_key}`;
   return null;
 }
 
@@ -81,7 +83,10 @@ export function bugtrackerState(t: Pick<Task, 'bugtracker_wanted_at' | 'bugtrack
   return t.bugtracker_wanted_at ? 'wanted' : 'none';
 }
 
-export interface Project extends Pick<ProjectRow, 'id' | 'name' | 'archived_at' | 'favorite_at' | 'bugtracker_key' | 'notes'> {
+export interface Project extends Pick<
+  ProjectRow,
+  'id' | 'name' | 'archived_at' | 'favorite_at' | 'bugtracker_key' | 'notes'
+> {
   tasks: Task[]; // tâches à faire uniquement
   summary_day: string | null; // jour de la dernière version de la synthèse ('YYYY-MM-DD')
   done_today: boolean; // une tâche du projet faite le jour demandé : synthèse à mettre à jour

@@ -92,7 +92,9 @@ test('d : focus sur la date ; saisie au clavier, année appliquée seulement com
   await expect(date(page)).toBeFocused();
 });
 
-test('onglet Log : filtres (recherche, date, projet) sur une ligne sous les onglets, alignés à droite', async ({ page }) => {
+test('onglet Log : filtres (recherche, date, projet) sur une ligne sous les onglets, alignés à droite', async ({
+  page,
+}) => {
   const box = async (sel: string) => (await page.locator(sel).boundingBox())!;
   const middle = async (sel: string) => {
     const b = await box(sel);
@@ -112,7 +114,9 @@ test('onglet Log : filtres (recherche, date, projet) sur une ligne sous les ongl
   expect(Math.abs((await middle('#filter-reset')) - line)).toBeLessThan(4);
 });
 
-test('P, T, L : onglet Projets, Aujourd’hui, Log ; Ctrl+Maj+← / Ctrl+Maj+→ en boucle ; / et d vont au Log', async ({ page }) => {
+test('P, T, L : onglet Projets, Aujourd’hui, Log ; Ctrl+Maj+← / Ctrl+Maj+→ en boucle ; / et d vont au Log', async ({
+  page,
+}) => {
   const tab = (name: string) => page.getByRole('tab', { name, exact: true });
   await expect(tab('Log')).toHaveAttribute('aria-selected', 'true');
   await expect(tab('Log')).toHaveAttribute('title', 'Log (L)');
@@ -188,10 +192,20 @@ test('projet : seulement les jours où ce projet a des entrées, pagination comp
   await expect(page.getByRole('button', { name: 'Jours précédents' })).toBeDisabled();
 });
 
-test('recherche : jours dont une tâche correspond (titre, contenu, ticket), compteur, mot souligné', async ({ page, store }) => {
+test('recherche : jours dont une tâche correspond (titre, contenu, ticket), compteur, mot souligné', async ({
+  page,
+  store,
+}) => {
   const p = store.createProject('Beta');
-  store.updateTask(store.createTask(p.id, 'Déploiement').id, { doneAt: '2026-09-22', notes: 'Suite de la réunion **Vingt**' });
-  store.updateTask(store.createTask(p.id, 'Ticket seul').id, { doneAt: '2026-09-19', bugtracker: 'done', bugtrackerKey: 'VING-1' });
+  store.updateTask(store.createTask(p.id, 'Déploiement').id, {
+    doneAt: '2026-09-22',
+    notes: 'Suite de la réunion **Vingt**',
+  });
+  store.updateTask(store.createTask(p.id, 'Ticket seul').id, {
+    doneAt: '2026-09-19',
+    bugtracker: 'done',
+    bugtrackerKey: 'VING-1',
+  });
   await page.reload();
   const count = page.locator('#log-count');
 
@@ -242,7 +256,10 @@ test('recherche : jours dont une tâche correspond (titre, contenu, ticket), com
   await expect(page.locator('#journal mark')).toHaveCount(0);
 });
 
-test('Log : bouton « à reporter » (R) : seulement les tâches faites à reporter, combinable', async ({ page, store }) => {
+test('Log : bouton « à reporter » (R) : seulement les tâches faites à reporter, combinable', async ({
+  page,
+  store,
+}) => {
   const beta = store.createProject('Beta');
   const faite = store.createTask(beta.id, 'Faite à reporter');
   store.updateTask(faite.id, { doneAt: '2026-09-22', bugtracker: 'wanted' });

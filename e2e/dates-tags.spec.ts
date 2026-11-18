@@ -27,9 +27,14 @@ const open = async (page: Page, path = '/') => {
   await page.goto(path);
   await expect(page.getByRole('tablist')).toBeVisible();
 };
-const taskRow = (store: Store, id: number) => store.db.prepare('SELECT day_at, due_at, tags FROM task WHERE id = ?').get(id);
+const taskRow = (store: Store, id: number) =>
+  store.db.prepare('SELECT day_at, due_at, tags FROM task WHERE id = ?').get(id);
 
-test('fiche : date prévue, échéance et tags (e), étiquettes sur la 2e ligne, u annule', async ({ page, store, data }) => {
+test('fiche : date prévue, échéance et tags (e), étiquettes sur la 2e ligne, u annule', async ({
+  page,
+  store,
+  data,
+}) => {
   store.updateTask(data.trois.id, { tags: ['client'] }); // tag existant, proposé
   await open(page);
   await page.locator(`[data-nav-key="task:${data.une.id}"]`).focus();
@@ -65,7 +70,11 @@ test('fiche : date prévue, échéance et tags (e), étiquettes sur la 2e ligne,
   await expect(une.locator('.details-line .due-date')).toHaveText(/12\/10$/);
   const tagsBox = (await une.locator('.tags').boundingBox())!;
   expect(tagsBox.x).toBe((await une.locator('.name').boundingBox())!.x); // sous le titre
-  expect(taskRow(store, data.une.id)).toEqual({ day_at: '2026-09-28', due_at: '2026-10-12', tags: '["client","urgent"]' });
+  expect(taskRow(store, data.une.id)).toEqual({
+    day_at: '2026-09-28',
+    due_at: '2026-10-12',
+    tags: '["client","urgent"]',
+  });
 
   // Annulable d'un coup (modification de la fiche).
   await page.keyboard.press('u');
@@ -142,7 +151,9 @@ test('fiche : mêmes champs au pixel près en lecture et en édition, bloqués e
   await expect(dialog).toHaveCount(0);
   expect(store.db.prepare('SELECT sprint FROM task WHERE id = ?').get(data.une.id)).toEqual({ sprint: 'Sprint 42' });
   await page.keyboard.press('u');
-  await expect.poll(() => store.db.prepare('SELECT sprint FROM task WHERE id = ?').get(data.une.id)).toEqual({ sprint: null });
+  await expect
+    .poll(() => store.db.prepare('SELECT sprint FROM task WHERE id = ?').get(data.une.id))
+    .toEqual({ sprint: null });
 });
 
 test('étiquettes : date prévue (aujourd’hui compris) ; échéance dépassée en rouge, alignée d’une ligne à l’autre ; Log sur une ligne', async ({
@@ -204,7 +215,11 @@ test('Aujourd’hui : ☀ sur une tâche en retard la ramène au jour', async ({
   expect(taskRow(store, data.deux.id)).toMatchObject({ day_at: TODAY });
 });
 
-test('Suivant : agenda par jour, tâche à ses deux dates, un cadre rouge par échéance dépassée', async ({ page, store, data }) => {
+test('Suivant : agenda par jour, tâche à ses deux dates, un cadre rouge par échéance dépassée', async ({
+  page,
+  store,
+  data,
+}) => {
   store.updateTask(data.une.id, { dayAt: '2026-09-28', dueAt: '2026-10-02' });
   store.updateTask(data.deux.id, { dueAt: '2026-09-20' });
   store.updateTask(data.trois.id, { dayAt: '2026-09-23', dueAt: '2026-09-22' }); // prévue avant : pas ici ; échéance dépassée : ici
@@ -329,7 +344,10 @@ test('non-régression : # s’écrit dans un champ de saisie ; ☀ et t inchang�
   await page.keyboard.press('Escape');
   await page.locator(`[data-nav-key="task:${data.deux.id}"]`).focus();
   await page.keyboard.press('t');
-  await expect(row(page, 'Deux').getByRole('button', { name: 'Pour aujourd’hui' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(row(page, 'Deux').getByRole('button', { name: 'Pour aujourd’hui' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
   expect(taskRow(store, data.deux.id)).toMatchObject({ day_at: TODAY });
 });
 
@@ -354,7 +372,10 @@ test('icônes toujours à la même place : étiquettes (tags, dates, report) ava
     expect(new Set(xs.map(Math.round)).size, selector).toBe(1);
   }
   // Tags trop longs : coupés, tous dans l'info-bulle.
-  await expect(row(page, 'Une').locator('.tags')).toHaveAttribute('title', 'Tags : #client #interne #api-publique #urgent');
+  await expect(row(page, 'Une').locator('.tags')).toHaveAttribute(
+    'title',
+    'Tags : #client #interne #api-publique #urgent',
+  );
   // Icône 🗒 : visible seulement s'il y a du contenu.
   await expect(row(page, 'Une').getByRole('button', { name: 'Voir les détails' })).toBeVisible();
   await expect(row(page, 'Deux').getByRole('button', { name: 'Voir les détails' })).toHaveCount(0);
