@@ -862,3 +862,23 @@ test('Jira : PAT jamais relu ni exporté, lecture et écriture d’un ticket', a
     await call('PUT', '/api/settings', { bugtracker_base_url: null, jira_pat: null });
   }
 });
+
+test('ordre des tâches d\'un projet : toutes, une fois chacune ; les faites ignorées', async () => {
+  const p = (await call('POST', '/api/projects', { name: 'Ordre' })).body;
+  const ids: number[] = [];
+  for (const title of ['A', 'B', 'C']) ids.push((await call('POST', '/api/tasks', { project_id: p.id, title })).body.id);
+  const faite = (await call('POST', '/api/tasks', { project_id: p.id, title: 'Faite' })).body;
+  await call('PATCH', `/api/tasks/${faite.id}`, { done: true, done_at: '2026-09-20' });
+  const titles = async () => {
+    const state = (await call('GET', '/api/state')).body;
+    return state.projects.find((x: { id: number }) => x.id === p.id).tasks.map((t: { title: string }) => t.title);
+  };
+  const [a, b, c] = ids;
+  assert.equal((await call('POST', `/api/projects/${p.id}/order`, { ids: [c, a, b] })).status, 200);
+  assert.deepEqual(await titles(), ['C', 'A', 'B']);
+  assert.equal((await call('POST', `/api/projects/${p.id}/order`, { ids: [a, b] })).status, 400, 'incomplet');
+  assert.equal((await call('POST', `/api/projects/${p.id}/order`, { ids: [a, a, b] })).status, 400, 'doublon');
+  assert.equal((await call('POST', `/api/projects/${p.id}/order`, { ids: [a, b, c, faite.id] })).status, 400, 'tâche faite');
+  assert.equal((await call('POST', '/api/projects/99999/order', { ids: [] })).status, 404);
+  assert.deepEqual(await titles(), ['C', 'A', 'B'], 'rien changé après un refus');
+});

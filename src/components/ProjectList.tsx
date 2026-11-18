@@ -1,5 +1,5 @@
 import { useRef, useState, type FocusEvent, type KeyboardEvent } from 'react';
-import { Archive, ArchiveRestore, Heart, NotebookText, Trash2 } from 'lucide-react';
+import { Archive, ArchiveRestore, ArrowDown01, Heart, NotebookText, Trash2 } from 'lucide-react';
 import { bugtrackerState, type BugtrackerState, type Priority, type Project, type Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
 import { useActions } from '@/lib/actions';
@@ -13,9 +13,14 @@ import { TicketInput } from './Report';
 
 type MoveTask = (task: Task, direction: -1 | 1) => void;
 
+// Tâches rangées par priorité : 1, 2, 3, puis sans priorité ; l'ordre actuel est
+// gardé à priorité égale.
+const byPriority = (tasks: Task[]) => [...tasks].sort((a, b) => (a.priority ?? 4) - (b.priority ?? 4));
+
 interface ProjectCardProps {
   project: Project;
   onMove?: MoveTask;
+  onSortPriority?: () => void; // absent si un filtre de tâches est actif (la liste n'est pas complète)
   onMoveProject: (direction: -1 | 1) => void;
 }
 
@@ -23,7 +28,7 @@ interface ProjectCardProps {
 // o ou Maj+Entrée ouvre la fiche (e : directement en édition), a archiver /
 // désarchiver, r saisir le ticket (dans la ligne), x ou Suppr demande la
 // suppression, un second appui la confirme ; Ctrl+Maj+↑ / Ctrl+Maj+↓ (ou ⌘+Maj) déplacent le projet. Tout est annulable (u).
-function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
+function ProjectCard({ project: p, onMove, onSortPriority, onMoveProject }: ProjectCardProps) {
   const { setLastProject, undoable, openProject } = useActions();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editTicket, setEditTicket] = useState(false);
@@ -31,6 +36,8 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
   const archived = Boolean(p.archived_at);
   const favorite = Boolean(p.favorite_at);
   const navKey = `project:${p.id}`;
+  // Le tri par priorité ne sert que s'il change l'ordre.
+  const sortUseful = Boolean(onSortPriority) && byPriority(p.tasks).some((t, i) => t.id !== p.tasks[i].id);
 
   // Modification annulable (u) et rejouable (U) : before = valeurs d'avant.
   type Patch = Parameters<typeof api.updateProject>[1];
@@ -185,6 +192,20 @@ function ProjectCard({ project: p, onMove, onMoveProject }: ProjectCardProps) {
             !confirmDelete && !editTicket && !ticket && 'ml-auto',
           )}
         >
+          {/* Tri par priorité (souris seulement) : sa place est gardée, invisible quand il ne changerait rien. */}
+          {!confirmDelete && (
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              className={cn('sort-priority text-muted-foreground', !sortUseful && 'invisible')}
+              aria-label="Trier par priorité"
+              title="Trier les tâches par priorité : 1, 2, 3, puis sans priorité (annulable : u)"
+              tabIndex={sortUseful ? 0 : -1}
+              onClick={onSortPriority}
+            >
+              <ArrowDown01 aria-hidden />
+            </Button>
+          )}
           {!confirmDelete && (
             <Button
               variant="ghost"
@@ -310,6 +331,18 @@ export function ProjectList({ projects, archivedOnly, bugtrackerFilter, priority
     moving.current = false;
   };
 
+  // Tâches d'un projet rangées par priorité ; annuler rend l'ordre d'avant.
+  const sortByPriority = (project: Project) => {
+    const before = project.tasks.map((t) => t.id);
+    const after = byPriority(project.tasks).map((t) => t.id);
+    return undoable({
+      label: 'tri par priorité',
+      focus: `project:${project.id}`,
+      run: () => api.orderTasks(project.id, after),
+      undo: () => api.orderTasks(project.id, before),
+    });
+  };
+
   // Création : annuler le supprime, rejouer le restaure (même identifiant).
   const addProject = async (name: string) => {
     let id = 0;
@@ -337,6 +370,7 @@ export function ProjectList({ projects, archivedOnly, bugtrackerFilter, priority
             key={p.id}
             project={p}
             onMove={taskFilter ? undefined : moveTask}
+            onSortPriority={taskFilter ? undefined : () => sortByPriority(p)}
             onMoveProject={(direction) => moveProject(p, direction)}
           />
         ))}

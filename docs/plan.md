@@ -9,12 +9,10 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 ## En cours
 
 - [ ] Jira : créer le ticket depuis une tâche sans identifiant, enfant d'un ticket représentant le projet ; icônes distinctes de « remonter » (☁↑)
-- [ ] Projet : bouton qui propose de réordonner ses tâches par priorité (à la place d'un tri automatique)
 
 ## Décisions attendues
 
 - [?] Jira, créer le ticket depuis la tâche : type de ticket, projet Jira, lien du ticket enfant (décision prise : oui, à concevoir)
-- [?] Bouton « réordonner par priorité » au niveau du projet : icône et touche ?
 
 ## Idées / plus tard
 
@@ -30,6 +28,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
+- [x] Projet : bouton « Trier par priorité » (flèche + 0 1, au survol, souris seulement) : 1, 2, 3 puis sans priorité, stable, annulable ; remplace le tri automatique refusé ([PR #16](https://github.com/pom421/tasks/pull/16))
 - [x] Log : bouton « N tâches à reporter » (drapeau, `R` dans l'onglet Log) : seulement les tâches faites à reporter, que le compteur des projets ne compte plus ([PR #15](https://github.com/pom421/tasks/pull/15))
 - [x] Décisions tranchées : Log sans entrée non réaffiché ; chrono unique, retard compté dans « 3/5 », `Tab` natif dans les dates, tri automatique par priorité refusé (remplacé par un bouton) ; filtre « Archivés » actif en remplissage gris clair ; compteur du plan orange à 5/5, rouge au-delà ([PR #14](https://github.com/pom421/tasks/pull/14))
 - [x] Audit : faille `picomatch` (GHSA-fc5q-39xc-vjpf, haute, sans correctif) ignorée avec sa raison : dépendance de développement (Vite), motifs jamais saisis par un utilisateur ; à retirer quand un correctif sort ([PR #18](https://github.com/pom421/tasks/pull/18))

@@ -60,6 +60,7 @@ export const api = {
   restoreProject: (deleted: Record<string, unknown>) => request('POST', '/api/projects/restore', deleted),
   createTask: (projectId: number, title: string) => request('POST', '/api/tasks', { project_id: projectId, title }),
   updateTask: (id: number, patch: TaskPatch) => request('PATCH', `/api/tasks/${id}`, patch),
+  orderTasks: (projectId: number, ids: number[]) => request('POST', `/api/projects/${projectId}/order`, { ids }),
   moveProject: (id: number, index: number) => request('POST', `/api/projects/${id}/move`, { index }),
   moveTask: (id: number, projectId: number, index: number) =>
     request('POST', `/api/tasks/${id}/move`, { project_id: projectId, index }),

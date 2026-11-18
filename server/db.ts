@@ -368,6 +368,22 @@ export class Store {
     return true;
   }
 
+  // Ordre des tâches à faire d'un projet : `ids` doit les contenir toutes, une fois
+  // chacune (sinon false, rien n'est changé). Les positions sont renumérotées.
+  orderTasks(projectId: number, ids: number[]): boolean {
+    const current = this.orm
+      .select({ id: task.id })
+      .from(task)
+      .where(and(eq(task.project_id, projectId), isNull(task.done_at)))
+      .all()
+      .map((r) => r.id);
+    if (ids.length !== current.length || new Set(ids).size !== ids.length || !ids.every((id) => current.includes(id))) return false;
+    this.orm.transaction((tx) => {
+      ids.forEach((taskId, position) => tx.update(task).set({ position }).where(eq(task.id, taskId)).run());
+    });
+    return true;
+  }
+
   // Place un projet à l'index donné parmi tous les projets (archivés compris) ;
   // les positions sont renumérotées. false si le projet n'existe pas.
   moveProject(id: number, index: number): boolean {
