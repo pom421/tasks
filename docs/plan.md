@@ -37,7 +37,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
-- [x] Jira : créer le ticket depuis une tâche sans identifiant (icône « ticket + », seulement si le projet a un ticket, l'epic, et que l'URL et le PAT sont réglés) : tâche enfant de l'epic après confirmation ; ☁↑ / ☁↓ n'apparaissent plus tant qu'ils sont inutilisables ; `+` dans la fiche ([PR #17](https://github.com/pom421/tasks/pull/17))
+- [x] Jira : créer le ticket depuis une tâche sans identifiant (icône « ticket + », seulement si le projet a un ticket, l'epic, et que l'URL et le PAT sont réglés) : tâche enfant de l'epic après confirmation ; ☁↑ / ☁↓ n'apparaissent plus tant qu'ils sont inutilisables ; `+` dans la fiche ; délier une tâche de son ticket en deux temps, avec avertissement (`r r`, ✕ ✕) ([PR #17](https://github.com/pom421/tasks/pull/17))
 - [x] Dépendances : cooldown 7 jours avec exceptions par version précise (skill `dependances-securite`), `pnpm audit` en CI (PR + chaque jour, seuil `high`), 12 failles corrigées, toutes les dépendances, pnpm 12.19.0 et Node 26 et actions GitHub (`checkout` / `setup-node` v7) mis à jour dans le respect du cooldown ([PR #13](https://github.com/pom421/tasks/pull/13))
 - [x] Fiche d'un projet (`o`, `Maj+Entrée`, `e`, icône 🗒) : nom, ticket (cliquable en lecture, comme la pastille rose de la ligne), contenu Markdown ; pas de tags ni de dates pour l'instant ([PR #6](https://github.com/pom421/tasks/pull/6))
 - [x] Modification d'un nom : la saisie et la sélection restent quand la fenêtre perd le focus (`Alt+Tab` ; Firefox sous Linux en RDP, où `Ctrl` faisait perdre le focus : copier-coller impossible). Un clic ailleurs dans la page annule toujours ([PR #12](https://github.com/pom421/tasks/pull/12))

@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { EditableName } from './Editable';
 import { ReportBadge } from './ReportBadge';
-import { TicketInput, useReport } from './Report';
+import { TicketInput, UnlinkWarning, useReport } from './Report';
 import { focusByKey, moveDirection } from '@/lib/nav';
 import { TimeSpent, TimerButtons, useTimer } from './Timer';
 import { PlanButton, usePlan } from './Plan';
@@ -87,8 +87,9 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
       setConfirmDelete(false);
       return;
     }
-    if (confirmDelete && e.key === 'Escape') e.stopPropagation();
+    if ((confirmDelete || report.unlinking) && e.key === 'Escape') e.stopPropagation();
     setConfirmDelete(false); // toute autre touche annule la demande
+    if (e.key !== 'r') report.cancelUnlink();
     if (priority.onKey(e)) return;
     if (e.key === ' ' && target.getAttribute('role') !== 'checkbox') {
       // Sur la case elle-même, Espace la coche nativement.
@@ -108,7 +109,9 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
 
   // Le focus quitte la ligne : la demande de suppression est abandonnée.
   const onBlur = (e: FocusEvent<HTMLLIElement>) => {
-    if (!e.currentTarget.contains(e.relatedTarget)) setConfirmDelete(false);
+    if (e.currentTarget.contains(e.relatedTarget)) return;
+    setConfirmDelete(false);
+    report.cancelUnlink();
   };
 
   return (
@@ -170,7 +173,10 @@ export function TaskRow({ task, onMove, highlight = '' }: { task: Task | DoneTas
               }}
             />
           ) : (
-            <ReportBadge task={task} />
+            <>
+              <ReportBadge task={task} />
+              {report.unlinking && <UnlinkWarning ticketKey={task.bugtracker_key} />}
+            </>
           )}
           {done && (
             <>

@@ -312,6 +312,8 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, pro
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     // Champ bloqué (lecture) : les touches restent celles de la fiche.
     const inField = (e.target as HTMLElement).matches('input:not([readonly]), textarea');
+    // Toute autre touche que r (et Échap, traité à part) annule l'avertissement « délier ».
+    if (e.key !== 'r' && e.key !== 'Escape') report.cancelUnlink();
     if (!inField && !done && !e.ctrlKey && !e.metaKey && !e.altKey && timer.onKey(e)) return;
     if (!inField && !done && !e.ctrlKey && !e.metaKey && !e.altKey && plan.onKey(e)) return;
     if (!inField && !e.ctrlKey && !e.metaKey && !e.altKey && priority.onKey(e)) return;
@@ -373,6 +375,8 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, pro
         // Échap : fermer en enregistrant (et rester ouvert en cas d'erreur).
         onEscapeKeyDown={(e) => {
           e.preventDefault();
+          // Échap pendant l'avertissement « délier » : l'annule, la fiche reste ouverte.
+          if (report.unlinking) return report.cancelUnlink();
           // Échap dans le champ du ticket : abandonne la saisie, la fiche reste ouverte.
           if ((e.target as HTMLElement).matches('.ticket-input')) return;
           // Échap dans un champ à propositions ouvertes : ferme la liste seulement.

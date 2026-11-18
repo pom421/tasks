@@ -10,9 +10,12 @@ import { REPORT_BASE, REPORT_WANTED, ReportBadge } from './ReportBadge';
 // Report d'une tâche, partagé par la ligne (r) et la fiche (clic) :
 // rien -> à reporter -> identifiant demandé : reportée -> rien. Saisie abandonnée
 // (Échap, vide, invalide, clic ailleurs) : retour à rien. Annulable (u).
+// Délier une tâche reportée de son ticket se fait en deux temps, comme une
+// suppression : 1er appui = avertissement (unlinking), 2e = retrait, Échap annule.
 export function useReport(task: Task) {
   const { undoable } = useActions();
   const [asking, setAsking] = useState(false);
+  const [unlinking, setUnlinking] = useState(false);
   const askingNow = useRef(false); // champ demandé (ouvert, ou en attente des enregistrements)
   const change = (label: string, patch: TaskPatch, before: TaskPatch) =>
     undoable({
@@ -41,8 +44,13 @@ export function useReport(task: Task) {
       askingNow.current = true;
       j.queue = j.queue.then(() => setAsking(true));
     } else if (j.state === 'none') step('wanted', null, 'à reporter', { bugtracker: 'wanted' }, { bugtracker: 'none' });
-    else step('none', null, 'retrait du report', { bugtracker: 'none' }, { bugtracker_ticket: j.key });
+    else if (!unlinking) setUnlinking(true);
+    else {
+      setUnlinking(false);
+      step('none', null, 'retrait du report', { bugtracker: 'none' }, { bugtracker_ticket: j.key });
+    }
   };
+  const cancelUnlink = () => setUnlinking(false);
   const save = (key: string) => step('done', key, 'reportée', { bugtracker_ticket: key }, { bugtracker_ticket: null });
   // Champ fermé ; sans identifiant enregistré, retour à rien.
   const stopAsking = (saved: boolean) => {
@@ -51,12 +59,21 @@ export function useReport(task: Task) {
     setAsking(false);
     if (!saved) step('none', null, 'retrait du report', { bugtracker: 'none' }, { bugtracker: 'wanted' });
   };
-  return { state: bugtrackerState(task), asking, cycle, save, stopAsking };
+  return { state: bugtrackerState(task), asking, unlinking, cycle, cancelUnlink, save, stopAsking };
 }
 
 // Report dans la fiche : un seul contrôle, à la place du ticket. Clic (ou r) sur
 // « aucun » : à reporter ; sur « à reporter » : champ de l'identifiant ;
-// reportée : pastille du ticket et ✕ pour retirer le report.
+// reportée : pastille du ticket et ✕ pour retirer le report (en deux temps).
+
+// Avertissement avant de délier une tâche de son ticket (ligne et fiche).
+export function UnlinkWarning({ ticketKey }: { ticketKey: string | null }) {
+  return (
+    <span className="confirm-unlink min-w-0 flex-none text-xs text-destructive" role="alert">
+      r à nouveau : délier {ticketKey} (le ticket reste dans Jira) · Échap : annuler
+    </span>
+  );
+}
 export function ReportControl({ task, report }: { task: Task; report: ReturnType<typeof useReport> }) {
   const button = useRef<HTMLButtonElement>(null);
   // Champ refermé : le focus revient sur le contrôle (après son affichage).
@@ -85,13 +102,14 @@ export function ReportControl({ task, report }: { task: Task; report: ReturnType
           ref={button}
           variant="ghost"
           size="icon-xs"
-          className="size-5 text-muted-foreground"
-          title="Retirer le report et l’identifiant (r)"
-          aria-label="Retirer le report"
+          className={cn('size-5', report.unlinking ? 'text-destructive' : 'text-muted-foreground')}
+          title={report.unlinking ? 'Confirmer : délier la tâche du ticket (r)' : 'Délier la tâche du ticket (r r)'}
+          aria-label={report.unlinking ? 'Confirmer le retrait du report' : 'Retirer le report'}
           onClick={report.cycle}
         >
           <X aria-hidden />
         </Button>
+        {report.unlinking && <UnlinkWarning ticketKey={task.bugtracker_key} />}
       </span>
     );
   }
