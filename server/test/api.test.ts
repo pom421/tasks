@@ -423,7 +423,7 @@ test('migration 12 : colonnes et réglage du ticket renommés (bugtracker), donn
             PRAGMA user_version = 11;`);
   v11.close();
   const store11 = new Store(file);
-  assert.deepEqual(store11.migration.applied.map((m) => m.version), [12, 13, 14, 15, 16, 17, 18]);
+  assert.deepEqual(store11.migration.applied.map((m) => m.version), [12, 13, 14, 15, 16, 17, 18, 19]);
   const [done] = store11.journal({ limit: 5 }).days[0].tasks;
   assert.deepEqual(
     [done.bugtracker_wanted_at, done.bugtracker_at, done.bugtracker_key],
@@ -893,4 +893,56 @@ test('ordre des tâches d\'un projet : toutes, une fois chacune ; les faites ign
   assert.equal((await call('POST', `/api/projects/${p.id}/order`, { ids: [a, b, c, faite.id] })).status, 400, 'tâche faite');
   assert.equal((await call('POST', '/api/projects/99999/order', { ids: [] })).status, 404);
   assert.deepEqual(await titles(), ['C', 'A', 'B'], 'rien changé après un refus');
+});
+
+test('synthèse : une version par jour, identique = pas de version ; état du cercle ; fait récemment ; suppression et restauration', async () => {
+  const p = (await call('POST', '/api/projects', { name: 'Synthèse' })).body;
+  const project = async (day: string) => (await call('GET', `/api/state?day=${day}`)).body.projects.find((x: { id: number }) => x.id === p.id);
+  const versions = async (day: string) => (await call('GET', `/api/projects/${p.id}/summaries?day=${day}`)).body.versions;
+
+  // Sans version : rien, pas de tâche faite ce jour-là.
+  assert.deepEqual(await project('2026-10-01'), { ...(await project('2026-10-01')), summary_day: null, done_today: false });
+
+  // Deux enregistrements le même jour : une seule version (la dernière) ; project.notes suit.
+  await call('PATCH', `/api/projects/${p.id}`, { notes: 'v1', day: '2026-10-01' });
+  await call('PATCH', `/api/projects/${p.id}`, { notes: 'v1 bis', day: '2026-10-01' });
+  await call('PATCH', `/api/projects/${p.id}`, { notes: 'v2', day: '2026-10-03' });
+  assert.deepEqual(await versions('2026-10-03'), [{ day: '2026-10-03', content: 'v2' }, { day: '2026-10-01', content: 'v1 bis' }]);
+  assert.equal((await project('2026-10-03')).notes, 'v2');
+  assert.equal((await project('2026-10-03')).summary_day, '2026-10-03');
+
+  // Revenir au contenu d'avant (annulation) : la version du jour disparaît, l'historique est exact.
+  await call('PATCH', `/api/projects/${p.id}`, { notes: 'v1 bis', day: '2026-10-03' });
+  assert.deepEqual(await versions('2026-10-03'), [{ day: '2026-10-01', content: 'v1 bis' }]);
+  assert.equal((await project('2026-10-03')).summary_day, '2026-10-01');
+  assert.equal((await call('PATCH', `/api/projects/${p.id}`, { notes: 'x', day: '3/10' })).status, 400);
+
+  // Tâche faite ce jour-là : cercle ; fait récemment = depuis la version d'avant ce jour.
+  const t = (await call('POST', '/api/tasks', { project_id: p.id, title: 'Faite le 2' })).body;
+  await call('PATCH', `/api/tasks/${t.id}`, { done: true, done_at: '2026-10-02' });
+  const old = (await call('POST', '/api/tasks', { project_id: p.id, title: 'Faite avant' })).body;
+  await call('PATCH', `/api/tasks/${old.id}`, { done: true, done_at: '2026-09-30' });
+  assert.equal((await project('2026-10-02')).done_today, true);
+  assert.equal((await project('2026-10-03')).done_today, false);
+  const { recent } = (await call('GET', `/api/projects/${p.id}/summaries?day=2026-10-03`)).body;
+  assert.deepEqual(recent, [{ id: t.id, title: 'Faite le 2', done_at: '2026-10-02' }]); // pas « Faite avant » (avant la version du 1er)
+  assert.equal((await call('GET', `/api/projects/${p.id}/summaries`)).status, 400);
+  assert.equal((await call('GET', '/api/projects/99999/summaries?day=2026-10-03')).status, 404);
+
+  // Une tâche faite se lit par son id (lien de la synthèse), avec son projet.
+  assert.deepEqual(
+    (({ id, title, done_at, project_name }) => ({ id, title, done_at, project_name }))((await call('GET', `/api/tasks/${t.id}`)).body),
+    { id: t.id, title: 'Faite le 2', done_at: '2026-10-02', project_name: 'Synthèse' },
+  );
+  assert.equal((await call('GET', '/api/tasks/99999')).status, 404);
+
+  // Suppression puis restauration : les versions reviennent.
+  const { body: deleted } = await call('DELETE', `/api/projects/${p.id}`);
+  assert.equal(deleted.summaries.length, 1);
+  assert.equal((await call('POST', '/api/projects/restore', deleted)).status, 201);
+  assert.deepEqual(await versions('2026-10-03'), [{ day: '2026-10-01', content: 'v1 bis' }]);
+  // Ancienne suppression (sans versions) : toujours restaurable.
+  const { body: again } = await call('DELETE', `/api/projects/${p.id}`);
+  delete again.summaries;
+  assert.equal((await call('POST', '/api/projects/restore', again)).status, 201);
 });

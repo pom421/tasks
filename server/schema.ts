@@ -10,7 +10,7 @@
 // 'YYYY-MM-DD' (journée). NULL = pas de date (état inactif).
 
 import { sql } from 'drizzle-orm';
-import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import type { Priority } from '../shared/types.ts';
 
 const now = sql`(datetime('now'))`;
@@ -23,7 +23,7 @@ export const project = sqliteTable('project', {
   favorite_at: text(), // favori depuis
   position: integer().notNull().default(0), // ordre d'affichage des projets
   bugtracker_key: text(), // ticket du projet (epic, PROJ-123), lien construit avec bugtracker_base_url
-  notes: text(), // contenu, en Markdown
+  notes: text(), // synthèse : sa version la plus récente, en Markdown (historique : project_summary)
 });
 
 export const task = sqliteTable(
@@ -57,6 +57,21 @@ export const task = sqliteTable(
   (t) => [index('task_project').on(t.project_id), index('task_done_at').on(t.done_at)],
 );
 
+// Synthèse d'un projet, une version par jour (la dernière modification du jour
+// l'emporte) ; la plus récente est aussi dans project.notes. Une version
+// identique à la précédente n'est pas gardée.
+export const projectSummary = sqliteTable(
+  'project_summary',
+  {
+    project_id: integer()
+      .notNull()
+      .references(() => project.id, { onDelete: 'cascade' }),
+    day: text().notNull(), // 'YYYY-MM-DD' (journée du navigateur)
+    content: text().notNull(), // Markdown ; '' = synthèse vidée ce jour-là
+  },
+  (t) => [primaryKey({ columns: [t.project_id, t.day] })],
+);
+
 // Réglages de l'application : bugtracker_base_url, day_capacity (maximum de tâches
 // par jour dans Aujourd'hui).
 export const setting = sqliteTable('setting', {
@@ -72,7 +87,8 @@ export const schemaMigration = sqliteTable('schema_migration', {
   applied_at: text(), // NULL = appliquée avant l'existence de cette table
 });
 
-export const tables = [project, task, setting, schemaMigration];
+export const tables = [project, task, projectSummary, setting, schemaMigration];
 
 export type ProjectRow = typeof project.$inferSelect;
 export type TaskRow = typeof task.$inferSelect;
+export type SummaryRow = typeof projectSummary.$inferSelect;

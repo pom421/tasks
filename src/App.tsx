@@ -1,8 +1,8 @@
 import { flushSync } from 'react-dom';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { DEFAULT_DAY_CAPACITY, allTags, jiraReady, type BugtrackerState, type JournalDay, type Priority, type Project, type Settings, type Task } from '../shared/types.ts';
+import { DEFAULT_DAY_CAPACITY, allTags, jiraReady, type BugtrackerState, type DoneTask, type JournalDay, type Priority, type Project, type Settings, type Task } from '../shared/types.ts';
 import { api } from '@/lib/api';
-import { ActionsContext, type Actions, type TaskField } from '@/lib/actions';
+import { ActionsContext, type Actions, type ProjectField, type TaskField } from '@/lib/actions';
 import { record, useHistory } from '@/lib/history';
 import { focusByKey, handleNavKey, restore, snapshot, type FocusSnapshot } from '@/lib/nav';
 import { Toolbar } from '@/components/Toolbar';
@@ -66,7 +66,9 @@ export function App() {
   // fermeture ; opening numérote les ouvertures (formulaire neuf à chaque fois).
   const [openTask, setOpenTask] = useState<{ id: number; field: TaskField; open: boolean; opening: number } | null>(null);
   // Fiche d'un projet : mêmes principes.
-  const [openProject, setOpenProject] = useState<{ id: number; field: TaskField; open: boolean; opening: number } | null>(null);
+  const [openProject, setOpenProject] = useState<{ id: number; field: ProjectField; open: boolean; opening: number } | null>(null);
+  // Tâche lue à part (lien de la synthèse vers une tâche faite hors de la fenêtre du Log).
+  const [looseTask, setLooseTask] = useState<Task | DoneTask | null>(null);
   const [filter, setFilter] = useState<Filter>(NO_FILTER);
   // Filtres de la zone des projets (boutons sous la barre d'outils) : sans effet sur le Log.
   // Filtre report (R) : aucun → à reporter → reportées → aucun.
@@ -336,7 +338,8 @@ export function App() {
     ...data.projects.flatMap((p) => p.tasks),
     ...data.days.flatMap((d) => d.tasks),
   ];
-  const current = openTask && allTasks.find((t) => t.id === openTask.id);
+  // Tâche hors des données chargées (faite il y a longtemps, ouverte depuis un lien de la synthèse).
+  const current = openTask && (allTasks.find((t) => t.id === openTask.id) ?? (looseTask?.id === openTask.id ? looseTask : undefined));
   const currentProject = openProject && data.projects.find((p) => p.id === openProject.id);
   const projectName = (t: Task & { project_name?: string }) =>
     t.project_name ?? data.projects.find((p) => p.id === t.project_id)?.name ?? '';
@@ -373,6 +376,20 @@ export function App() {
           onClose={(changed) => {
             setOpenProject({ ...openProject, open: false });
             if (changed) actions.act(async () => ({ focus: `project:${currentProject.id}` }));
+          }}
+          // Lien de la synthèse vers une tâche : la fiche du projet se ferme, celle de la tâche s'ouvre.
+          onOpenTask={async (id) => {
+            setOpenProject({ ...openProject, open: false });
+            const known = allTasks.find((t) => t.id === id);
+            if (known) return actions.openTask(known);
+            try {
+              const { done_at, ...rest } = (await api.getTask(id)) as Task & { done_at: string | null };
+              const found = (done_at ? { ...rest, done_at } : rest) as Task | DoneTask;
+              setLooseTask(found);
+              actions.openTask(found);
+            } catch (err) {
+              toast((err as Error).message);
+            }
           }}
         />
       )}

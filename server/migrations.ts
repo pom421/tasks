@@ -155,6 +155,19 @@ export const MIGRATIONS: Migration[] = [
     name: 'contenu des projets',
     sql: `ALTER TABLE project ADD COLUMN notes TEXT;`,
   },
+  {
+    version: 19,
+    name: 'synthèse des projets, versionnée par jour',
+    sql: `
+      CREATE TABLE project_summary (
+        project_id INTEGER NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+        day TEXT NOT NULL,
+        content TEXT NOT NULL,
+        PRIMARY KEY (project_id, day)
+      );
+      INSERT INTO project_summary (project_id, day, content)
+        SELECT id, date('now', 'localtime'), notes FROM project WHERE notes IS NOT NULL AND notes <> '';`,
+  },
 ];
 
 export const LATEST_VERSION = MIGRATIONS.at(-1)!.version;

@@ -1,9 +1,10 @@
 import { useRef, useState, type FocusEvent, type KeyboardEvent } from 'react';
-import { Archive, ArchiveRestore, ArrowDown01, Heart, NotebookText, Trash2 } from 'lucide-react';
+import { Archive, ArchiveRestore, ArrowDown01, Circle, Heart, NotebookText, Trash2 } from 'lucide-react';
 import { bugtrackerState, type BugtrackerState, type Priority, type Project, type Task } from '../../shared/types.ts';
 import { api } from '@/lib/api';
 import { useActions } from '@/lib/actions';
 import { focusByKey, moveDirection } from '@/lib/nav';
+import { localToday } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { AddInput, EditableName } from './Editable';
@@ -90,7 +91,14 @@ function ProjectCard({ project: p, onMove, onSortPriority, onMoveProject }: Proj
       e.preventDefault();
       openProject(p, e.key === 'e' ? 'edit' : 'notes');
     }
+    if (e.key === 's') {
+      e.preventDefault();
+      openProject(p, 'summary');
+    }
   };
+  // Synthèse : cercle à droite les jours où une tâche du projet a été faite ;
+  // vide tant que la synthèse n'a pas été mise à jour ce jour-là, plein ensuite.
+  const summaryDone = p.summary_day === localToday();
 
   // Le focus quitte l'en-tête : la demande de suppression est abandonnée.
   const onBlur = (e: FocusEvent<HTMLDivElement>) => {
@@ -144,7 +152,7 @@ function ProjectCard({ project: p, onMove, onSortPriority, onMoveProject }: Proj
           <Heart aria-hidden fill={favorite ? 'currentColor' : 'none'} />
         </Button>
         {/* Fiche du projet, à côté du cœur : icône toujours visible s'il a du
-            contenu, sinon au survol (la souris peut ainsi en ajouter). */}
+            synthèse, sinon au survol (la souris peut ainsi en écrire une). */}
         {!confirmDelete && (
           <Button
             variant="ghost"
@@ -155,7 +163,7 @@ function ProjectCard({ project: p, onMove, onSortPriority, onMoveProject }: Proj
               !p.notes && 'invisible group-hover:visible group-focus-within:visible',
             )}
             aria-label="Fiche du projet"
-            title={p.notes ? 'Voir le contenu (o ou Maj+Entrée)' : 'Ouvrir la fiche du projet (o ou Maj+Entrée)'}
+            title={p.notes ? 'Voir la synthèse (o ou Maj+Entrée ; s : la modifier)' : 'Ouvrir la fiche du projet (o ou Maj+Entrée ; s : écrire la synthèse)'}
             onClick={() => openProject(p, 'notes')}
           >
             <NotebookText aria-hidden />
@@ -229,6 +237,18 @@ function ProjectCard({ project: p, onMove, onSortPriority, onMoveProject }: Proj
             <Trash2 aria-hidden />
           </Button>
         </span>
+        {p.done_today && !confirmDelete && (
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            className="summary-reminder self-center text-muted-foreground"
+            aria-label={summaryDone ? 'Synthèse à jour' : 'Synthèse à mettre à jour'}
+            title={summaryDone ? 'Synthèse mise à jour aujourd’hui (s)' : 'Synthèse à mettre à jour : une tâche du projet faite aujourd’hui (s)'}
+            onClick={() => openProject(p, 'summary')}
+          >
+            <Circle aria-hidden fill={summaryDone ? 'currentColor' : 'none'} />
+          </Button>
+        )}
       </div>
       <ul>
         {p.tasks.map((t) => (

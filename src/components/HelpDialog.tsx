@@ -52,6 +52,7 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
       [[['f']], 'Favori / plus favori'],
       [[['a']], 'Archiver / désarchiver'],
       [[['r']], 'Ticket du projet (epic…) : saisir, modifier, vider pour le retirer'],
+      [[['s']], 'Synthèse : la modifier'],
       [[['x x']], 'Supprimer avec ses tâches (ou Suppr)'],
     ],
   ],

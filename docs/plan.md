@@ -14,7 +14,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Idées / plus tard
 
-- [ ] Fiche « vue d'ensemble » d'un projet (nom à choisir ; « chemise » écarté) : Markdown libre, versionnée par jour (dernière version affichée, anciennes consultables), avec trois blocs : fait récemment (liste à puces, une ligne par tâche faite : titre avec lien, texte libre n'importe où), prochaines étapes (idem, seulement les P1), liens épinglés (Markdown). Étape 1 : petit cercle à droite d'un projet quand la fiche est à mettre à jour (projet modifié aujourd'hui, fiche pas touchée). Plus tard : vue horizontale de tous les projets (1/3 de largeur chacun, défilement horizontal)
+- [ ] Vue d'ensemble de tous les projets : vue horizontale, un tiers de largeur par projet (sa synthèse), défilement horizontal
 - [ ] Lien d'un ticket : modèle d'URL réglable (`https://…/browse/{clé}`) pour GitLab ou GitHub (« pour l'instant, non » ; aujourd'hui `URL/browse/CLÉ`, format Jira)
 - [ ] Jira : convertir Markdown ↔ wiki (refusé pour l'instant : contenu envoyé tel quel)
 - [ ] Drizzle : passer à la 1.0 stable quand elle sort (épinglée en `1.0.0-rc.4`)
@@ -26,6 +26,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
+- [x] Synthèse d'un projet (remplace son contenu) : Markdown libre (le projet et ses liens, fait récemment, prochaines étapes), une version par jour consultable et restaurable ; boutons « Tâches faites » (depuis la version d'avant) et « Priorités 1 » qui insèrent des liens vers les fiches ; cercle à droite du projet les jours où une tâche est faite (vide, plein une fois la synthèse mise à jour) ; `s` ; migration 19 ([PR #19](https://github.com/pom421/tasks/pull/19))
 - [x] Jira : créer le ticket depuis une tâche sans identifiant (icône « ticket + », seulement si le projet a un ticket, l'epic, et que l'URL et le PAT sont réglés) : tâche enfant de l'epic après confirmation ; ☁↑ / ☁↓ n'apparaissent plus tant qu'ils sont inutilisables ; `+` dans la fiche ; délier une tâche de son ticket en deux temps, avec avertissement (`r r`, ✕ ✕) ([PR #17](https://github.com/pom421/tasks/pull/17))
 - [x] Projet : bouton « Trier par priorité » (flèche + 0 1, au survol, souris seulement) : 1, 2, 3 puis sans priorité, stable, annulable ; remplace le tri automatique refusé ([PR #16](https://github.com/pom421/tasks/pull/16))
 - [x] Log : bouton « N tâches à reporter » (drapeau, `R` dans l'onglet Log) : seulement les tâches faites à reporter, que le compteur des projets ne compte plus ([PR #15](https://github.com/pom421/tasks/pull/15))

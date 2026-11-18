@@ -190,7 +190,15 @@ function restoredProject(body: Body): DeletedProject {
   };
   const tasks = body.tasks.map((t) => restoredTask((t ?? {}) as Body));
   if (tasks.some((t) => t.project_id !== project.id)) throw new HttpError(400, 'Tâche d’un autre projet');
-  return { project, tasks };
+  // Versions de la synthèse (absentes des suppressions faites avant elles).
+  const raw = body.summaries ?? [];
+  if (!Array.isArray(raw) || raw.length > 10_000) throw new HttpError(400, 'Synthèse invalide');
+  const summaries = raw.map((s) => {
+    const v = (s ?? {}) as Body;
+    if (!isDate(v.day) || typeof v.content !== 'string' || v.content.length > 20_000) throw new HttpError(400, 'Synthèse invalide');
+    return { project_id: project.id, day: v.day, content: v.content };
+  });
+  return { project, tasks, summaries };
 }
 
 function optionalText(value: unknown, label: string, max: number): string | null {
@@ -358,10 +366,23 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
       if ('archived' in body) patch.archived = Boolean(body.archived);
       if ('favorite' in body) patch.favorite = Boolean(body.favorite);
       if ('bugtracker_ticket' in body) Object.assign(patch, bugtrackerTicket(body.bugtracker_ticket));
-      if ('notes' in body) patch.notes = optionalText(body.notes, 'Contenu', 20_000);
+      if ('notes' in body) patch.notes = optionalText(body.notes, 'Synthèse', 20_000);
+      if ('day' in body) {
+        if (!isDate(body.day)) throw new HttpError(400, 'Jour invalide');
+        patch.day = body.day;
+      }
       const project = store.updateProject(Number(id), patch);
       if (!project) throw new HttpError(404, 'Projet introuvable');
       send(res, 200, project);
+    }],
+
+    // Synthèse d'un projet : versions et tâches faites depuis la version d'avant `day`.
+    ['GET', /^\/api\/projects\/(\d+)\/summaries$/, async (_req, res, url, id) => {
+      const day = url.searchParams.get('day');
+      if (!isDate(day)) throw new HttpError(400, 'Jour invalide');
+      const summaries = store.summaries(Number(id), day);
+      if (!summaries) throw new HttpError(404, 'Projet introuvable');
+      send(res, 200, summaries);
     }],
 
     // Déplacement d'un projet : { index } parmi tous les projets.
@@ -405,6 +426,13 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
       } catch {
         throw new HttpError(400, 'Projet introuvable');
       }
+    }],
+
+    // Une tâche, à faire ou faite (lien de la synthèse vers sa fiche).
+    ['GET', /^\/api\/tasks\/(\d+)$/, async (_req, res, _url, id) => {
+      const found = store.getTask(Number(id));
+      if (!found) throw new HttpError(404, 'Tâche introuvable');
+      send(res, 200, found);
     }],
 
     ['PATCH', /^\/api\/tasks\/(\d+)$/, async (req, res, _url, id) => {
