@@ -28,6 +28,7 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
       [[['Ctrl+Entrée']], 'Enregistrer et lire ; en lecture, fermer'],
       [[['r', 'c', 'C', 't', '1', '2', '3']], 'Comme sur la tâche'],
       [[['>'], ['<']], 'Pousser vers Jira / récupérer depuis Jira (comparaison, puis confirmer)'],
+      [[['+']], 'Créer le ticket dans Jira, enfant du ticket du projet (puis confirmer)'],
     ],
   ],
   [

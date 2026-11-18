@@ -51,7 +51,7 @@ const BOX = 'flex h-9 items-center rounded-md border border-input px-3 text-sm s
 // invalide ou clic ailleurs : retour à aucun) → aucun (r ou ✕).
 // Jira (ticket PROJ-123, URL et PAT renseignés) : > pousse vers Jira, < récupère
 // depuis Jira, après une fenêtre de comparaison ; annulable (u). Sans identifiant,
-// si le projet a un ticket (epic) : l'icône « + » crée le ticket dans Jira, enfant
+// si le projet a un ticket (epic) : + (ou l'icône) crée le ticket dans Jira, enfant
 // de l'epic, après une fenêtre de confirmation (pas annulable : il existe dans Jira).
 // Tout est enregistré automatiquement, rien n'est perdu.
 // Accessibilité : focus piégé, titre et description annoncés (Radix),
@@ -318,6 +318,11 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, pro
     if ((e.key === '>' || e.key === '<') && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault();
       startJira(e.key === '>' ? 'push' : 'pull');
+      return;
+    }
+    if (e.key === '+' && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      if (jira) startCreate();
       return;
     }
     if (e.key === 'r' && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {

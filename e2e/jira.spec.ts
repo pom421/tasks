@@ -77,9 +77,20 @@ test('créer le ticket : tâche enfant du ticket du projet, après confirmation 
     await expect(confirm).toHaveCount(0);
     expect(Object.keys(issues)).toEqual(['PROJ-9']);
 
-    // Confirmer : le ticket est créé sous l'epic, l'identifiant est enregistré (report fait).
-    await create.click();
-    await page.getByRole('button', { name: 'Créer le ticket' }).click();
+    // + dans un champ de saisie : tapé, rien n'est créé.
+    await page.keyboard.press('e');
+    await expect(dialog.getByLabel('Titre')).toBeFocused();
+    await page.keyboard.press('End');
+    await page.keyboard.type('+');
+    await expect(dialog.getByLabel('Titre')).toHaveValue('Une+');
+    await expect(confirm).toHaveCount(0);
+    await page.keyboard.press('Backspace');
+    await page.keyboard.press('Control+Enter'); // retour en lecture
+
+    // Confirmer par + puis + : le ticket est créé sous l'epic, l'identifiant est enregistré (report fait).
+    await page.keyboard.press('+');
+    await expect(confirm).toBeVisible();
+    await page.keyboard.press('+');
     await expect(dialog.locator('.jira-status')).toHaveText('Ticket PROJ-101 créé dans Jira, rattaché à PROJ-9.');
     await expect(dialog.locator('.report-key')).toHaveText('PROJ-101');
     expect(issues['PROJ-101']).toEqual({ summary: 'Une', description: 'Détail', duedate: '2026-10-12', sprint: 'Sprint 43', epic: 'PROJ-9' });

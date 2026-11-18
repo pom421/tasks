@@ -40,7 +40,7 @@ export function JiraButtons({ ready, ticketKey, canCreate, onClick, onCreate }: 
         tabIndex={-1}
         className="jira-create flex-none text-muted-foreground"
         aria-label="Créer le ticket dans Jira"
-        title="Créer le ticket dans Jira : une tâche rattachée au ticket du projet"
+        title="Créer le ticket dans Jira : une tâche rattachée au ticket du projet (+)"
         onClick={onCreate}
       >
         <TicketPlus aria-hidden />
@@ -164,7 +164,14 @@ export function JiraCreate({ epicKey, projectName, fields, busy, onConfirm, onCa
     <Dialog open onOpenChange={(open) => !open && onCancel()}>
       <DialogContent
         className="jira-create-dialog flex max-h-[85vh] flex-col sm:max-w-2xl"
-        onKeyDown={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          // Les touches ne remontent pas à la fiche ; + confirme, comme > pour pousser.
+          e.stopPropagation();
+          if (e.key === '+') {
+            e.preventDefault();
+            if (!busy) onConfirm();
+          }
+        }}
         onOpenAutoFocus={(e) => {
           e.preventDefault();
           confirm.current?.focus();
@@ -183,7 +190,7 @@ export function JiraCreate({ epicKey, projectName, fields, busy, onConfirm, onCa
           ])}
         </div>
         <div className="flex items-center justify-between gap-2">
-          <p className="text-xs text-muted-foreground">Entrée : créer · Échap : annuler</p>
+          <p className="text-xs text-muted-foreground">+ ou Entrée : créer · Échap : annuler</p>
           <DialogFooter>
             <Button type="button" onClick={onCancel}>
               Annuler
