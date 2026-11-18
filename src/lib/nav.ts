@@ -29,7 +29,9 @@ function focusItem(el: HTMLElement | undefined, { margin = false } = {}) {
     items[Math.min(i + MARGIN, items.length - 1)].scrollIntoView({ block: 'nearest' });
     // Les blocs de l'en-tête (barre, onglets, filtres) comptent comme des
     // éléments avant le premier : il réapparaît bloc par bloc, sans saut.
-    const header = [...document.querySelectorAll<HTMLElement>('[data-nav-header]')].filter((h) => h.offsetParent !== null);
+    const header = [...document.querySelectorAll<HTMLElement>('[data-nav-header]')].filter(
+      (h) => h.offsetParent !== null,
+    );
     const j = i + header.length - MARGIN;
     if (j <= 0) window.scrollTo({ top: 0 });
     else [...header, ...items][j].scrollIntoView({ block: 'nearest' });
@@ -154,6 +156,7 @@ export function moveDirection(e: {
   key: string;
   target: EventTarget | null;
 }): -1 | 1 | undefined {
-  if (!e.shiftKey || e.altKey || !(e.ctrlKey || e.metaKey) || (e.target as HTMLElement).matches('input, textarea')) return undefined;
+  if (!e.shiftKey || e.altKey || !(e.ctrlKey || e.metaKey) || (e.target as HTMLElement).matches('input, textarea'))
+    return undefined;
   return ({ ArrowUp: -1, ArrowDown: 1 } as Record<string, -1 | 1>)[e.key];
 }

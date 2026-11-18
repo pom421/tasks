@@ -15,7 +15,8 @@ function seed(store: Store) {
 }
 
 // Clé de navigation de l'élément qui a le focus ("project:1", "task:2"…).
-const current = (page: Page) => page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset.navKey ?? null);
+const current = (page: Page) =>
+  page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset.navKey ?? null);
 
 // Recharge la page et attend la liste : sinon les touches partent trop tôt.
 async function reload(page: Page) {
@@ -112,7 +113,11 @@ test('Entrée sur un projet : édition, Entrée enregistre et rend la navigation
   expect(await current(page)).toBe(`task:${data.tasks.une.id}`);
 });
 
-test('Entrée sur une tâche puis Échap : annule, focus sur la tâche, navigation reprend', async ({ page, store, data }) => {
+test('Entrée sur une tâche puis Échap : annule, focus sur la tâche, navigation reprend', async ({
+  page,
+  store,
+  data,
+}) => {
   await pressDown(page, 2);
   await page.keyboard.press('Enter');
   const input = page.locator('input.edit');
@@ -195,7 +200,11 @@ test('Espace dans le journal décoche la tâche', async ({ page, store, data }) 
   expect(store.state().projects[1].tasks[0].title).toBe('Trois');
 });
 
-test('champ d’ajout : Entrée pour écrire, Entrée ajoute, Échap vide et repasse en lecture', async ({ page, store, data }) => {
+test('champ d’ajout : Entrée pour écrire, Entrée ajoute, Échap vide et repasse en lecture', async ({
+  page,
+  store,
+  data,
+}) => {
   await pressDown(page, 4);
   expect(await current(page)).toBe(`add:${data.alpha.id}`);
   await page.keyboard.press('Enter'); // atteint par la navigation : en lecture, Entrée pour écrire
@@ -274,14 +283,21 @@ test('x puis Échap, ou x puis déplacement : suppression annulée', async ({ pa
   expect(store.state().projects[0].tasks.map((t) => t.title)).toEqual(['Une', 'Deux']);
 });
 
-test('tâche : pas de bouton de suppression à la souris, seulement x x (ni fenêtre de confirmation)', async ({ page, data }) => {
+test('tâche : pas de bouton de suppression à la souris, seulement x x (ni fenêtre de confirmation)', async ({
+  page,
+  data,
+}) => {
   const une = page.locator(`li.task:has([data-nav-key="task:${data.tasks.une.id}"])`);
   await une.hover();
   await expect(une.getByRole('button', { name: /Supprimer|✕/ })).toHaveCount(0);
   await expect(une.getByText('✕')).toHaveCount(0);
 });
 
-test('ligne de tâche : icônes alignées à droite, clic n’importe où sur la ligne = édition puis flèches', async ({ page, store, data }) => {
+test('ligne de tâche : icônes alignées à droite, clic n’importe où sur la ligne = édition puis flèches', async ({
+  page,
+  store,
+  data,
+}) => {
   store.updateTask(data.tasks.une.id, { bugtracker: 'wanted', notes: 'du contenu' });
   await reload(page);
   // Première ligne (le titre, porteur de data-nav-key, devient un champ en édition).
@@ -313,7 +329,11 @@ test('ligne de tâche : icônes alignées à droite, clic n’importe où sur la
   expect(await current(page)).toBe(`task:${data.tasks.deux.id}`);
 });
 
-test('remonter au premier projet : l’en-tête (titre, filtres, réglages) redevient visible', async ({ page, store, data }) => {
+test('remonter au premier projet : l’en-tête (titre, filtres, réglages) redevient visible', async ({
+  page,
+  store,
+  data,
+}) => {
   for (let i = 0; i < 25; i++) store.createTask(data.beta.id, `Tâche ${i}`);
   await reload(page);
   await page.setViewportSize({ width: 800, height: 400 });
@@ -343,7 +363,10 @@ test('Suppr fonctionne comme x (double appui)', async ({ page, store }) => {
   expect(store.state().projects[0].tasks.map((t) => t.title)).toEqual(['Deux']);
 });
 
-test('j / k naviguent comme ↓ / ↑, y compris sur « + Ajouter » ; s’écrivent une fois en écriture (Entrée)', async ({ page, data }) => {
+test('j / k naviguent comme ↓ / ↑, y compris sur « + Ajouter » ; s’écrivent une fois en écriture (Entrée)', async ({
+  page,
+  data,
+}) => {
   await page.keyboard.press('j');
   expect(await current(page)).toBe(`project:${data.alpha.id}`);
   await page.keyboard.press('j');
@@ -371,7 +394,10 @@ test('j / k naviguent comme ↓ / ↑, y compris sur « + Ajouter » ; s’écri
   await expect(add).toHaveValue('jk');
 });
 
-test('« + Ajouter » : n ou clic = écriture directe ; n sur le champ en lecture le passe en écriture', async ({ page, data }) => {
+test('« + Ajouter » : n ou clic = écriture directe ; n sur le champ en lecture le passe en écriture', async ({
+  page,
+  data,
+}) => {
   const add = page.locator(`[data-nav-key="add:${data.alpha.id}"]`);
   await add.click();
   await page.keyboard.type('x');
@@ -444,7 +470,9 @@ test('badge « reporté » conservé dans le journal, et J y fonctionne aussi', 
   await expect(row).toHaveCount(0);
   // Onglet Log : la tâche est le premier élément.
   await page.keyboard.press('L');
-  await expect(page.locator(`#journal li.task:has([data-nav-key="task:${data.tasks.trois.id}"]) .report-done`)).toBeVisible();
+  await expect(
+    page.locator(`#journal li.task:has([data-nav-key="task:${data.tasks.trois.id}"]) .report-done`),
+  ).toBeVisible();
   await pressDown(page, 1);
   expect(await current(page)).toBe(`task:${data.tasks.trois.id}`);
   await page.keyboard.press('r');
@@ -456,7 +484,11 @@ test('badge « reporté » conservé dans le journal, et J y fonctionne aussi', 
 // Titres des tâches à faire, par projet, tels qu'enregistrés.
 const order = (store: Store) => store.state().projects.map((p) => p.tasks.map((t) => t.title));
 
-test('Ctrl+Maj+↑ / Ctrl+Maj+↓ changent l’ordre dans le projet ; le focus suit la tâche', async ({ page, store, data }) => {
+test('Ctrl+Maj+↑ / Ctrl+Maj+↓ changent l’ordre dans le projet ; le focus suit la tâche', async ({
+  page,
+  store,
+  data,
+}) => {
   await pressDown(page, 3); // « Deux »
   await page.keyboard.press('Control+Shift+ArrowUp');
   await expect(page.locator(`#project-${data.alpha.id} .name`)).toHaveText(['Alpha', 'Deux', 'Une']);
@@ -483,7 +515,11 @@ test('en bord de projet, la tâche passe dans le projet voisin', async ({ page, 
   expect(order(store)).toEqual([['Une', 'Deux'], ['Trois']]);
 });
 
-test('⌘+Maj+↓ comme Ctrl+Maj+↓ (macOS) ; tout en haut, rien ne bouge ; Alt ne déplace plus', async ({ page, store, data }) => {
+test('⌘+Maj+↓ comme Ctrl+Maj+↓ (macOS) ; tout en haut, rien ne bouge ; Alt ne déplace plus', async ({
+  page,
+  store,
+  data,
+}) => {
   await pressDown(page, 2); // « Une », première du premier projet
   await page.keyboard.press('Control+Shift+ArrowUp');
   // Anciennes touches (Alt+↓, Alt+j) : sans effet.
@@ -590,7 +626,11 @@ test('archiver et supprimer : boutons icônes nommés, titre au survol', async (
   expect(store.state().projects.map((p) => p.name)).toEqual(['Alpha']);
 });
 
-test('boutons de filtre : à reporter, Archivés, Favoris, dans cet ordre, seulement si utiles', async ({ page, store, data }) => {
+test('boutons de filtre : à reporter, Archivés, Favoris, dans cet ordre, seulement si utiles', async ({
+  page,
+  store,
+  data,
+}) => {
   const row = page.locator('#bugtracker-pending, #archived-only, #favorites-only');
   await expect(row).toHaveCount(0); // rien à reporter, ni archivé, ni favori
   store.updateTask(data.tasks.une.id, { bugtracker: 'wanted' });
@@ -598,7 +638,11 @@ test('boutons de filtre : à reporter, Archivés, Favoris, dans cet ordre, seule
   store.updateProject(gamma.id, { archived: true });
   store.updateProject(data.beta.id, { favorite: true });
   await reload(page);
-  expect(await row.evaluateAll((els) => els.map((e) => e.id))).toEqual(['bugtracker-pending', 'archived-only', 'favorites-only']);
+  expect(await row.evaluateAll((els) => els.map((e) => e.id))).toEqual([
+    'bugtracker-pending',
+    'archived-only',
+    'favorites-only',
+  ]);
 
   // Archivés : comme « à reporter », un filtre : seulement les projets archivés.
   const archived = page.locator('#archived-only');
@@ -710,7 +754,9 @@ test('clavier sur un projet : f favori, a archiver, x x supprimer, u annule tout
 
   // x : message de confirmation ; Échap annule ; x x supprime.
   await page.keyboard.press('x');
-  await expect(page.locator(`#project-${data.beta.id} .confirm-delete`)).toContainText('x ou corbeille à nouveau : supprimer le projet');
+  await expect(page.locator(`#project-${data.beta.id} .confirm-delete`)).toContainText(
+    'x ou corbeille à nouveau : supprimer le projet',
+  );
   await page.keyboard.press('Escape');
   await expect(page.locator('.confirm-delete')).toHaveCount(0);
   await page.keyboard.press('x');
@@ -763,7 +809,9 @@ test('r fait tourner : à reporter (contour) → ticket demandé dans la ligne (
   await expect(une.locator('.report-done')).toHaveText('reporté · PROJ-1');
   // Délier : 1er r = avertissement, Échap l'annule ; une autre touche aussi.
   await page.keyboard.press('r');
-  await expect(une.locator('.confirm-unlink')).toHaveText('r à nouveau : délier PROJ-1 (le ticket reste dans Jira) · Échap : annuler');
+  await expect(une.locator('.confirm-unlink')).toHaveText(
+    'r à nouveau : délier PROJ-1 (le ticket reste dans Jira) · Échap : annuler',
+  );
   await page.keyboard.press('Escape');
   await expect(une.locator('.confirm-unlink')).toHaveCount(0);
   await expect(une.locator('.report-done')).toHaveText('reporté · PROJ-1');
@@ -775,13 +823,21 @@ test('r fait tourner : à reporter (contour) → ticket demandé dans la ligne (
   await page.keyboard.press('r');
   await page.keyboard.press('r');
   await expect(une.locator('.report')).toHaveCount(0);
-  expect(store.state().projects[0].tasks[0]).toMatchObject({ bugtracker_wanted_at: null, bugtracker_at: null, bugtracker_key: null });
+  expect(store.state().projects[0].tasks[0]).toMatchObject({
+    bugtracker_wanted_at: null,
+    bugtracker_at: null,
+    bugtracker_key: null,
+  });
   // u : le report revient avec son ticket.
   await page.keyboard.press('u');
   await expect(une.locator('.report-done')).toHaveText('reporté · PROJ-1');
 });
 
-test('r r : ticket saisi dans la ligne, clé + URL du bugtracker = lien cliquable, u le retire', async ({ page, store, data }) => {
+test('r r : ticket saisi dans la ligne, clé + URL du bugtracker = lien cliquable, u le retire', async ({
+  page,
+  store,
+  data,
+}) => {
   store.updateSettings({ bugtracker_base_url: 'https://entreprise.tickets.fr' });
   await reload(page);
   await pressDown(page, 2);
@@ -819,7 +875,11 @@ const rightBeforeActions = (el: Locator) =>
     return actions.getBoundingClientRect().left - e.getBoundingClientRect().right < 12;
   });
 
-test('r sur un projet : ticket dans la ligne, pastille cliquable après le nom, modifiable, u l’annule', async ({ page, store, data }) => {
+test('r sur un projet : ticket dans la ligne, pastille cliquable après le nom, modifiable, u l’annule', async ({
+  page,
+  store,
+  data,
+}) => {
   store.updateSettings({ bugtracker_base_url: 'https://entreprise.tickets.fr' });
   await reload(page);
   const head = page.locator(`#project-${data.alpha.id} .project-head`);
@@ -860,7 +920,11 @@ test('r sur un projet : ticket dans la ligne, pastille cliquable après le nom, 
   await expect(head.locator('.project-ticket')).toHaveCount(0);
 });
 
-test('ticket du projet : pas d’icône ; vidé, il est retiré ; lien refusé ; absent des autres onglets', async ({ page, store, data }) => {
+test('ticket du projet : pas d’icône ; vidé, il est retiré ; lien refusé ; absent des autres onglets', async ({
+  page,
+  store,
+  data,
+}) => {
   store.updateProject(data.beta.id, { bugtrackerKey: 'EPIC-3' });
   await reload(page);
   const head = page.locator(`#project-${data.beta.id} .project-head`);
@@ -1160,7 +1224,8 @@ test('fiche Markdown : e édite (titre → Tab → ticket → dates → tags →
   // Champ date : Tab passe d'abord par ses parties (jour, mois, année ; natif,
   // leur nombre dépend du navigateur) : Tab jusqu'au champ suivant, dans l'ordre.
   const tabTo = async (field: Locator) => {
-    for (let i = 0; i < 5 && !(await field.evaluate((el) => el === document.activeElement)); i++) await page.keyboard.press('Tab');
+    for (let i = 0; i < 5 && !(await field.evaluate((el) => el === document.activeElement)); i++)
+      await page.keyboard.press('Tab');
     await expect(field).toBeFocused();
   };
   await tabTo(dialog.getByLabel('Date prévue'));
@@ -1300,7 +1365,11 @@ test('compteur « à reporter » : filtre la zone des projets seulement (R ou cl
   await expect(page.locator('#journal .name')).toHaveText(['Trois', 'Faite à reporter']);
 });
 
-test('R : à reporter → reportées → toutes ; bouton visible avec des reportées seulement', async ({ page, store, data }) => {
+test('R : à reporter → reportées → toutes ; bouton visible avec des reportées seulement', async ({
+  page,
+  store,
+  data,
+}) => {
   store.updateTask(data.tasks.une.id, { bugtracker: 'wanted' });
   store.updateTask(data.tasks.trois.id, { bugtracker: 'done', bugtrackerKey: 'PROJ-3' });
   await reload(page);
@@ -1439,7 +1508,11 @@ test('titre long : « … » sur une ligne, titre complet au survol ou au focus 
   await expect(page.locator('.full-title')).toHaveCount(0);
 });
 
-test('titre long au clavier : info-bulle après un court délai, rien si on passe vite dessus', async ({ page, store, data }) => {
+test('titre long au clavier : info-bulle après un court délai, rien si on passe vite dessus', async ({
+  page,
+  store,
+  data,
+}) => {
   const long =
     'Préparer la présentation trimestrielle pour le comité de direction avec les chiffres consolidés de toutes les équipes produit';
   store.updateTask(data.tasks.une.id, { title: long });
@@ -1455,8 +1528,14 @@ test('titre long au clavier : info-bulle après un court délai, rien si on pass
   await expect(page.locator('.full-title')).toHaveText(long);
 });
 
-test('ligne épurée et fiche ordonnée : titre, ticket et sprint, dates et temps passé, tags, contenu', async ({ page, data }) => {
-  await expect(page.locator(`[data-nav-key="add:${data.alpha.id}"]`)).toHaveAttribute('placeholder', '+ Ajouter une tâche (n)');
+test('ligne épurée et fiche ordonnée : titre, ticket et sprint, dates et temps passé, tags, contenu', async ({
+  page,
+  data,
+}) => {
+  await expect(page.locator(`[data-nav-key="add:${data.alpha.id}"]`)).toHaveAttribute(
+    'placeholder',
+    '+ Ajouter une tâche (n)',
+  );
   const une = row(page, data.tasks.une.id);
   await une.hover();
   await expect(une.locator('.actions button')).toHaveCount(0); // ni « reporté », ni « détails », ni suppression (x x)
@@ -1496,10 +1575,15 @@ test('ligne : temps passé (sablier, « 3 min ») sur la 2e ligne (au bout du ti
   await pressDown(page, 2);
   await page.keyboard.press(' ');
   await page.keyboard.press('L');
-  await expect(page.locator(`#journal li.task:has([data-nav-key="task:${data.tasks.une.id}"]) .time-spent`)).toHaveText('3 min');
+  await expect(page.locator(`#journal li.task:has([data-nav-key="task:${data.tasks.une.id}"]) .time-spent`)).toHaveText(
+    '3 min',
+  );
 });
 
-test('info-bulles uniformes : rapides, une seule, title rendu après le survol, dans l’écran au bord droit', async ({ page, data }) => {
+test('info-bulles uniformes : rapides, une seule, title rendu après le survol, dans l’écran au bord droit', async ({
+  page,
+  data,
+}) => {
   const help = page.getByRole('button', { name: '?' });
   await help.hover();
   const tip = page.getByRole('tooltip');
@@ -1519,7 +1603,9 @@ test('info-bulles uniformes : rapides, une seule, title rendu après le survol, 
   expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize()!.width);
 });
 
-test('fiche : ▷ du chrono fixe quand ↻ apparaît ; libellés sans « : » ; contenu vide centré, sans italique', async ({ page }) => {
+test('fiche : ▷ du chrono fixe quand ↻ apparaît ; libellés sans « : » ; contenu vide centré, sans italique', async ({
+  page,
+}) => {
   await pressDown(page, 2);
   await page.keyboard.press('o');
   const dialog = page.getByRole('dialog', { name: 'Une' });
@@ -1536,7 +1622,15 @@ test('fiche : ▷ du chrono fixe quand ↻ apparaît ; libellés sans « : » ; 
   await page.keyboard.press('c');
 
   // Mêmes libellés qu'en édition.
-  await expect(dialog.locator('label')).toHaveText(['Ticket', 'Sprint', 'Date prévue', 'Échéance', 'Temps passé', 'Tags', 'Contenu']);
+  await expect(dialog.locator('label')).toHaveText([
+    'Ticket',
+    'Sprint',
+    'Date prévue',
+    'Échéance',
+    'Temps passé',
+    'Tags',
+    'Contenu',
+  ]);
   const preview = dialog.locator('.notes-preview');
   await expect(preview).toHaveText('Aucun contenu');
   await expect(preview).toHaveCSS('justify-content', 'center');
@@ -1612,7 +1706,9 @@ test('e sur une tâche : fiche ouverte directement en édition, titre sélection
   await expect.poll(() => current(page)).toBe(`task:${data.tasks.deux.id}`);
 });
 
-test('une colonne : le Log, dans son onglet, prend la place des projets (écran large comme étroit)', async ({ page }) => {
+test('une colonne : le Log, dans son onglet, prend la place des projets (écran large comme étroit)', async ({
+  page,
+}) => {
   for (const width of [1280, 800]) {
     await page.setViewportSize({ width, height: 600 });
     await reload(page);
@@ -1685,7 +1781,10 @@ test('Log : une tâche cochée est barrée ; décochée, elle ne l’est plus', 
   await page.keyboard.press(' ');
   await expect(inLog).toHaveCount(0);
   await page.keyboard.press('P');
-  await expect(page.locator('#projects .task .name', { hasText: /^Une$/ })).not.toHaveCSS('text-decoration-line', 'line-through');
+  await expect(page.locator('#projects .task .name', { hasText: /^Une$/ })).not.toHaveCSS(
+    'text-decoration-line',
+    'line-through',
+  );
 });
 
 test('zone « Log » : un cadre par jour', async ({ page, store, data }) => {
@@ -1771,7 +1870,11 @@ test('u / U rapides : les appuis s’enchaînent sans se perdre', async ({ page,
   expect(store.state().projects[0].tasks[0].priority).toBe(2);
 });
 
-test('création annulable : u retire la tâche ou le projet créé, U le rétablit (même identifiant)', async ({ page, store, data }) => {
+test('création annulable : u retire la tâche ou le projet créé, U le rétablit (même identifiant)', async ({
+  page,
+  store,
+  data,
+}) => {
   const add = page.locator(`[data-nav-key="add:${data.alpha.id}"]`);
   await add.click();
   await page.keyboard.type('Nouvelle');
@@ -1866,7 +1969,11 @@ test('modification dans la fiche annulable : u remet le titre d’avant, U le r�
 
 // --- Déplacement de projet ------------------------------------------------------
 
-test('Ctrl+Maj+↑ / Ctrl+Maj+↓ sur un projet : il passe au-dessus du précédent / sous le suivant', async ({ page, store, data }) => {
+test('Ctrl+Maj+↑ / Ctrl+Maj+↓ sur un projet : il passe au-dessus du précédent / sous le suivant', async ({
+  page,
+  store,
+  data,
+}) => {
   const names = () => page.locator('.project-head .name');
   await pressDown(page, 5); // projet « Beta »
   expect(await current(page)).toBe(`project:${data.beta.id}`);
@@ -1890,7 +1997,10 @@ test('Ctrl+Maj+↑ / Ctrl+Maj+↓ sur un projet : il passe au-dessus du précéd
   await expect(names()).toHaveText(['Alpha', 'Beta']);
 });
 
-test('Maj+↑ / Maj+↓ : en-tête du projet précédent / suivant ; dans un champ, sélection du texte', async ({ page, data }) => {
+test('Maj+↑ / Maj+↓ : en-tête du projet précédent / suivant ; dans un champ, sélection du texte', async ({
+  page,
+  data,
+}) => {
   const { alpha, beta, tasks } = data;
   await pressDown(page, 3); // « Deux », dans Alpha
   expect(await current(page)).toBe(`task:${tasks.deux.id}`);
@@ -1948,7 +2058,11 @@ test('fiche : même disposition en lecture et en édition (titre en haut, icône
   expect(editIcons.y).toBeGreaterThan(close.y + close.height);
 });
 
-test('Échap Échap : retire tous les filtres (projets et Log) ; un seul Échap ne touche pas aux projets', async ({ page, store, data }) => {
+test('Échap Échap : retire tous les filtres (projets et Log) ; un seul Échap ne touche pas aux projets', async ({
+  page,
+  store,
+  data,
+}) => {
   store.updateProject(data.alpha.id, { favorite: true });
   store.updateTask(data.tasks.une.id, { bugtracker: 'wanted', priority: 1 });
   store.updateProject(store.createProject('Gamma').id, { archived: true });
@@ -1988,7 +2102,9 @@ test('place de la barre de défilement toujours réservée (pas de décalage au 
   expect(gutter).toBe('stable');
 });
 
-test('aide ? : raccourcis groupés, tout visible sur écran courant, liste qui défile sur petit écran', async ({ page }) => {
+test('aide ? : raccourcis groupés, tout visible sur écran courant, liste qui défile sur petit écran', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await reload(page);
   await page.keyboard.press('?');

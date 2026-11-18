@@ -142,7 +142,10 @@ export function JiraCompare({
               same && 'text-muted-foreground',
             );
             return [
-              <span key={`${f.name}-name`} className={cn('text-muted-foreground', !same && 'font-medium text-foreground')}>
+              <span
+                key={`${f.name}-name`}
+                className={cn('text-muted-foreground', !same && 'font-medium text-foreground')}
+              >
                 {f.name}
                 {same && <span className="block text-xs">(identique)</span>}
               </span>,
@@ -208,7 +211,8 @@ export function JiraCreate({
       >
         <DialogTitle>Créer le ticket dans Jira</DialogTitle>
         <DialogDescription>
-          Une tâche sera créée dans Jira, rattachée à {epicKey} (ticket du projet {projectName}). Elle ne pourra pas être supprimée d’ici.
+          Une tâche sera créée dans Jira, rattachée à {epicKey} (ticket du projet {projectName}). Elle ne pourra pas
+          être supprimée d’ici.
         </DialogDescription>
         <div className="grid min-h-0 grid-cols-[auto_1fr] gap-x-4 gap-y-2 overflow-y-auto text-sm">
           {FIELDS.map((f) => [

@@ -50,11 +50,15 @@ test('bouton Chrono : lance (icône pause pleine, toujours visible) puis met en 
   await expect(une.locator('.title')).toHaveText('Une');
   await expect(une.locator('.details-line')).toHaveText('0 min');
   await expect(une.locator('.time-spent')).toHaveClass(/text-foreground/);
-  expect(store.db.prepare('SELECT timer_started_at FROM task WHERE id = ?').get(data.une.id)).not.toEqual({ timer_started_at: null });
+  expect(store.db.prepare('SELECT timer_started_at FROM task WHERE id = ?').get(data.une.id)).not.toEqual({
+    timer_started_at: null,
+  });
 
   await chrono.click();
   await expect(chrono).toHaveAttribute('aria-pressed', 'false');
-  expect(store.db.prepare('SELECT timer_started_at FROM task WHERE id = ?').get(data.une.id)).toEqual({ timer_started_at: null });
+  expect(store.db.prepare('SELECT timer_started_at FROM task WHERE id = ?').get(data.une.id)).toEqual({
+    timer_started_at: null,
+  });
 });
 
 test('temps passé en info-bulle : en minutes, puis 2h34 ; chrono en marche compté', async ({ page, store, data }) => {
@@ -113,7 +117,9 @@ test('un seul chrono à la fois ; cocher la tâche arrête son chrono', async ({
 
   await row(page, 'Deux').getByRole('checkbox').click();
   await expect(page.locator('#projects li.task', { hasText: 'Deux' })).toHaveCount(0);
-  expect(store.db.prepare('SELECT timer_started_at FROM task WHERE id = ?').get(data.deux.id)).toEqual({ timer_started_at: null });
+  expect(store.db.prepare('SELECT timer_started_at FROM task WHERE id = ?').get(data.deux.id)).toEqual({
+    timer_started_at: null,
+  });
 });
 
 test('fiche : mêmes icônes, mêmes touches', async ({ page, store, data }) => {

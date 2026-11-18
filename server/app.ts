@@ -204,7 +204,8 @@ function restoredProject(body: Body): DeletedProject {
   if (!Array.isArray(raw) || raw.length > 10_000) throw new HttpError(400, 'Synthèse invalide');
   const summaries = raw.map((s) => {
     const v = (s ?? {}) as Body;
-    if (!isDate(v.day) || typeof v.content !== 'string' || v.content.length > 20_000) throw new HttpError(400, 'Synthèse invalide');
+    if (!isDate(v.day) || typeof v.content !== 'string' || v.content.length > 20_000)
+      throw new HttpError(400, 'Synthèse invalide');
     return { project_id: project.id, day: v.day, content: v.content };
   });
   return { project, tasks, summaries };
@@ -327,7 +328,8 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
         const body = await readJson(req);
         const patch: SettingsPatch = {};
         // URL du bugtracker, sans « / » final (on y ajoute /browse/CLÉ).
-        if ('bugtracker_base_url' in body) patch.bugtracker_base_url = httpUrl(body.bugtracker_base_url)?.replace(/\/+$/, '') ?? null;
+        if ('bugtracker_base_url' in body)
+          patch.bugtracker_base_url = httpUrl(body.bugtracker_base_url)?.replace(/\/+$/, '') ?? null;
         // Plan journée : maximum de tâches, de 1 à 50.
         if ('day_capacity' in body) {
           const n = body.day_capacity;
@@ -458,9 +460,11 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
       /^\/api\/projects\/(\d+)\/order$/,
       async (req, res, _url, id) => {
         const { ids } = await readJson(req);
-        if (!Array.isArray(ids) || !ids.every((i) => Number.isInteger(i))) throw new HttpError(400, 'Liste de tâches invalide');
+        if (!Array.isArray(ids) || !ids.every((i) => Number.isInteger(i)))
+          throw new HttpError(400, 'Liste de tâches invalide');
         if (!store.hasProject(Number(id))) throw new HttpError(404, 'Projet introuvable');
-        if (!store.orderTasks(Number(id), ids)) throw new HttpError(400, 'Il faut toutes les tâches à faire du projet, une fois chacune');
+        if (!store.orderTasks(Number(id), ids))
+          throw new HttpError(400, 'Il faut toutes les tâches à faire du projet, une fois chacune');
         send(res, 200, { ok: true });
       },
     ],
@@ -528,14 +532,16 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
         if ('done' in body) patch.doneAt = body.done ? (doneAt as string) : null;
         else if ('done_at' in body) patch.doneAt = doneAt as string | null;
         if ('bugtracker' in body) {
-          if (!['none', 'wanted', 'done'].includes(body.bugtracker as string)) throw new HttpError(400, 'État de report invalide');
+          if (!['none', 'wanted', 'done'].includes(body.bugtracker as string))
+            throw new HttpError(400, 'État de report invalide');
           patch.bugtracker = body.bugtracker as BugtrackerState;
         }
         // Un ticket renseigné vaut « reportée », vidé « à reporter » (règle de la base).
         if ('bugtracker_ticket' in body) Object.assign(patch, bugtrackerTicket(body.bugtracker_ticket));
         if ('notes' in body) patch.notes = optionalText(body.notes, 'Notes', 20_000);
         if ('timer' in body) {
-          if (!['start', 'pause', 'reset'].includes(body.timer as string)) throw new HttpError(400, 'Action du chrono invalide');
+          if (!['start', 'pause', 'reset'].includes(body.timer as string))
+            throw new HttpError(400, 'Action du chrono invalide');
           patch.timer = body.timer as TimerAction;
         }
         // Annulation (u) : valeurs précédentes du chrono.

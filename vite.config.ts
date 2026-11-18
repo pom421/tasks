@@ -23,7 +23,7 @@ export default defineConfig({
   // PORT : autre port si 5173 est pris (ex. aperçu d'un worktree).
   server: { host: '127.0.0.1', port: Number(process.env.PORT) || 5173 },
   // Vite+ : `vp check` (format, lint avec types, TypeScript), `vp test` (tests unitaires).
-  fmt: { singleQuote: true, printWidth: 140, ignorePatterns: ['pnpm-lock.yaml'] },
+  fmt: { singleQuote: true, printWidth: 120, ignorePatterns: ['pnpm-lock.yaml'] },
   lint: {
     // Modèle de capture d'écran (skill capture-ecran) : vérifié une fois copié dans e2e/.
     ignorePatterns: ['.claude/skills/capture-ecran/zz-shot.spec.ts'],

@@ -1,4 +1,13 @@
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+} from 'react';
 import { ListChecks } from 'lucide-react';
 import { BUGTRACKER_KEY_RE, bugtrackerLink, isValidTicket, type Project, type Summaries } from '../../shared/types.ts';
 import { api } from '@/lib/api';
@@ -216,7 +225,9 @@ export function ProjectDialog({ project, field, open, onClose, onOpenTask }: Pro
   const ticketKey = values.ticket.trim().toUpperCase();
   const ticketLink = BUGTRACKER_KEY_RE.test(ticketKey) ? bugtrackerLink({ bugtracker_key: ticketKey }, settings) : null;
   const count = project.tasks.length;
-  const state = [project.archived_at && 'archivé', `${count} tâche${count > 1 ? 's' : ''} à faire`].filter(Boolean).join(' · ');
+  const state = [project.archived_at && 'archivé', `${count} tâche${count > 1 ? 's' : ''} à faire`]
+    .filter(Boolean)
+    .join(' · ');
   const errorFor = (f: Field) =>
     error?.field === f && (
       <p id={`${id}-${f}-error`} role="alert" className="text-sm text-destructive">
@@ -247,7 +258,9 @@ export function ProjectDialog({ project, field, open, onClose, onOpenTask }: Pro
           focusByKey(`project:${project.id}`);
         }}
       >
-        <DialogTitle className={cn('pr-6 leading-snug [overflow-wrap:anywhere]', editing && 'sr-only')}>{values.name}</DialogTitle>
+        <DialogTitle className={cn('pr-6 leading-snug [overflow-wrap:anywhere]', editing && 'sr-only')}>
+          {values.name}
+        </DialogTitle>
         {editing && (
           <div className="grid gap-1.5 pr-6">
             <Input
@@ -324,7 +337,12 @@ export function ProjectDialog({ project, field, open, onClose, onOpenTask }: Pro
             </div>
           </>
         ) : (
-          <div ref={reader} tabIndex={-1} className="reader grid min-h-0 flex-1 gap-4 outline-none" aria-describedby={`${id}-hint`}>
+          <div
+            ref={reader}
+            tabIndex={-1}
+            className="reader grid min-h-0 flex-1 gap-4 outline-none"
+            aria-describedby={`${id}-hint`}
+          >
             {/* Comme la fiche d'une tâche : libellés atténués, valeur absente aussi. */}
             <dl className="grid grid-cols-[7rem_1fr] gap-x-4 text-sm leading-7">
               <dt className="text-muted-foreground">Ticket</dt>
@@ -384,7 +402,9 @@ export function ProjectDialog({ project, field, open, onClose, onOpenTask }: Pro
               )}
               onClick={onPreviewClick}
               onDoubleClick={() => !shown && startEditing('notes')}
-              {...(shownNotes.trim() ? { dangerouslySetInnerHTML: { __html: shownHtml } } : { children: 'Aucune synthèse' })}
+              {...(shownNotes.trim()
+                ? { dangerouslySetInnerHTML: { __html: shownHtml } }
+                : { children: 'Aucune synthèse' })}
             />
           </div>
         )}

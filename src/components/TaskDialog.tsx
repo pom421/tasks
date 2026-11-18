@@ -55,7 +55,16 @@ const BOX = 'flex h-9 items-center rounded-md border border-input px-3 text-sm s
 // Tout est enregistré automatiquement, rien n'est perdu.
 // Accessibilité : focus piégé, titre et description annoncés (Radix),
 // libellés reliés aux champs, erreurs annoncées.
-export function TaskDialog({ task, projectName, field, tagSuggestions, jira, projectTicket, open, onClose }: TaskDialogProps) {
+export function TaskDialog({
+  task,
+  projectName,
+  field,
+  tagSuggestions,
+  jira,
+  projectTicket,
+  open,
+  onClose,
+}: TaskDialogProps) {
   const id = useId();
   const { act } = useActions();
   const done = 'done_at' in task;
@@ -179,7 +188,13 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, pro
       return true;
     } catch (err) {
       const f: Field =
-        patch.day_at !== undefined ? 'day' : patch.due_at !== undefined ? 'due' : patch.sprint !== undefined ? 'sprint' : 'title';
+        patch.day_at !== undefined
+          ? 'day'
+          : patch.due_at !== undefined
+            ? 'due'
+            : patch.sprint !== undefined
+              ? 'sprint'
+              : 'title';
       return fail(f, (err as Error).message);
     }
   };
@@ -187,7 +202,12 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, pro
   // Jira : comparaison ouverte (valeurs du ticket lues à l'instant), message.
   const ticketKey = task.bugtracker_key;
   const blocker = jiraBlocker(ticketKey, jira);
-  const [compare, setCompare] = useState<{ direction: JiraDirection; key: string; local: JiraFields; remote: JiraFields } | null>(null);
+  const [compare, setCompare] = useState<{
+    direction: JiraDirection;
+    key: string;
+    local: JiraFields;
+    remote: JiraFields;
+  } | null>(null);
   const [jiraBusy, setJiraBusy] = useState(false);
   const [jiraStatus, setJiraStatus] = useState<{ ok?: string; error?: string }>({});
   // Sprints actifs puis à venir du projet du ticket, lus à la première entrée
@@ -272,7 +292,12 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, pro
           undo: () => api.updateTask(task.id, local),
           redo: () => api.updateTask(task.id, patch),
         });
-        const fields = { title: remote.title, notes: remote.notes ?? '', due: remote.due_at ?? '', sprint: remote.sprint ?? '' };
+        const fields = {
+          title: remote.title,
+          notes: remote.notes ?? '',
+          due: remote.due_at ?? '',
+          sprint: remote.sprint ?? '',
+        };
         saved.current = { ...saved.current, ...fields, changed: true };
         latest.current = { ...latest.current, ...fields };
         setValues(latest.current);
@@ -397,7 +422,9 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, pro
             croix), puis projet et icônes. En édition, le champ prend la place du
             titre, qui reste annoncé par Radix. */}
         {/* Bordure invisible : même hauteur que le champ du titre (édition). */}
-        <DialogTitle className={cn('border-b border-transparent pr-6 leading-snug [overflow-wrap:anywhere]', editing && 'sr-only')}>
+        <DialogTitle
+          className={cn('border-b border-transparent pr-6 leading-snug [overflow-wrap:anywhere]', editing && 'sr-only')}
+        >
           {values.title}
         </DialogTitle>
         {editing && (
@@ -425,7 +452,13 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, pro
           <span className="flex items-center">
             {!done && <PlanButton plan={plan} />}
             <PriorityButton priority={task.priority} onClick={priority.cycle} />
-            <JiraButtons ready={jira} ticketKey={ticketKey} canCreate={canCreate} onClick={startJira} onCreate={startCreate} />
+            <JiraButtons
+              ready={jira}
+              ticketKey={ticketKey}
+              canCreate={canCreate}
+              onClick={startJira}
+              onCreate={startCreate}
+            />
           </span>
         </div>
 
@@ -469,7 +502,11 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, pro
                   ref={refs[f]}
                   id={`${id}-${f}`}
                   type="date"
-                  title={f === 'day' ? 'Quand je compte la faire (aujourd’hui : dans Aujourd’hui)' : 'Date limite, imposée de l’extérieur'}
+                  title={
+                    f === 'day'
+                      ? 'Quand je compte la faire (aujourd’hui : dans Aujourd’hui)'
+                      : 'Date limite, imposée de l’extérieur'
+                  }
                   value={values[f]}
                   onChange={set(f)}
                   onKeyDown={onInputEnter}
@@ -526,7 +563,9 @@ export function TaskDialog({ task, projectName, field, tagSuggestions, jira, pro
                   !values.notes.trim() && 'flex items-center justify-center text-base text-muted-foreground',
                 )}
                 onDoubleClick={() => startEditing('notes')}
-                {...(values.notes.trim() ? { dangerouslySetInnerHTML: { __html: html } } : { children: 'Aucun contenu' })}
+                {...(values.notes.trim()
+                  ? { dangerouslySetInnerHTML: { __html: html } }
+                  : { children: 'Aucun contenu' })}
               />
             )}
           </div>

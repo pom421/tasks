@@ -20,7 +20,14 @@ const FOCUS_TOOLTIP_DELAY = 500;
 
 // Nom navigable au clavier. Clic ou Entrée -> champ d'édition :
 // Entrée enregistre, Échap annule, dans les deux cas le focus revient au nom.
-export function EditableName({ value, navKey, onSave, className, truncate = false, display = value }: EditableNameProps) {
+export function EditableName({
+  value,
+  navKey,
+  onSave,
+  className,
+  truncate = false,
+  display = value,
+}: EditableNameProps) {
   const [tooltip, setTooltip] = useState(false);
   const [editing, setEditing] = useState(false);
   const refocus = useRef(false);
@@ -74,7 +81,11 @@ export function EditableName({ value, navKey, onSave, className, truncate = fals
   const name = (
     <span
       ref={span}
-      className={cn('name cursor-text outline-none', truncate ? 'min-w-0 truncate' : '[overflow-wrap:anywhere]', className)}
+      className={cn(
+        'name cursor-text outline-none',
+        truncate ? 'min-w-0 truncate' : '[overflow-wrap:anywhere]',
+        className,
+      )}
       tabIndex={0}
       data-nav=""
       data-nav-key={navKey}

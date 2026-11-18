@@ -27,7 +27,12 @@ export function useReport(task: Task) {
   // r tapé plusieurs fois vite : chaque appui part du dernier état demandé
   // (pas de celui encore affiché) et les requêtes s'enchaînent dans l'ordre.
   // key : identifiant, pour rendre le report retiré.
-  const j = useRef({ state: bugtrackerState(task), key: task.bugtracker_key, pending: 0, queue: Promise.resolve() }).current;
+  const j = useRef({
+    state: bugtrackerState(task),
+    key: task.bugtracker_key,
+    pending: 0,
+    queue: Promise.resolve(),
+  }).current;
   if (!j.pending) Object.assign(j, { state: bugtrackerState(task), key: task.bugtracker_key });
   const step = (state: BugtrackerState, key: string | null, label: string, patch: TaskPatch, before: TaskPatch) => {
     Object.assign(j, { state, key });

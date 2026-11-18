@@ -74,7 +74,9 @@ test('s sur un projet : synthèse en édition ; boutons d’insertion (faites de
   await summary.press('End');
   await dialog.getByRole('button', { name: 'Tâches faites (1)' }).click();
   await dialog.getByRole('button', { name: 'Priorités 1 (1)' }).click();
-  await expect(summary).toHaveValue(`Ancienne\n- [Faite \\[récente\\]](#tache-${recent.id})\n- [Urgente](#tache-${p1.id})\n`);
+  await expect(summary).toHaveValue(
+    `Ancienne\n- [Faite \\[récente\\]](#tache-${recent.id})\n- [Urgente](#tache-${p1.id})\n`,
+  );
 
   // En lecture : liens ; un clic ouvre la fiche de la tâche (faite, hors de la fenêtre du Log comprise).
   await page.keyboard.press('Control+Enter');
@@ -116,7 +118,10 @@ test('versions : une par jour ; consulter une version passée, la restaurer (u a
   await expect.poll(() => store.db.prepare('SELECT COUNT(*) AS n FROM project_summary').get()).toEqual({ n: 2 });
 });
 
-test('non-régression : sans tâche faite aujourd’hui, pas de cercle ; s dans un champ s’écrit', async ({ page, store }) => {
+test('non-régression : sans tâche faite aujourd’hui, pas de cercle ; s dans un champ s’écrit', async ({
+  page,
+  store,
+}) => {
   const alpha = store.createProject('Alpha');
   store.createTask(alpha.id, 'Une');
   await page.goto('/');

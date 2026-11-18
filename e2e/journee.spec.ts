@@ -47,7 +47,11 @@ test('☀ au survol : ajoute au plan (soleil plein, toujours visible), puis reti
   await expect(sun).toHaveAttribute('aria-pressed', 'false');
 });
 
-test('onglet Aujourd’hui : seulement les tâches choisies, par projet ; compteur 3/5 tâches', async ({ page, store, data }) => {
+test('onglet Aujourd’hui : seulement les tâches choisies, par projet ; compteur 3/5 tâches', async ({
+  page,
+  store,
+  data,
+}) => {
   store.updateTask(data.une.id, { dayAt: TODAY });
   store.updateTask(data.trois.id, { dayAt: TODAY });
   store.updateTask(data.deux.id, { dayAt: '2026-09-24' }); // prévue hier, pas faite : en retard
@@ -113,7 +117,10 @@ test('clavier : t ajoute / retire, T change d’onglet, u annule', async ({ page
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('ArrowDown'); // sur « Une »
   await page.keyboard.press('t');
-  await expect(row(page, 'Une').getByRole('button', { name: 'Pour aujourd’hui' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(row(page, 'Une').getByRole('button', { name: 'Pour aujourd’hui' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
 
   await page.keyboard.press('T');
   await expect(tab(page, 'Aujourd’hui')).toHaveAttribute('aria-selected', 'true');
@@ -151,7 +158,10 @@ test('fiche : ☀ et t ajoutent au plan / en retirent', async ({ page, store, da
   await expect(sun).toHaveAttribute('aria-pressed', 'true');
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
-  await expect(row(page, 'Une').getByRole('button', { name: 'Pour aujourd’hui' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(row(page, 'Une').getByRole('button', { name: 'Pour aujourd’hui' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
 });
 
 test('toutes faites : message exact', async ({ page, store, data }) => {
@@ -174,7 +184,11 @@ test('Réglages : maximum de tâches par jour', async ({ page, store }) => {
   await expect(page.getByRole('alert')).toHaveText('Maximum invalide : nombre de 1 à 50 attendu');
 });
 
-test('non-régression : Log sans ☀, filtres des projets inchangés dans l’onglet Projets', async ({ page, store, data }) => {
+test('non-régression : Log sans ☀, filtres des projets inchangés dans l’onglet Projets', async ({
+  page,
+  store,
+  data,
+}) => {
   store.updateProject(data.alpha.id, { favorite: true });
   store.updateTask(data.deux.id, { doneAt: TODAY });
   await open(page);
@@ -199,6 +213,9 @@ test('non-régression : s et v n’ont plus d’effet (remplacés par t et T)', 
   await page.keyboard.press('s');
   await page.keyboard.press('v');
   await expect(tab(page, 'Projets')).toHaveAttribute('aria-selected', 'true');
-  await expect(row(page, 'Une').getByRole('button', { name: 'Pour aujourd’hui' })).toHaveAttribute('aria-pressed', 'false');
+  await expect(row(page, 'Une').getByRole('button', { name: 'Pour aujourd’hui' })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  );
   expect(store.db.prepare('SELECT day_at FROM task WHERE id = ?').get(data.une.id)).toEqual({ day_at: null });
 });

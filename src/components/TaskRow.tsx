@@ -133,13 +133,18 @@ export function TaskRow({
       onBlur={onBlur}
     >
       <div className="flex min-w-0 items-center gap-2">
-        <Checkbox checked={done} onCheckedChange={toggleDone} title={done ? 'Remettre à faire' : 'Marquer comme faite'} />
+        <Checkbox
+          checked={done}
+          onCheckedChange={toggleDone}
+          title={done ? 'Remettre à faire' : 'Marquer comme faite'}
+        />
         {/* Clic sur la place libre après le titre : le titre passe en édition
             (et donne le curseur clavier à la tâche). */}
         <span
           className="title flex min-w-0 flex-1 cursor-text items-center gap-1.5 self-stretch"
           onClick={(e) => {
-            if (!(e.target as Element).closest('button, a, input, .name')) e.currentTarget.querySelector<HTMLElement>('.name')?.click();
+            if (!(e.target as Element).closest('button, a, input, .name'))
+              e.currentTarget.querySelector<HTMLElement>('.name')?.click();
           }}
         >
           <EditableName
@@ -213,7 +218,9 @@ export function TaskRow({
                   className="text-xs"
                   defaultValue={task.done_at}
                   autoFocus
-                  onChange={(e) => e.target.value && change('date changée', { done_at: e.target.value }, { done_at: task.done_at })}
+                  onChange={(e) =>
+                    e.target.value && change('date changée', { done_at: e.target.value }, { done_at: task.done_at })
+                  }
                   onKeyDown={(e) => e.key === 'Escape' && setEditingDate(false)}
                   onBlur={() => setEditingDate(false)}
                 />

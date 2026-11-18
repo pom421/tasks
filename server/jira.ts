@@ -16,7 +16,13 @@ export class JiraError extends Error {}
 const SPRINT_TYPE = 'com.pyxis.greenhopper.jira:gh-sprint';
 const EPIC_LINK_TYPE = 'com.pyxis.greenhopper.jira:gh-epic-link';
 
-async function call(config: JiraConfig, method: 'GET' | 'PUT' | 'POST', path: string, body?: unknown, key?: string): Promise<Response> {
+async function call(
+  config: JiraConfig,
+  method: 'GET' | 'PUT' | 'POST',
+  path: string,
+  body?: unknown,
+  key?: string,
+): Promise<Response> {
   let res: Response;
   try {
     res = await fetch(`${config.baseUrl}${path}`, {
@@ -111,7 +117,8 @@ export async function listSprints(config: JiraConfig, project: string): Promise<
       config,
       `/rest/agile/1.0/board/${board.id}/sprint?state=active,future&maxResults=100`,
     );
-    for (const s of sprints.values) found.set(s.id, { id: s.id, name: s.name, active: s.state.toLowerCase() === 'active' });
+    for (const s of sprints.values)
+      found.set(s.id, { id: s.id, name: s.name, active: s.state.toLowerCase() === 'active' });
   }
   return [...found.values()].sort((a, b) => Number(b.active) - Number(a.active)).map(({ id, name }) => ({ id, name }));
 }
@@ -125,7 +132,11 @@ async function findSprint(config: JiraConfig, key: string, name: string): Promis
 }
 
 export async function writeIssue(config: JiraConfig, key: string, fields: JiraFields): Promise<void> {
-  const body: Record<string, unknown> = { summary: fields.title, description: fields.notes ?? '', duedate: fields.due_at };
+  const body: Record<string, unknown> = {
+    summary: fields.title,
+    description: fields.notes ?? '',
+    duedate: fields.due_at,
+  };
   // Sprint écrit seulement s'il change (Jira le refuse sur un sprint fermé).
   const { field, sprint } = await readRaw(config, key);
   if ((sprint?.name ?? null) !== fields.sprint) {
@@ -144,7 +155,9 @@ async function taskTypeId(config: JiraConfig, project: string): Promise<string> 
   const types = (data.issueTypes ?? []).filter((t) => !t.subtask);
   const found = types.find((t) => /^(task|tâche|tache)$/i.test(t.name));
   if (!found)
-    throw new JiraError(`Type « Tâche » introuvable dans le projet ${project} (types : ${types.map((t) => t.name).join(', ') || 'aucun'})`);
+    throw new JiraError(
+      `Type « Tâche » introuvable dans le projet ${project} (types : ${types.map((t) => t.name).join(', ') || 'aucun'})`,
+    );
   return found.id;
 }
 
@@ -155,7 +168,8 @@ export async function createIssue(config: JiraConfig, epicKey: string, fields: J
   const project = epicKey.split('-')[0];
   const all = await get<{ id: string; schema?: { custom?: string } }[]>(config, '/rest/api/2/field');
   const epicField = all.find((f) => f.schema?.custom === EPIC_LINK_TYPE)?.id;
-  if (!epicField) throw new JiraError('Pas de champ « Epic Link » dans Jira : impossible de rattacher la tâche à l’epic');
+  if (!epicField)
+    throw new JiraError('Pas de champ « Epic Link » dans Jira : impossible de rattacher la tâche à l’epic');
   const body: Record<string, unknown> = {
     project: { key: project },
     issuetype: { id: await taskTypeId(config, project) },

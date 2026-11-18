@@ -47,7 +47,13 @@ export function PlanButton({ plan, hidden }: { plan: ReturnType<typeof usePlan>;
       )}
       aria-label="Pour aujourd’hui"
       aria-pressed={plan.inPlan}
-      title={plan.inPlan ? 'Retirer d’Aujourd’hui (t)' : plan.planned ? 'Prévoir pour aujourd’hui plutôt (t)' : 'Ajouter à Aujourd’hui (t)'}
+      title={
+        plan.inPlan
+          ? 'Retirer d’Aujourd’hui (t)'
+          : plan.planned
+            ? 'Prévoir pour aujourd’hui plutôt (t)'
+            : 'Ajouter à Aujourd’hui (t)'
+      }
       onClick={plan.toggle}
     >
       <Sun aria-hidden fill={plan.inPlan ? 'currentColor' : 'none'} />

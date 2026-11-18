@@ -11,7 +11,8 @@ for (const f of [file, `${file}-wal`, `${file}-shm`]) fs.rmSync(f, { force: true
 const store = new Store(file);
 
 // 8 jours ouvrés (hors week-end) avant aujourd'hui, du plus ancien au plus récent.
-const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const iso = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const workdays: string[] = [];
 for (const d = new Date(); workdays.length < 8;) {
   d.setDate(d.getDate() - 1);
@@ -43,7 +44,11 @@ const done: [number, string, number, string?, string?][] = [
 ];
 for (const [projectId, title, day, notes, bugtrackerKey] of done) {
   const t = store.createTask(projectId, title);
-  store.updateTask(t.id, { doneAt: workdays[day], notes, ...(bugtrackerKey && { bugtracker: 'done' as const, bugtrackerKey }) });
+  store.updateTask(t.id, {
+    doneAt: workdays[day],
+    notes,
+    ...(bugtrackerKey && { bugtracker: 'done' as const, bugtrackerKey }),
+  });
 }
 
 // Tags sur quelques tâches faites (filtre du Log).
