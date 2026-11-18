@@ -232,3 +232,59 @@ test('recherche : jours dont une tâche correspond (titre, contenu, ticket), com
   await expect(page.locator('#log-search')).toHaveValue('');
   await expect(page.locator('#journal mark')).toHaveCount(0);
 });
+
+test('Log : bouton « à reporter » (R) : seulement les tâches faites à reporter, combinable', async ({ page, store }) => {
+  const beta = store.createProject('Beta');
+  const faite = store.createTask(beta.id, 'Faite à reporter');
+  store.updateTask(faite.id, { doneAt: '2026-09-22', bugtracker: 'wanted' });
+  const filter = page.locator('#log-report');
+  const names = page.locator('#journal .name');
+
+  // Aucune tâche faite à reporter : pas de bouton (un filtre sans effet n'apparaît pas).
+  await page.goto('/log');
+  await expect(filter).toHaveCount(1); // celle de Beta
+  store.updateTask(faite.id, { bugtracker: 'none' });
+  await page.reload();
+  await expect(page.locator('#journal .day').first()).toBeVisible();
+  await expect(filter).toHaveCount(0);
+  await page.keyboard.press('R'); // sans effet
+  await expect(page.locator('#log-count')).toHaveText('6 tâches trouvées dans 5 journées');
+
+  // Une tâche faite à reporter : bouton, nombre sur toutes les données.
+  store.updateTask(faite.id, { bugtracker: 'wanted' });
+  await page.reload();
+  const button = page.getByRole('button', { name: '1 tâche à reporter' });
+  await expect(button).toHaveAttribute('aria-pressed', 'false');
+  await expect(button).toHaveAttribute('title', 'Seulement les tâches faites à reporter (R)');
+  await page.keyboard.press('R');
+  await expect(button).toHaveAttribute('aria-pressed', 'true');
+  await expect(names).toHaveText(['Faite à reporter']);
+  await expect(page.locator('#journal .project-label')).toHaveText(['Beta']);
+
+  // Combiné à la recherche : ET ; le bouton garde le nombre total.
+  await page.locator('#log-search').fill('vingt');
+  await expect(page.locator('#journal-days .empty')).toHaveText('Aucune tâche trouvée.');
+  await expect(button).toHaveText('1 tâche à reporter');
+  await page.locator('#log-search').fill('');
+
+  // Bascule : R retire le filtre ; la croix aussi.
+  await page.locator('body').click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press('R');
+  await expect(button).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#log-count')).toHaveText('6 tâches trouvées dans 5 journées'); // fenêtre de 5 jours, dont le 22
+  await expect(names.filter({ hasText: 'Faite à reporter' })).toHaveCount(1);
+  await button.click();
+  await expect(names).toHaveText(['Faite à reporter']);
+  await page.getByRole('button', { name: 'Réinitialiser les filtres du Log' }).click();
+  await expect(button).toHaveAttribute('aria-pressed', 'false');
+});
+
+test('non-régression : le bouton à reporter du Log est indépendant de celui des projets', async ({ page, store }) => {
+  const beta = store.createProject('Beta');
+  store.updateTask(store.createTask(beta.id, 'À faire à reporter').id, { bugtracker: 'wanted' });
+  await page.goto('/');
+  await expect(page.locator('#bugtracker-pending')).toHaveText('1 tâche à reporter');
+  await page.keyboard.press('L');
+  await expect(page.locator('#log-report')).toHaveCount(0); // seulement les tâches faites comptent dans le Log
+  await expect(page.locator('#journal .day').first()).toBeVisible();
+});

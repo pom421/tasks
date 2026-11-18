@@ -533,6 +533,7 @@ test('A : bascule le filtre Archivés', async ({ page, store, data }) => {
   await expect(page.locator('.project .project-head .name')).toHaveText(['Alpha']);
   await page.keyboard.press('A');
   await expect(filter).toHaveAttribute('aria-pressed', 'true');
+  await expect(filter.locator('svg')).toHaveClass(/fill-muted-foreground/); // remplissage gris clair, pas de bloc noir
   await expect(page.locator('.project .project-head .name')).toHaveText(['Beta']);
   await page.keyboard.press('A');
   await expect(filter).toHaveAttribute('aria-pressed', 'false');
@@ -590,7 +591,7 @@ test('boutons de filtre : à reporter, Archivés, Favoris, dans cet ordre, seule
   await archived.click();
   await expect(archived).toHaveAttribute('aria-pressed', 'true');
   // Sobre : pas de fond coloré, l'icône se remplit.
-  await expect(archived.locator('svg')).toHaveAttribute('fill', 'currentColor');
+  await expect(archived.locator('svg')).toHaveClass(/fill-muted-foreground/); // gris clair, pas de bloc noir
   await expect(archived).not.toHaveClass(/bg-primary/);
   await expect(page.locator('#projects .project-head .name')).toHaveText(['Gamma']);
   await archived.click();
@@ -845,7 +846,7 @@ test('ticket du projet : pas d’icône ; vidé, il est retiré ; lien refusé ;
   // Pas d'icône pour le ticket (comme le report d'une tâche) : r seulement.
   await head.hover();
   await expect(head.getByRole('button', { name: 'Ticket du projet' })).toHaveCount(0);
-  await expect(head.locator('.actions button')).toHaveCount(2); // archive, corbeille
+  await expect(head.locator('.actions button')).toHaveCount(3); // tri par priorité, archive, corbeille (pas d'icône de ticket)
   await head.locator('.name').focus();
   await page.keyboard.press('r');
   const ticket = head.getByRole('textbox', { name: 'Ticket' });

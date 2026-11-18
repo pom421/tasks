@@ -29,8 +29,9 @@ officiel (lien GHSA) : une « version de sécurité » peut être un piège.
 
 - Un `overrides` s'oublie : le retirer dès que le parent publie une version
   corrigée, et relire la liste de temps en temps.
-- Faille sans effet sur le projet : `pnpm audit --ignore <GHSA>`, avec la
-  raison en commentaire.
+- Faille sans effet sur le projet (ex. dépendance de développement, sans
+  correctif) : `auditConfig.ignoreGhsas` dans `pnpm-workspace.yaml`, avec la
+  raison et la date en commentaire ; retirer la ligne dès qu'un correctif sort.
 
 ## Exception au cooldown (correctif trop récent)
 

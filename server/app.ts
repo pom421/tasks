@@ -372,6 +372,16 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
       send(res, 200, { ok: true });
     }],
 
+    // Ordre des tâches à faire d'un projet : { ids } = toutes, dans le nouvel ordre
+    // (tri par priorité ; l'annulation renvoie l'ancien ordre).
+    ['POST', /^\/api\/projects\/(\d+)\/order$/, async (req, res, _url, id) => {
+      const { ids } = await readJson(req);
+      if (!Array.isArray(ids) || !ids.every((i) => Number.isInteger(i))) throw new HttpError(400, 'Liste de tâches invalide');
+      if (!store.hasProject(Number(id))) throw new HttpError(404, 'Projet introuvable');
+      if (!store.orderTasks(Number(id), ids)) throw new HttpError(400, 'Il faut toutes les tâches à faire du projet, une fois chacune');
+      send(res, 200, { ok: true });
+    }],
+
     // Renvoie le projet supprimé et ses tâches : le front les garde pour pouvoir annuler (u).
     ['DELETE', /^\/api\/projects\/(\d+)$/, (_req, res, _url, id) => {
       const deleted = store.deleteProject(Number(id));

@@ -27,3 +27,12 @@ minimumReleaseAgeExcludePrune: true
 # `pnpm audit` échoue à partir de ce niveau de gravité.
 audit:
   level: high
+
+# Failles ignorées, chacune avec sa raison (skill dependances-securite).
+# À relire quand un correctif sort, puis retirer la ligne.
+auditConfig:
+  ignoreGhsas:
+    # picomatch <= 4.0.7, ReDoS (aucun correctif au 18/11/2026) : dépendance de
+    # développement seulement (vite, tinyglobby), motifs écrits par nous, jamais
+    # par un utilisateur. Sans effet sur l'app.
+    - GHSA-fc5q-39xc-vjpf

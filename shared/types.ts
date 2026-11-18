@@ -106,6 +106,7 @@ export interface Journal {
   days: JournalDay[];
   dates: string[]; // jours ayant des entrées qui correspondent aux filtres, triés
   tags: string[]; // tags des tâches faites (propositions du filtre)
+  bugtrackerPending: number; // tâches faites à reporter (toutes, quels que soient les filtres)
 }
 
 export interface JournalFilter {
