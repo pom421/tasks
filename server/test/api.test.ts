@@ -391,12 +391,10 @@ test('à propos : version de l’outil (package.json), commit, version de la bas
   assert.match(body.migrated_at, /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
   assert.equal(typeof body.db_file, 'string');
   // Dans le dépôt git : commit court et date ; hors dépôt : null.
-  if (body.commit) {
-    assert.match(`${body.commit.hash} ${body.commit.date}`, /^[0-9a-f]{7,} \d{4}-\d{2}-\d{2}$/);
-    // Lien GitHub : adresse du dépôt (package.json), identifiant complet qui commence par le court.
-    assert.equal(pkg.repository, 'https://github.com/pom421/tasks');
-    assert.match(body.commit.url, new RegExp(`^${pkg.repository}/commit/${body.commit.hash}[0-9a-f]{33,}$`));
-  }
+  // Dépôt GitHub : repository de package.json.
+  assert.equal(body.repo_url, 'https://github.com/pom421/tasks');
+  assert.equal(body.repo_url, pkg.repository);
+  if (body.commit) assert.match(`${body.commit.hash} ${body.commit.date}`, /^[0-9a-f]{7,} \d{4}-\d{2}-\d{2}$/);
 });
 
 test('migrations 4 et 15 : une tâche « reportée » (v3) sans ticket redevient à reporter', async () => {

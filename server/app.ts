@@ -295,15 +295,14 @@ const PKG = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'))
 };
 const COMMIT = (() => {
   try {
-    const out = execFileSync('git', ['log', '-1', '--format=%h %H %cs'], {
+    const out = execFileSync('git', ['log', '-1', '--format=%h %cs'], {
       cwd: ROOT,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
       timeout: 5000,
     });
-    const [hash, full, date] = out.trim().split(' ');
-    // Lien vers le commit sur GitHub (identifiant complet : jamais ambigu).
-    return hash && full && date ? { hash, date, url: `${PKG.repository}/commit/${full}` } : null;
+    const [hash, date] = out.trim().split(' ');
+    return hash && date ? { hash, date } : null;
   } catch {
     return null; // pas de git, ou hors dépôt (archive)
   }
@@ -333,6 +332,7 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
         const { version, migrated_at } = store.schema();
         const about: About = {
           app_version: PKG.version,
+          repo_url: PKG.repository,
           commit: COMMIT,
           schema_version: version,
           schema_expected: LATEST_VERSION,

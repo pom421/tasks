@@ -1349,19 +1349,18 @@ test('réglages : « À propos » replié en bas, révèle la version de l’out
   await expect(page.locator('.about-migrated')).toHaveText(/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/);
   await expect(page.locator('.about-file')).toHaveText(/\.db$/);
 
-  // Commit : lien vers GitHub (nouvel onglet), nommé par son identifiant court ; Tab depuis le bouton l'atteint.
-  const hash = (await page.locator('.about-commit').textContent())!;
-  const commit = page.getByRole('link', { name: hash });
-  await expect(commit).toHaveAttribute(
-    'href',
-    new RegExp(`^https://github\\.com/pom421/tasks/commit/${hash}[0-9a-f]{33}$`),
-  );
-  await expect(commit).toHaveAttribute('target', '_blank');
-  await expect(commit).toHaveAttribute('rel', 'noopener noreferrer');
-  await expect(commit).toHaveAttribute('title', 'Ouvrir le commit sur GitHub');
+  // Dépôt : icône GitHub au bout de la ligne de l'outil (seul lien de la ligne : le commit n'en est pas un),
+  // nouvel onglet ; Tab depuis le bouton l'atteint.
+  const repo = page.getByRole('link', { name: 'Dépôt GitHub' });
+  await expect(page.locator('.about-app a')).toHaveCount(1);
+  await expect(repo).toHaveAttribute('href', 'https://github.com/pom421/tasks');
+  await expect(repo).toHaveAttribute('target', '_blank');
+  await expect(repo).toHaveAttribute('rel', 'noopener noreferrer');
+  await expect(repo).toHaveAttribute('title', 'Ouvrir le dépôt sur GitHub');
+  await expect(repo.locator('svg')).toHaveAttribute('aria-hidden', 'true');
   await toggle.focus();
   await page.keyboard.press('Tab');
-  await expect(commit).toBeFocused();
+  await expect(repo).toBeFocused();
 
   // Clavier : Entrée sur le bouton replie / déplie.
   await toggle.focus();
