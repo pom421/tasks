@@ -52,7 +52,7 @@ test('cercle : seulement si une tâche du projet est faite aujourd’hui ; vide 
   expect(store.db.prepare('SELECT COUNT(*) AS n FROM project_review').get()).toEqual({ n: 0 });
 });
 
-test('s : bilan du jour ; ajouter les dernières tâches (depuis le bilan d’avant) et les P1, en liens ; retour à la synthèse', async ({
+test('s : bilan du jour ; ajouter les tâches précédentes (depuis le bilan d’avant) et les P1, en liens ; retour à la synthèse', async ({
   page,
   store,
 }) => {
@@ -72,13 +72,13 @@ test('s : bilan du jour ; ajouter les dernières tâches (depuis le bilan d’av
   await page.keyboard.press('s');
   const dialog = page.getByRole('dialog', { name: 'Alpha' });
   const done = dialog.getByLabel('Fait dernièrement');
-  const next = dialog.getByLabel('Bientôt');
+  const next = dialog.getByLabel('Prochainement');
   // Nouveau bilan, vide ; les repères ne changent pas.
   await expect(done).toBeFocused();
   await expect(done).toHaveValue('');
   await expect(dialog.getByLabel('Repères')).toHaveCount(0); // repliés
 
-  const addDone = dialog.getByRole('button', { name: 'Ajouter les dernières tâches (1)' });
+  const addDone = dialog.getByRole('button', { name: 'Ajouter les tâches précédentes (1)' });
   const addNext = dialog.getByRole('button', { name: 'Ajouter les prochaines tâches prioritaires (1)' });
   await addDone.click();
   await expect(done).toHaveValue(`- [Faite \\[récente\\]](#tache-${recent.id})\n`);
@@ -145,7 +145,7 @@ test('bilans : ← → et flèches ; repères toujours là ; bilan passé modifi
   await page.keyboard.press('ArrowLeft');
   await expect(day).toHaveText('Bilan du lundi 21 septembre 2026');
   await expect(dialog.locator('.done-preview')).toHaveText('Lundi');
-  await page.keyboard.press('r');
+  await dialog.getByRole('button', { name: 'Repères' }).click();
   await expect(dialog.locator('.notes-preview')).toHaveText('Repères du projet');
   await expect(previous).toBeDisabled();
   await following.click();
@@ -157,14 +157,14 @@ test('bilans : ← → et flèches ; repères toujours là ; bilan passé modifi
   await dialog.locator('.done-preview').dblclick();
   const doneField = dialog.getByLabel('Fait dernièrement');
   await expect(doneField).toBeFocused();
-  await expect(dialog.getByRole('button', { name: /Ajouter les dernières tâches/ })).toHaveCount(0);
+  await expect(dialog.getByRole('button', { name: /Ajouter les tâches précédentes/ })).toHaveCount(0);
   await doneField.fill('Lundi modifié');
   await page.keyboard.press('Control+Enter');
   await expect(dialog.locator('.done-preview')).toHaveText('Lundi modifié');
   // Le bilan suivant propose ses tâches (faites depuis le 21).
   await page.keyboard.press('ArrowRight');
   await page.keyboard.press('e');
-  await expect(dialog.getByRole('button', { name: 'Ajouter les dernières tâches (1)' })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Ajouter les tâches précédentes (1)' })).toBeVisible();
   await page.keyboard.press('Control+Enter');
 
   // Nouveau bilan : daté d'aujourd'hui, vide ; Échap sans rien écrire : pas gardé.
@@ -186,7 +186,7 @@ test('bilans : ← → et flèches ; repères toujours là ; bilan passé modifi
     .toEqual({ done: 'Lundi' });
 });
 
-test('repères repliés par défaut : 📌 plein si remplis, r ou clic les déplie ; zones l’une sous l’autre ; corps qui défile', async ({
+test('repères repliés par défaut : 📌 plein si remplis, clic ou Tab puis Entrée les déplie (pas de raccourci) ; zones l’une sous l’autre ; corps qui défile', async ({
   page,
   store,
 }) => {
@@ -203,23 +203,28 @@ test('repères repliés par défaut : 📌 plein si remplis, r ou clic les dépl
   const dialog = page.getByRole('dialog', { name: 'Alpha' });
   const toggle = dialog.getByRole('button', { name: 'Repères' });
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-  await expect(toggle).toHaveAttribute('title', 'Déplier les repères (r)');
+  await expect(toggle).toHaveAttribute('title', 'Déplier les repères');
   await expect(toggle.locator('svg.notes-filled')).toHaveAttribute('fill', 'currentColor'); // remplis
   await expect(dialog.locator('.notes-preview')).toHaveCount(0);
 
-  // r déplie (le bilan descend), r replie ; le clic aussi.
+  // r : pas de raccourci, rien ne bouge.
+  await page.keyboard.press('r');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  // Tab jusqu'à la ligne, Entrée déplie (le bilan descend), Entrée replie ; le clic aussi.
   const bilanTop = async () => (await dialog.locator('.review-header').boundingBox())!.y;
   const before = await bilanTop();
-  await page.keyboard.press('r');
+  await page.keyboard.press('Tab');
+  await expect(toggle).toBeFocused();
+  await page.keyboard.press('Enter');
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   await expect(dialog.locator('.notes-preview')).toHaveText('Le projet');
   expect(await bilanTop()).toBeGreaterThan(before);
-  await page.keyboard.press('r');
+  await page.keyboard.press('Enter');
   await expect(dialog.locator('.notes-preview')).toHaveCount(0);
   await toggle.click();
   await expect(dialog.locator('.notes-preview')).toBeVisible();
 
-  // « Fait dernièrement » au-dessus de « Bientôt », pleine largeur ; la fenêtre reste dans l'écran, le corps défile.
+  // « Fait dernièrement » au-dessus de « Prochainement », pleine largeur ; la fenêtre reste dans l'écran, le corps défile.
   const done = (await dialog.locator('.done-preview').boundingBox())!;
   const next = (await dialog.locator('.next-preview').boundingBox())!;
   expect(next.y).toBeGreaterThan(done.y + done.height);
@@ -237,7 +242,17 @@ test('repères repliés par défaut : 📌 plein si remplis, r ou clic les dépl
   await page.keyboard.press('o');
   const empty = page.getByRole('dialog', { name: 'Beta' }).getByRole('button', { name: 'Repères (vides)' });
   await expect(empty.locator('svg.notes-filled')).toHaveAttribute('fill', 'none');
-  await expect(empty).toHaveAttribute('title', 'Déplier les repères (vides) (r)');
+  await expect(empty).toHaveAttribute('title', 'Déplier les repères (vides)');
+  // En édition : nom → ticket → ligne des repères ; Entrée les déplie, curseur dedans ; Maj+Tab revient sur la ligne.
+  await page.keyboard.press('e');
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Tab');
+  await expect(empty).toBeFocused();
+  await page.keyboard.press('Enter');
+  const field = page.getByRole('dialog', { name: 'Beta' }).getByLabel('Repères');
+  await expect(field).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(empty).toBeFocused();
 });
 
 test('non-régression : sans tâche faite aujourd’hui, pas de cercle ; s dans un champ s’écrit ; pas de retour hors synthèse', async ({

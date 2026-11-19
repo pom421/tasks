@@ -49,10 +49,10 @@ type Values = Record<Field, string>;
 // lecture seule par défaut ; e passe en édition (nom, puis Tab : ticket,
 // repères, bilan) ; Ctrl+Entrée enregistre et repasse en lecture ; un second
 // Ctrl+Entrée (ou Échap) ferme. Enregistrement automatique, annulable (u).
-// Synthèse = repères (le projet, ses liens : non datés, repliés par défaut, r ou
-// l'icône 📌 pleine s'ils sont remplis les déplie) + bilans datés, créés au besoin
+// Synthèse = repères (le projet, ses liens : non datés, repliés par défaut ; la
+// ligne « 📌 Repères », pleine s'ils sont remplis, les déplie : clic, ou Tab puis Entrée) + bilans datés, créés au besoin
 // (« Nouveau bilan » ou s : celui du jour), un par jour au plus : « Fait
-// dernièrement » puis « Bientôt », l'un sous l'autre, modifiables ensemble ;
+// dernièrement » puis « Prochainement », l'un sous l'autre, modifiables ensemble ;
 // ← → (ou les flèches, toujours visibles en haut) passent d'un bilan à l'autre.
 // Le corps défile, l'en-tête et le pied restent dans la fenêtre. Boutons
 // d'insertion : tâches faites depuis le bilan d'avant, P1 à faire, en liens.
@@ -257,11 +257,6 @@ export function ProjectDialog({ project, field, day: dayProp, open, onClose, onO
       void reviewToday();
       return;
     }
-    if (plain && e.key === 'r') {
-      e.preventDefault();
-      toggleNotes();
-      return;
-    }
     if (plain && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
       e.preventDefault();
       void goTo(e.key === 'ArrowLeft' ? previousDay : nextDay);
@@ -422,11 +417,10 @@ export function ProjectDialog({ project, field, day: dayProp, open, onClose, onO
       type="button"
       variant="ghost"
       size="sm"
-      tabIndex={-1}
       className="notes-toggle -ml-2 h-7 w-fit gap-1.5 px-2 text-sm font-medium"
       aria-expanded={showNotes}
       aria-controls={`${id}-notes-zone`}
-      title={`${showNotes ? 'Replier' : 'Déplier'} les repères${filledNotes ? '' : ' (vides)'} (r)`}
+      title={`${showNotes ? 'Replier' : 'Déplier'} les repères${filledNotes ? '' : ' (vides)'}`}
       onClick={toggleNotes}
     >
       <Pin
@@ -532,13 +526,13 @@ export function ProjectDialog({ project, field, day: dayProp, open, onClose, onO
                         title="Ajouter les tâches faites depuis le bilan d’avant, en liens vers leur fiche"
                         onClick={() => insert('done', taskLines(recent))}
                       >
-                        <ListChecks aria-hidden /> Ajouter les dernières tâches ({recent.length})
+                        <ListChecks aria-hidden /> Ajouter les tâches précédentes ({recent.length})
                       </Button>
                     ),
                   )}
                   {zone(
                     'next',
-                    'Bientôt',
+                    'Prochainement',
                     p1.length > 0 && (
                       <Button
                         type="button"
@@ -594,7 +588,7 @@ export function ProjectDialog({ project, field, day: dayProp, open, onClose, onO
                     {preview('done', 'Rien')}
                   </div>
                   <div className="grid min-w-0 content-start gap-1.5">
-                    <h4 className="text-sm text-muted-foreground">Bientôt</h4>
+                    <h4 className="text-sm text-muted-foreground">Prochainement</h4>
                     {preview('next', 'Rien')}
                   </div>
                 </div>
@@ -607,7 +601,7 @@ export function ProjectDialog({ project, field, day: dayProp, open, onClose, onO
           <p id={`${id}-hint`} className="text-xs text-muted-foreground">
             {editing
               ? 'Tab : champ suivant · Ctrl+Entrée : enregistrer et repasser en lecture'
-              : 'e : modifier · s : bilan du jour · ← → : bilans · r : repères · Ctrl+Entrée ou Échap : fermer'}
+              : 'e : modifier · s : bilan du jour · ← → : bilans · Ctrl+Entrée ou Échap : fermer'}
           </p>
           <DialogFooter>
             <Button type="button" onClick={close}>

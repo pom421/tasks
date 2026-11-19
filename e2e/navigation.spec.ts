@@ -974,9 +974,11 @@ test('fiche du projet : o lit, e édite (nom → Tab → ticket → contenu), Ct
   await expect(dialog.locator('.reader')).toBeFocused();
   await expect(dialog.getByText('Projet · 2 tâches à faire')).toBeVisible();
   await expect(dialog.locator('.ticket-value')).toHaveText('aucun');
-  // Repères repliés ; r les déplie (et le reste en édition).
+  // Repères repliés ; Tab jusqu'à leur ligne puis Entrée les déplie (et le reste en édition).
   await expect(dialog.locator('.notes-preview')).toHaveCount(0);
-  await page.keyboard.press('r');
+  await page.keyboard.press('Tab');
+  await expect(dialog.getByRole('button', { name: 'Repères (vides)' })).toBeFocused();
+  await page.keyboard.press('Enter');
   await expect(dialog.locator('.notes-preview')).toHaveText('Aucun repère');
   // Pas de tags ni de dates pour un projet.
   await expect(dialog.getByText('Tags :')).toHaveCount(0);
@@ -990,6 +992,8 @@ test('fiche du projet : o lit, e édite (nom → Tab → ticket → contenu), Ct
   await page.keyboard.press('Tab');
   await expect(dialog.getByLabel('Ticket', { exact: true })).toBeFocused();
   await page.keyboard.type('epic-7');
+  await page.keyboard.press('Tab');
+  await expect(dialog.getByRole('button', { name: 'Repères' })).toBeFocused(); // ligne des repères
   await page.keyboard.press('Tab');
   const editor = dialog.getByLabel('Repères');
   await expect(editor).toBeFocused();
@@ -1044,6 +1048,7 @@ test('fiche du projet : Maj+Entrée et clic sur 🗒 (au survol sans contenu) ; 
   await dialog.locator('.notes-preview').dblclick();
   await expect(dialog.getByLabel('Repères')).toBeFocused();
   await page.keyboard.type('Contexte');
+  await page.keyboard.press('Shift+Tab'); // ligne des repères
   await page.keyboard.press('Shift+Tab'); // ticket
   await page.keyboard.type('pas un ticket');
   await page.keyboard.press('Enter');
@@ -1058,7 +1063,7 @@ test('fiche du projet : Maj+Entrée et clic sur 🗒 (au survol sans contenu) ; 
 
   // Maj+Entrée sur l'en-tête : lecture ; le contenu s'affiche.
   await page.keyboard.press('Shift+Enter');
-  await page.keyboard.press('r');
+  await page.getByRole('dialog', { name: 'Beta' }).getByRole('button', { name: 'Repères' }).click();
   await expect(page.getByRole('dialog', { name: 'Beta' }).locator('.notes-preview')).toHaveText('Contexte');
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);

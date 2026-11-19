@@ -46,7 +46,7 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
       [[['Ctrl+Entrée']], 'Enregistrer et lire ; en lecture, fermer'],
       [[['r', 'c', 'C', 't', '1', '2', '3']], 'Comme sur la tâche'],
       [[['>'], ['<'], ['+']], 'Jira : pousser / récupérer / créer le ticket (puis confirmer)'],
-      [[['←', '→'], ['r']], 'Synthèse : bilans / repères'],
+      [[['←', '→']], 'Bilan précédent / suivant'],
       [[['Retour\u00a0arrière']], 'Retour à la synthèse'],
     ],
   ],

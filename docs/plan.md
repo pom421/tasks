@@ -24,7 +24,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
-- [x] Synthèse plus pratique : « Fait dernièrement » puis « Bientôt » l'un sous l'autre (libellé à gauche, bouton à droite, champ dessous), corps qui défile dans la fenêtre, ligne du bilan collante ; repères repliables (📌 plein si remplis, `r`) ; onglet Suivant sur `N` (Next) au lieu de `S`
+- [x] Synthèse plus pratique : « Fait dernièrement » puis « Prochainement » l'un sous l'autre (libellé à gauche, bouton à droite, champ dessous), corps qui défile dans la fenêtre, ligne du bilan collante ; repères repliables (📌 plein si remplis ; clic, ou Tab puis Entrée : pas de raccourci) ; « Prochainement » et « Ajouter les tâches précédentes » ; onglet Suivant sur `N` (Next) au lieu de `S`
 - [x] Synthèse en deux parties : « Repères » (non datés, toujours affichés) et bilans datés créés au besoin (« Nouveau bilan », `s`), « Fait dernièrement » et « Bientôt » modifiés ensemble ; ← → entre les bilans ; « Ajouter les dernières tâches » (depuis le bilan d'avant) et « Ajouter les prochaines tâches prioritaires » ; « Retour à la synthèse » depuis une tâche liée (`Retour arrière`) ; migration 20 (versions abandonnées, contenu → repères)
 - [x] Jira : « + » sur la ligne d'une tâche à reporter (faite ou non) pour créer son ticket, en deux appuis (`+` `+`, ou deux clics) ; dans la fiche aussi ; message si PAT ou ticket du projet manquant
 - [x] Formatage à 120 colonnes, comme csp-cli
