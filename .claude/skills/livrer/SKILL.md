@@ -16,9 +16,14 @@ description: Vérifier, documenter, commiter, pousser et ouvrir une PR vers main
    (`SECTIONS` de `HelpDialog.tsx`), `docs/plan.md` (tâche directement dans
    « Fait », questions dans « Décisions attendues » ; une tâche d'une PR déjà
    fusionnée encore « En cours » passe aussi en « Fait »).
-4. **Commit** en français (`feat:` / `fix:` / `style:` / `test:` / `docs:`),
+4. **Version** (`package.json`, une fois par PR, affichée dans Réglages → À propos) :
+   nouvelle fonction (`feat:`) → mineure (`1.1.0` → `1.2.0`), correction ou style
+   (`fix:` / `style:`) → corrective (`1.2.0` → `1.2.1`) ; docs, tests ou configuration
+   de Claude seuls → inchangée ; majeure seulement si l'utilisateur la demande.
+   La ligne « Fait » de `docs/plan.md` finit par la version : `([PR #N](…), 1.2.0)`.
+5. **Commit** en français (`feat:` / `fix:` / `style:` / `test:` / `docs:`),
    titre court, corps en puces, lignes d'attribution de la session.
-5. **Pousser et ouvrir la PR** : jamais de push direct sur `main`, sauf pour
+6. **Pousser et ouvrir la PR** : jamais de push direct sur `main`, sauf pour
    un changement qui ne touche que la configuration de Claude (`CLAUDE.md`,
    `.claude/`) : `git push origin HEAD:main`, sans PR. Sur une
    branche de travail (en créer une si on est sur `main`) :
@@ -28,8 +33,8 @@ description: Vérifier, documenter, commiter, pousser et ouvrir une PR vers main
    la même branche, PR encore ouverte : nouveau commit, même PR.
    PR créée : lien de la PR ajouté à sa ligne de `docs/plan.md`, commit `docs:`
    poussé sur la même branche (pas de PR à part).
-6. **CI** : app de bureau, PR suivie par l'app → elle prévient d'un échec, ne
+7. **CI** : app de bureau, PR suivie par l'app → elle prévient d'un échec, ne
    rien programmer. Sinon : vérification dans 4 minutes, consigne « skill
    verifier-ci pour la PR <numéro> ».
-7. **Répondre** selon `CLAUDE.md`, avec le **lien de la PR**. Ne pas fusionner :
+8. **Répondre** selon `CLAUDE.md`, avec le **lien de la PR**. Ne pas fusionner :
    l'utilisateur relit et fusionne.
