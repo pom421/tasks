@@ -1349,6 +1349,20 @@ test('réglages : « À propos » replié en bas, révèle la version de l’out
   await expect(page.locator('.about-migrated')).toHaveText(/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/);
   await expect(page.locator('.about-file')).toHaveText(/\.db$/);
 
+  // Commit : lien vers GitHub (nouvel onglet), nommé par son identifiant court ; Tab depuis le bouton l'atteint.
+  const hash = (await page.locator('.about-commit').textContent())!;
+  const commit = page.getByRole('link', { name: hash });
+  await expect(commit).toHaveAttribute(
+    'href',
+    new RegExp(`^https://github\\.com/pom421/tasks/commit/${hash}[0-9a-f]{33}$`),
+  );
+  await expect(commit).toHaveAttribute('target', '_blank');
+  await expect(commit).toHaveAttribute('rel', 'noopener noreferrer');
+  await expect(commit).toHaveAttribute('title', 'Ouvrir le commit sur GitHub');
+  await toggle.focus();
+  await page.keyboard.press('Tab');
+  await expect(commit).toBeFocused();
+
   // Clavier : Entrée sur le bouton replie / déplie.
   await toggle.focus();
   await page.keyboard.press('Enter');

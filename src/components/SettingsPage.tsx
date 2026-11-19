@@ -300,7 +300,17 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
                   {about.commit && (
                     <span className="text-muted-foreground">
                       {' '}
-                      · commit <span className="font-mono">{about.commit.hash}</span> du {day(about.commit.date)}
+                      · commit {/* Comme le lien du ticket d'un projet : ouvre GitHub dans un nouvel onglet. */}
+                      <a
+                        className="about-commit font-mono text-primary underline-offset-2 hover:underline"
+                        href={about.commit.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Ouvrir le commit sur GitHub"
+                      >
+                        {about.commit.hash}
+                      </a>{' '}
+                      du {day(about.commit.date)}
                     </span>
                   )}
                 </dd>
