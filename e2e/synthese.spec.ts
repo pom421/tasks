@@ -231,7 +231,8 @@ test('repères repliés par défaut : 📌 plein si remplis, r ou clic les dépl
   await expect(dialog.locator('.review-day')).toBeInViewport();
   await page.keyboard.press('Escape');
 
-  // Repères vides : 📌 vide, « (vides) » dans le titre.
+  // Repères vides : 📌 vide, « (vides) » dans le titre (souris écartée : survolé, le title devient une info-bulle).
+  await page.mouse.move(0, 0);
   await page.locator(`#project-${beta.id} .project-head .name`).focus();
   await page.keyboard.press('o');
   const empty = page.getByRole('dialog', { name: 'Beta' }).getByRole('button', { name: 'Repères (vides)' });
