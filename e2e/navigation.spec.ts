@@ -1,4 +1,5 @@
 import type { Locator, Page } from '@playwright/test';
+import fs from 'node:fs';
 import type { Store } from '../server/db.ts';
 import { test as base, expect } from './fixtures.ts';
 
@@ -1322,6 +1323,38 @@ test('réglages (/admin) : URL du bugtracker conservée en base, lien depuis la 
     'href',
     'https://entreprise.tickets.fr/browse/PROJ-1',
   );
+});
+
+test('réglages : « À propos » replié en bas, révèle la version de l’outil et celle de la base (clic ou Tab puis Entrée)', async ({
+  page,
+}) => {
+  await page.goto('/admin');
+  const toggle = page.getByRole('button', { name: 'À propos' });
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator('.about')).toHaveCount(0);
+  // Tout en bas : après la section Données.
+  const data = (await page.getByRole('heading', { name: 'Données' }).boundingBox())!;
+  expect((await toggle.boundingBox())!.y).toBeGreaterThan(data.y);
+
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  // Version de package.json (augmentée à chaque livraison) : pas écrite en dur dans le test.
+  const { version } = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { version: string };
+  expect(version).toMatch(/^\d+\.\d+\.\d+$/);
+  await expect(page.locator('.about-app')).toHaveText(
+    new RegExp(`^version ${version.replaceAll('.', '\\.')}( · commit [0-9a-f]{7,} du \\d{2}/\\d{2}/\\d{4})?$`),
+  );
+  await expect(page.locator('.about-schema')).toHaveText(/^version (\d+) · attendue par l’outil : \1$/);
+  await expect(page.locator('.about-schema')).not.toHaveClass(/text-destructive/);
+  await expect(page.locator('.about-migrated')).toHaveText(/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/);
+  await expect(page.locator('.about-file')).toHaveText(/\.db$/);
+
+  // Clavier : Entrée sur le bouton replie / déplie.
+  await toggle.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.about')).toHaveCount(0);
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.about')).toBeVisible();
 });
 
 test('réglages : Importer .sqlite en deux temps, sans fenêtre de confirmation ; Échap annule', async ({ page }) => {

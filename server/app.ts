@@ -3,12 +3,15 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { type DeletedProject, type ProjectPatch, type Store, type TaskPatch, isDate, today } from './db.ts';
 import type { ProjectRow, TaskRow } from './schema.ts';
 import {
   BUGTRACKER_KEY_RE,
   PRIORITIES,
   normalizeTag,
+  type About,
   type BugtrackerState,
   type JiraFields,
   type Priority,
@@ -16,6 +19,7 @@ import {
   type TimerAction,
 } from '../shared/types.ts';
 import { JiraError, createIssue, listSprints, readIssue, writeIssue, type JiraConfig } from './jira.ts';
+import { LATEST_VERSION } from './migrations.ts';
 import { parseMarkdown } from './markdown.ts';
 
 type Req = IncomingMessage;
@@ -282,6 +286,26 @@ export interface AppOptions {
   staticDir?: string;
 }
 
+// Version de l'outil (package.json) et commit du code lancé (git, s'il est là) :
+// lus une fois, au démarrage du serveur.
+const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+const APP_VERSION = (JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')) as { version: string })
+  .version;
+const COMMIT = (() => {
+  try {
+    const out = execFileSync('git', ['log', '-1', '--format=%h %cs'], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      timeout: 5000,
+    });
+    const [hash, date] = out.trim().split(' ');
+    return hash && date ? { hash, date } : null;
+  } catch {
+    return null; // pas de git, ou hors dépôt (archive)
+  }
+})();
+
 export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, staticDir }: AppOptions = {}) {
   // Table de routage : [méthode, regex, handler(req, res, url, ...params)].
   // Appel à Jira avec l'URL des tickets et le PAT des Réglages ; ses erreurs
@@ -298,6 +322,24 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
   }
 
   const routes: [string, RegExp, Handler][] = [
+    // À propos (Réglages) : version de l'outil et de la base.
+    [
+      'GET',
+      /^\/api\/about$/,
+      (_req, res) => {
+        const { version, migrated_at } = store.schema();
+        const about: About = {
+          app_version: APP_VERSION,
+          commit: COMMIT,
+          schema_version: version,
+          schema_expected: LATEST_VERSION,
+          migrated_at,
+          db_file: store.file,
+        };
+        send(res, 200, about);
+      },
+    ],
+
     // day : journée de « Plan journée » (date du navigateur), facultative.
     [
       'GET',

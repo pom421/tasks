@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { Store } from '../db.ts';
 import { createApp } from '../app.ts';
+import { LATEST_VERSION } from '../migrations.ts';
 import { fakeJira, type FakeIssue } from './fake-jira.ts';
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tasks-test-'));
@@ -379,6 +380,18 @@ test('bugtracker : à reporter puis reportée, lien, compteur et filtre du journ
   await call('PATCH', `/api/tasks/${t.id}`, { bugtracker_ticket: 'proj-9' });
   const { body: none } = await call('PATCH', `/api/tasks/${t.id}`, { bugtracker: 'none' });
   assert.deepEqual([none.bugtracker_wanted_at, none.bugtracker_at, none.bugtracker_key], [null, null, null]);
+});
+
+test('à propos : version de l’outil (package.json), commit, version de la base et version attendue', async () => {
+  const { body } = await call('GET', '/api/about');
+  const pkg = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, '..', '..', 'package.json'), 'utf8'));
+  assert.equal(body.app_version, pkg.version);
+  assert.equal(body.schema_version, LATEST_VERSION);
+  assert.equal(body.schema_expected, LATEST_VERSION);
+  assert.match(body.migrated_at, /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
+  assert.equal(typeof body.db_file, 'string');
+  // Dans le dépôt git : commit court et date ; hors dépôt : null.
+  if (body.commit) assert.match(`${body.commit.hash} ${body.commit.date}`, /^[0-9a-f]{7,} \d{4}-\d{2}-\d{2}$/);
 });
 
 test('migrations 4 et 15 : une tâche « reportée » (v3) sans ticket redevient à reporter', async () => {
