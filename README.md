@@ -5,38 +5,50 @@ SPA React + TypeScript (Vite, Tailwind, shadcn/ui), petit serveur Node + SQLite 
 
 ## Lancer en local
 
+Outillage : [Vite+](https://viteplus.dev) (commande `vp` : installation, serveur, build, tests, formatage, lint), réglé dans `vite.config.ts` ; pnpm reste le gestionnaire de paquets (version épinglée).
+
 1. Installer **Node.js 22.18 ou plus** (26 conseillé, voir `.nvmrc`) : https://nodejs.org. Vérifier avec `node --version`.
-2. Installer pnpm, dans la version épinglée par le projet (`packageManager` de `package.json`, toute autre version est refusée) :
+2. Installer pnpm (version épinglée par le projet : `packageManager` de `package.json`, toute autre version est refusée) et Vite+ :
    ```sh
-   npm install -g pnpm@12.19.0
+   npm install -g pnpm@12.19.0 vite-plus@1.6.0
    ```
-   Node 25 et plus ne fournit plus corepack, donc `corepack enable` ne marche plus. Si pnpm est déjà installé : `pnpm self-update 12.19.0`.
+   Node 25 et plus ne fournit plus corepack (`corepack enable` ne marche plus). Le `vp` global délègue à la version de Vite+ du projet.
 3. Récupérer le code et installer :
    ```sh
    git clone https://github.com/pom421/tasks.git
    cd tasks
-   pnpm install
+   vp install
    ```
 4. Démarrer (compile le front puis lance le serveur) :
    ```sh
-   pnpm start
+   vp run start
    ```
 5. Ouvrir http://localhost:3000
 
-Outillage : [Vite+](https://viteplus.dev) (`vp` : serveur, build, tests, formatage, lint), réglé dans `vite.config.ts`.
+| Besoin                                                                                                              | Commande                                               |
+| ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| L'app, avec ses données (`data/tasks.db`, créé au premier lancement)                                                | `vp run start` → http://localhost:3000                 |
+| Démo : recrée `data/demo.db` (3 projets, 8 jours ouvrés de Log jusqu'à hier), sans toucher à `data/tasks.db`        | `vp run demo` → http://localhost:5173                  |
+| Développement (rechargement à chaud, API incluse, même base)                                                        | `vp dev` → http://localhost:5173                       |
+| Vérifier : formatage (oxfmt), lint avec les types (oxlint), TypeScript, puis tests unitaires (Vitest : API, import) | `vp run ready` (`vp check --fix` corrige le formatage) |
+| Tests d'interface (Chromium) ; la première fois : `pnpm exec playwright install chromium`                           | `vp run test:e2e`                                      |
+| Version et historique de la base, migration si besoin                                                               | `vp run db:migrate [fichier]`                          |
 
-Développement : `pnpm dev` → http://localhost:5173 (rechargement à chaud, API incluse, même base `data/tasks.db`).
+`vp dev`, `vp check`, `vp test`, `vp build` sont des commandes de Vite+ ; `vp run <nom>` lance un script de `package.json` (`vpr <nom>` en raccourci), jamais mis en cache. `pnpm <nom>` marche aussi.
 
-Arrêter : `Ctrl+C`. Les données sont dans `data/tasks.db`, qui est créé au premier lancement.
+Arrêter : `Ctrl+C`. Options : `PORT=8080 vp run start` pour changer de port, `TASKS_DB=~/taches.db vp run start` pour un autre fichier de base.
 
-Démo : `pnpm demo` recrée `data/demo.db` (3 projets, 8 jours ouvrés de Log jusqu'à hier) et lance l'app dessus, sans toucher à `data/tasks.db`.
+### Mettre à jour une installation existante
 
-Options : `PORT=8080 pnpm start` pour changer de port, `TASKS_DB=~/taches.db pnpm start` pour un autre fichier de base.
+La base est migrée au démarrage (`schema_migration` garde l'historique) : copie automatique `data/tasks.db.vN.bak` avant (N = version d'avant, jamais écrasée), une transaction par étape (une étape en échec est annulée, l'app s'arrête avec le message). `git pull` ne touche pas `data/` (ignoré par git). Pour une vieille installation, l'essayer d'abord sur une copie :
 
-Vérifications :
+1. Arrêter l'app, puis copier la base : `cp data/tasks.db ~/tasks-avant-maj.db` (ou le fichier de `TASKS_DB`).
+2. Code et outils : `git status` (rien de modifié), `git switch main && git pull`, `node --version` (22.18 minimum), `npm install -g pnpm@12.19.0 vite-plus@1.6.0`, `vp install`.
+3. Essai à blanc : `cp data/tasks.db /tmp/essai.db && vp run db:migrate /tmp/essai.db` (« version N → version M, migrations appliquées : … »).
+4. Vérifier les données sur la copie : `PORT=3001 TASKS_DB=/tmp/essai.db vp run start` → http://localhost:3001, puis `Ctrl+C`.
+5. Migrer la vraie base : `vp run start` (le message de démarrage donne la sauvegarde).
 
-- `pnpm ready` : `vp check` (formatage oxfmt, lint oxlint avec les types, TypeScript ; `pnpm exec vp check --fix` corrige le formatage) puis `vp test` (tests unitaires Vitest : API, import, sans navigateur)
-- `pnpm test:e2e` : interface dans Chromium. La première fois, installer le navigateur : `pnpm exec playwright install chromium`
+Retour arrière : `cp ~/tasks-avant-maj.db data/tasks.db` et `git checkout <ancien commit>`.
 
 ## Claude Code sur le web (environnement cloud)
 
@@ -160,7 +172,7 @@ server/           Node exécute le TypeScript tel quel (pas d'étape de build)
   schema.ts       schéma de la base (Drizzle) : tables, colonnes, sens ; types déduits
   db.ts           accès SQLite (requêtes Drizzle)
   migrations.ts   scripts de migration numérotés et leur application
-  migrate.ts      commande pnpm db:migrate
+  migrate.ts      commande vp run db:migrate
   markdown.ts     import du markdown
   jira.ts         lecture / écriture d'un ticket Jira (API REST v2, PAT)
   test/           tests API (node:test)
@@ -195,4 +207,4 @@ Description complète et commentée : [`server/schema.ts`](server/schema.ts) (un
 - Suivi dans la table technique `schema_migration` (version, nom, version de l'outil, date d'application).
 - Avant de migrer une base existante, une **sauvegarde** est faite à côté : `tasks.db.v2.bak` (si elle existe déjà, elle n'est pas écrasée : `tasks.db.v2.2.bak`, etc.).
 - Une base plus récente que l'outil est refusée (mettre l'outil à jour).
-- `pnpm db:migrate [fichier]` : affiche la version et l'historique, et migre si besoin.
+- `vp run db:migrate [fichier]` : affiche la version et l'historique, et migre si besoin.
