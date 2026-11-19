@@ -50,6 +50,8 @@ La base est migrée au démarrage (`schema_migration` garde l'historique) : copi
 
 Retour arrière : `cp ~/tasks-avant-maj.db data/tasks.db` et `git checkout <ancien commit>`.
 
+Version de l'outil (`package.json`, affichée dans Réglages → À propos) : augmentée à chaque livraison qui change l'app, nouvelle fonction → `1.x.0`, correction → `1.x.y` (docs et tests seuls : inchangée). Chaque ligne « Fait » de `docs/plan.md` donne sa version.
+
 ## Claude Code sur le web (environnement cloud)
 
 Chaque session démarre dans un conteneur neuf : les dépendances doivent y être installées.

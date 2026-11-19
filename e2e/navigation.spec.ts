@@ -1,4 +1,5 @@
 import type { Locator, Page } from '@playwright/test';
+import fs from 'node:fs';
 import type { Store } from '../server/db.ts';
 import { test as base, expect } from './fixtures.ts';
 
@@ -1337,8 +1338,11 @@ test('réglages : « À propos » replié en bas, révèle la version de l’out
 
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  // Version de package.json (augmentée à chaque livraison) : pas écrite en dur dans le test.
+  const { version } = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { version: string };
+  expect(version).toMatch(/^\d+\.\d+\.\d+$/);
   await expect(page.locator('.about-app')).toHaveText(
-    /^version 1\.0\.0( · commit [0-9a-f]{7,} du \d{2}\/\d{2}\/\d{4})?$/,
+    new RegExp(`^version ${version.replaceAll('.', '\\.')}( · commit [0-9a-f]{7,} du \\d{2}/\\d{2}/\\d{4})?$`),
   );
   await expect(page.locator('.about-schema')).toHaveText(/^version (\d+) · attendue par l’outil : \1$/);
   await expect(page.locator('.about-schema')).not.toHaveClass(/text-destructive/);

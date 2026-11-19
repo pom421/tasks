@@ -24,7 +24,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
-- [x] Réglages : section « À propos » repliée en bas (version de l'outil et commit, version de la base et version attendue, dernière migration, fichier de la base) ; `GET /api/about`
+- [x] Réglages : section « À propos » repliée en bas (version de l'outil et commit, version de la base et version attendue, dernière migration, fichier de la base) ; `GET /api/about` ; version de l'outil augmentée à chaque livraison (fonction → mineure, correction → corrective) ([PR #28](https://github.com/pom421/tasks/pull/28), 1.1.0)
 - [x] README : commandes `vp` (installation, démarrage, démo, vérifications, migration) et procédure de mise à jour sûre d'une installation existante (copie, essai à blanc, vérification, retour arrière)
 - [x] Synthèse : flèches des bilans comme celles du Log (à contour, toujours visibles, grisées s'il n'y a rien avant / après, date du bilan voisin en info-bulle)
 - [x] Synthèse plus pratique : « Fait dernièrement » puis « Prochainement » l'un sous l'autre (libellé à gauche, bouton à droite, champ dessous), corps qui défile dans la fenêtre, ligne du bilan collante ; repères repliables (📌 plein si remplis ; clic, ou Tab puis Entrée : pas de raccourci) ; « Prochainement » et « Ajouter les tâches précédentes » ; onglet Suivant sur `N` (Next) au lieu de `S`
