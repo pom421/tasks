@@ -342,37 +342,34 @@ export function ProjectDialog({ project, field, day: dayProp, open, onClose, onO
   // bilan ; reste visible en haut quand le corps défile.
   const reviewHeader = (
     <div className="review-header sticky top-0 z-10 -mx-1 flex min-h-9 items-center gap-1 bg-background px-1">
-      {days.length > 1 && (
-        <>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            tabIndex={-1}
-            className="review-previous text-muted-foreground"
-            aria-label="Bilan précédent"
-            title="Bilan précédent (←)"
-            disabled={!previousDay}
-            onClick={() => void goTo(previousDay)}
-          >
-            <ChevronLeft aria-hidden />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            tabIndex={-1}
-            className="review-next text-muted-foreground"
-            aria-label="Bilan suivant"
-            title="Bilan suivant (→)"
-            disabled={!nextDay}
-            onClick={() => void goTo(nextDay)}
-          >
-            <ChevronRight aria-hidden />
-          </Button>
-        </>
-      )}
-      <h3 className="review-day ml-1 text-sm font-medium first-letter:uppercase">
+      {/* Comme les jours du Log : toujours là, grisées quand il n'y a rien avant / après. */}
+      <div className="flex gap-1" role="group" aria-label="Navigation entre les bilans">
+        <Button
+          type="button"
+          size="icon"
+          tabIndex={-1}
+          className="review-previous size-7"
+          aria-label="Bilan précédent"
+          title={previousDay ? `Bilan précédent, du ${formatDay(previousDay)} (←)` : 'Pas de bilan précédent'}
+          disabled={!previousDay}
+          onClick={() => void goTo(previousDay)}
+        >
+          <ChevronLeft aria-hidden />
+        </Button>
+        <Button
+          type="button"
+          size="icon"
+          tabIndex={-1}
+          className="review-next size-7"
+          aria-label="Bilan suivant"
+          title={nextDay ? `Bilan suivant, du ${formatDay(nextDay)} (→)` : 'Pas de bilan suivant'}
+          disabled={!nextDay}
+          onClick={() => void goTo(nextDay)}
+        >
+          <ChevronRight aria-hidden />
+        </Button>
+      </div>
+      <h3 className="review-day ml-2 text-sm font-medium first-letter:uppercase">
         {day ? `Bilan du ${formatDay(day)}` : data ? 'Aucun bilan' : ''}
       </h3>
       {data && day !== today && !days.includes(today) && (

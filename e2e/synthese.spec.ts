@@ -36,6 +36,9 @@ test('cercle : seulement si une tâche du projet est faite aujourd’hui ; vide 
   const done = dialog.getByLabel('Fait dernièrement');
   await expect(done).toBeFocused();
   await expect(dialog.locator('.review-day')).toHaveText('Bilan du vendredi 25 septembre 2026');
+  // Premier bilan : les deux flèches sont là, grisées (rien avant, rien après).
+  await expect(dialog.getByRole('button', { name: 'Bilan précédent' })).toBeDisabled();
+  await expect(dialog.getByRole('button', { name: 'Bilan suivant' })).toBeDisabled();
   await done.fill('Un essai');
   await page.keyboard.press('Control+Enter');
   await page.keyboard.press('Control+Enter');
@@ -141,6 +144,9 @@ test('bilans : ← → et flèches ; repères toujours là ; bilan passé modifi
   await expect(dialog.locator('.done-preview')).toHaveText('Mardi');
   await expect(dialog.locator('.next-preview')).toHaveText('Mercredi ?');
   await expect(following).toBeDisabled();
+  await expect(following).toHaveAttribute('title', 'Pas de bilan suivant');
+  await expect(previous).toBeEnabled();
+  await expect(previous).toHaveAttribute('title', 'Bilan précédent, du lundi 21 septembre 2026 (←)');
 
   await page.keyboard.press('ArrowLeft');
   await expect(day).toHaveText('Bilan du lundi 21 septembre 2026');
