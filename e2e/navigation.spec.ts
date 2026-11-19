@@ -1349,6 +1349,19 @@ test('réglages : « À propos » replié en bas, révèle la version de l’out
   await expect(page.locator('.about-migrated')).toHaveText(/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/);
   await expect(page.locator('.about-file')).toHaveText(/\.db$/);
 
+  // Dépôt : icône GitHub au bout de la ligne de l'outil (seul lien de la ligne : le commit n'en est pas un),
+  // nouvel onglet ; Tab depuis le bouton l'atteint.
+  const repo = page.getByRole('link', { name: 'Dépôt GitHub' });
+  await expect(page.locator('.about-app a')).toHaveCount(1);
+  await expect(repo).toHaveAttribute('href', 'https://github.com/pom421/tasks');
+  await expect(repo).toHaveAttribute('target', '_blank');
+  await expect(repo).toHaveAttribute('rel', 'noopener noreferrer');
+  await expect(repo).toHaveAttribute('title', 'Ouvrir le dépôt sur GitHub');
+  await expect(repo.locator('svg')).toHaveAttribute('aria-hidden', 'true');
+  await toggle.focus();
+  await page.keyboard.press('Tab');
+  await expect(repo).toBeFocused();
+
   // Clavier : Entrée sur le bouton replie / déplie.
   await toggle.focus();
   await page.keyboard.press('Enter');

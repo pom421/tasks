@@ -51,6 +51,7 @@ export interface Settings {
 // À propos (page Réglages) : version de l'outil et de la base.
 export interface About {
   app_version: string; // version de package.json
+  repo_url: string; // dépôt sur GitHub (repository de package.json)
   commit: { hash: string; date: string } | null; // code lancé (git), null hors dépôt git
   schema_version: number; // version de la base ouverte
   schema_expected: number; // version attendue par l'outil (dernière migration connue)

@@ -289,8 +289,10 @@ export interface AppOptions {
 // Version de l'outil (package.json) et commit du code lancé (git, s'il est là) :
 // lus une fois, au démarrage du serveur.
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const APP_VERSION = (JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')) as { version: string })
-  .version;
+const PKG = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')) as {
+  version: string;
+  repository: string; // adresse du dépôt GitHub
+};
 const COMMIT = (() => {
   try {
     const out = execFileSync('git', ['log', '-1', '--format=%h %cs'], {
@@ -329,7 +331,8 @@ export function createApp(store: Store, { allowedHosts = DEFAULT_ALLOWED_HOSTS, 
       (_req, res) => {
         const { version, migrated_at } = store.schema();
         const about: About = {
-          app_version: APP_VERSION,
+          app_version: PKG.version,
+          repo_url: PKG.repository,
           commit: COMMIT,
           schema_version: version,
           schema_expected: LATEST_VERSION,

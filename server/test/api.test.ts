@@ -391,6 +391,9 @@ test('à propos : version de l’outil (package.json), commit, version de la bas
   assert.match(body.migrated_at, /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
   assert.equal(typeof body.db_file, 'string');
   // Dans le dépôt git : commit court et date ; hors dépôt : null.
+  // Dépôt GitHub : repository de package.json.
+  assert.equal(body.repo_url, 'https://github.com/pom421/tasks');
+  assert.equal(body.repo_url, pkg.repository);
   if (body.commit) assert.match(`${body.commit.hash} ${body.commit.date}`, /^[0-9a-f]{7,} \d{4}-\d{2}-\d{2}$/);
 });
 
