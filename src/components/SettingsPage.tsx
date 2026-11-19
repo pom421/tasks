@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ChevronDown } from 'lucide-react';
+import type { About } from '../../shared/types.ts';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,6 +45,17 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
       })
       .catch((err) => setStatus({ error: err.message }));
   }, []);
+
+  // À propos : versions de l'outil et de la base, repliées par défaut.
+  const [about, setAbout] = useState<About | null>(null);
+  const [showAbout, setShowAbout] = useState(false);
+  useEffect(() => {
+    api.about().then(setAbout, () => {});
+  }, []);
+  const day = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
+  // Dernière migration : heure UTC de la base, affichée en heure locale.
+  const migratedAt = (utc: string) =>
+    new Date(`${utc.replace(' ', 'T')}Z`).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
 
   // Export / import de la base.
   const dbInput = useRef<HTMLInputElement>(null);
@@ -258,6 +270,58 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
           <p role="alert" className="text-sm text-destructive">
             {data.error}
           </p>
+        )}
+      </section>
+
+      <section className="mt-10 mb-6">
+        <h2>
+          <Button
+            variant="ghost"
+            className="about-toggle -ml-2 h-8 gap-1.5 px-2 text-base font-semibold"
+            aria-expanded={showAbout}
+            aria-controls={`${id}-about`}
+            title={showAbout ? 'Masquer les versions' : 'Afficher la version de l’outil et celle de la base'}
+            onClick={() => setShowAbout(!showAbout)}
+          >
+            À propos
+            <ChevronDown
+              aria-hidden
+              className={cn('text-muted-foreground transition-transform', showAbout && 'rotate-180')}
+            />
+          </Button>
+        </h2>
+        {showAbout && (
+          <dl id={`${id}-about`} className="about mt-2 grid grid-cols-[9rem_1fr] gap-x-4 gap-y-1 text-sm">
+            {about ? (
+              <>
+                <dt className="text-muted-foreground">Outil</dt>
+                <dd className="about-app">
+                  version {about.app_version}
+                  {about.commit && (
+                    <span className="text-muted-foreground">
+                      {' '}
+                      · commit <span className="font-mono">{about.commit.hash}</span> du {day(about.commit.date)}
+                    </span>
+                  )}
+                </dd>
+                <dt className="text-muted-foreground">Base</dt>
+                <dd
+                  className={cn('about-schema', about.schema_version !== about.schema_expected && 'text-destructive')}
+                >
+                  version {about.schema_version}
+                  <span className="text-muted-foreground"> · attendue par l’outil : {about.schema_expected}</span>
+                </dd>
+                <dt className="text-muted-foreground">Dernière migration</dt>
+                <dd className="about-migrated">
+                  {about.migrated_at ? migratedAt(about.migrated_at) : 'avant le suivi des migrations'}
+                </dd>
+                <dt className="text-muted-foreground">Fichier</dt>
+                <dd className="about-file font-mono text-xs leading-5 [overflow-wrap:anywhere]">{about.db_file}</dd>
+              </>
+            ) : (
+              <dd className="col-span-2 text-muted-foreground">Informations indisponibles</dd>
+            )}
+          </dl>
         )}
       </section>
     </div>

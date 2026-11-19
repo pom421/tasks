@@ -1,4 +1,5 @@
 import type {
+  About,
   DoneTask,
   ImportResult,
   BugtrackerState,
@@ -55,6 +56,7 @@ export interface TaskPatch {
 export const api = {
   state: (day: string) => request<State>('GET', `/api/state?day=${day}`),
   settings: () => request<Settings>('GET', '/api/settings'),
+  about: () => request<About>('GET', '/api/about'),
   updateSettings: (patch: SettingsPatch) => request<Settings>('PUT', '/api/settings', patch),
   journal: ({ from, to, projectId, bugtrackerPending, q, tags, limit }: JournalFilter) => {
     const params = new URLSearchParams();

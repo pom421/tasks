@@ -48,6 +48,16 @@ export interface Settings {
   jira_pat_set: boolean; // PAT Jira enregistré (sa valeur ne quitte jamais le serveur)
 }
 
+// À propos (page Réglages) : version de l'outil et de la base.
+export interface About {
+  app_version: string; // version de package.json
+  commit: { hash: string; date: string } | null; // code lancé (git), null hors dépôt git
+  schema_version: number; // version de la base ouverte
+  schema_expected: number; // version attendue par l'outil (dernière migration connue)
+  migrated_at: string | null; // dernière migration (UTC), null : appliquée avant le suivi
+  db_file: string; // fichier de la base
+}
+
 // Modification des réglages : le PAT s'écrit mais ne se relit pas.
 export type SettingsPatch = Partial<Omit<Settings, 'jira_pat_set'>> & { jira_pat?: string | null };
 

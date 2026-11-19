@@ -4,7 +4,16 @@ import path from 'node:path';
 import { and, count, desc, eq, getColumns, gt, gte, isNotNull, isNull, lte, ne, or, sql, type SQL } from 'drizzle-orm';
 import { drizzle, type NodeSQLiteDatabase } from 'drizzle-orm/node-sqlite';
 import type { SQLiteUpdateSetSource } from 'drizzle-orm/sqlite-core';
-import { project, projectReview, setting, task, type ProjectRow, type ReviewRow, type TaskRow } from './schema.ts';
+import {
+  project,
+  projectReview,
+  schemaMigration,
+  setting,
+  task,
+  type ProjectRow,
+  type ReviewRow,
+  type TaskRow,
+} from './schema.ts';
 import type {
   DoneTask,
   ImportResult,
@@ -272,6 +281,16 @@ export class Store {
 
   private task(id: number): TaskRow | undefined {
     return this.orm.select().from(task).where(eq(task.id, id)).get();
+  }
+
+  // Version de la base ouverte et date de sa dernière migration (null : appliquée avant le suivi).
+  schema(): { version: number; migrated_at: string | null } {
+    const last = this.orm
+      .select({ applied_at: schemaMigration.applied_at })
+      .from(schemaMigration)
+      .orderBy(desc(schemaMigration.version))
+      .get();
+    return { version: schemaVersion(this.db), migrated_at: last?.applied_at ?? null };
   }
 
   hasProject(id: number): boolean {
