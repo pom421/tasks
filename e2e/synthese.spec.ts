@@ -76,7 +76,7 @@ test('s : bilan du jour ; ajouter les dernières tâches (depuis le bilan d’av
   // Nouveau bilan, vide ; les repères ne changent pas.
   await expect(done).toBeFocused();
   await expect(done).toHaveValue('');
-  await expect(dialog.getByLabel('Repères')).toHaveValue('Le projet');
+  await expect(dialog.getByLabel('Repères')).toHaveCount(0); // repliés
 
   const addDone = dialog.getByRole('button', { name: 'Ajouter les dernières tâches (1)' });
   const addNext = dialog.getByRole('button', { name: 'Ajouter les prochaines tâches prioritaires (1)' });
@@ -145,6 +145,7 @@ test('bilans : ← → et flèches ; repères toujours là ; bilan passé modifi
   await page.keyboard.press('ArrowLeft');
   await expect(day).toHaveText('Bilan du lundi 21 septembre 2026');
   await expect(dialog.locator('.done-preview')).toHaveText('Lundi');
+  await page.keyboard.press('r');
   await expect(dialog.locator('.notes-preview')).toHaveText('Repères du projet');
   await expect(previous).toBeDisabled();
   await following.click();
@@ -183,6 +184,59 @@ test('bilans : ← → et flèches ; repères toujours là ; bilan passé modifi
   await expect
     .poll(() => store.db.prepare("SELECT done FROM project_review WHERE day = '2026-09-21'").get())
     .toEqual({ done: 'Lundi' });
+});
+
+test('repères repliés par défaut : 📌 plein si remplis, r ou clic les déplie ; zones l’une sous l’autre ; corps qui défile', async ({
+  page,
+  store,
+}) => {
+  const alpha = store.createProject('Alpha');
+  const beta = store.createProject('Beta');
+  store.updateProject(alpha.id, { notes: 'Le projet' });
+  const long = Array.from({ length: 40 }, (_, i) => `- Point ${i + 1}`).join('\n');
+  store.saveReview(alpha.id, { day: '2026-09-22', done: long, next: 'Ensuite' });
+  await page.setViewportSize({ width: 1000, height: 700 });
+  await page.goto('/');
+  await expect(page.locator('.project')).toHaveCount(2);
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('o');
+  const dialog = page.getByRole('dialog', { name: 'Alpha' });
+  const toggle = dialog.getByRole('button', { name: 'Repères' });
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(toggle).toHaveAttribute('title', 'Déplier les repères (r)');
+  await expect(toggle.locator('svg.notes-filled')).toHaveAttribute('fill', 'currentColor'); // remplis
+  await expect(dialog.locator('.notes-preview')).toHaveCount(0);
+
+  // r déplie (le bilan descend), r replie ; le clic aussi.
+  const bilanTop = async () => (await dialog.locator('.review-header').boundingBox())!.y;
+  const before = await bilanTop();
+  await page.keyboard.press('r');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(dialog.locator('.notes-preview')).toHaveText('Le projet');
+  expect(await bilanTop()).toBeGreaterThan(before);
+  await page.keyboard.press('r');
+  await expect(dialog.locator('.notes-preview')).toHaveCount(0);
+  await toggle.click();
+  await expect(dialog.locator('.notes-preview')).toBeVisible();
+
+  // « Fait dernièrement » au-dessus de « Bientôt », pleine largeur ; la fenêtre reste dans l'écran, le corps défile.
+  const done = (await dialog.locator('.done-preview').boundingBox())!;
+  const next = (await dialog.locator('.next-preview').boundingBox())!;
+  expect(next.y).toBeGreaterThan(done.y + done.height);
+  expect(Math.abs(next.x - done.x)).toBeLessThan(2);
+  expect((await dialog.boundingBox())!.y + (await dialog.boundingBox())!.height).toBeLessThanOrEqual(700);
+  expect(await dialog.locator('.reader').evaluate((e) => e.scrollHeight > e.clientHeight)).toBe(true);
+  // En-tête des bilans : reste visible en haut quand le corps défile.
+  await dialog.locator('.reader').evaluate((e) => (e.scrollTop = e.scrollHeight));
+  await expect(dialog.locator('.review-day')).toBeInViewport();
+  await page.keyboard.press('Escape');
+
+  // Repères vides : 📌 vide, « (vides) » dans le titre.
+  await page.locator(`#project-${beta.id} .project-head .name`).focus();
+  await page.keyboard.press('o');
+  const empty = page.getByRole('dialog', { name: 'Beta' }).getByRole('button', { name: 'Repères (vides)' });
+  await expect(empty.locator('svg.notes-filled')).toHaveAttribute('fill', 'none');
+  await expect(empty).toHaveAttribute('title', 'Déplier les repères (vides) (r)');
 });
 
 test('non-régression : sans tâche faite aujourd’hui, pas de cercle ; s dans un champ s’écrit ; pas de retour hors synthèse', async ({

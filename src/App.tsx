@@ -74,7 +74,7 @@ export function App() {
   const TABS = [
     { label: 'Projets', to: '/', key: 'P', selected: projectsView },
     { label: 'Aujourd’hui', to: '/plan', key: 'T', selected: dayView },
-    { label: 'Suivant', to: '/suivant', key: 'S', selected: upcomingView },
+    { label: 'Suivant', to: '/suivant', key: 'N', selected: upcomingView }, // N : Next
     { label: 'Log', to: '/log', key: 'L', selected: logView },
   ];
   // Fiche d'une tâche : id, champ focalisé, open à false pendant l'animation de

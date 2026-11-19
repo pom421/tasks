@@ -228,8 +228,11 @@ test('Suivant : agenda par jour, tâche à ses deux dates, un cadre rouge par é
   await expect(tab(page, 'Suivant')).toHaveAttribute('aria-selected', 'true');
   await expect(page).toHaveURL(/\/suivant$/);
   await page.keyboard.press('P');
-  await page.keyboard.press('S'); // touche de l'onglet
+  await page.keyboard.press('S'); // ancienne touche : sans effet
+  await expect(tab(page, 'Projets')).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('N'); // touche de l'onglet (Next)
   await expect(tab(page, 'Suivant')).toHaveAttribute('aria-selected', 'true');
+  await expect(tab(page, 'Suivant')).toHaveAttribute('title', 'Suivant (N)');
   const days = page.locator('#upcoming .upcoming-day');
   await expect(days.locator('h3')).toHaveText([
     'dimanche 20 septembre 2026 (échéance dépassée)',
