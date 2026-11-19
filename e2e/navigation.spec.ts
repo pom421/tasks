@@ -425,9 +425,8 @@ test('raccourcis actifs même quand le focus est sur la case à cocher', async (
 });
 
 test('nouveau projet : le focus va sur la saisie de sa première tâche', async ({ page, store }) => {
-  // p et N ne font rien (nouveau projet : n n) ; un seul n : champ d'ajout de tâche.
+  // p ne fait rien (nouveau projet : n n ; N : onglet Suivant) ; un seul n : champ d'ajout de tâche.
   await page.keyboard.press('p');
-  await page.keyboard.press('N');
   await expect(page.locator('#new-project')).not.toBeFocused();
   await page.keyboard.press('n');
   await expect(page.locator('#projects input.add').first()).toBeFocused();
@@ -975,6 +974,11 @@ test('fiche du projet : o lit, e édite (nom → Tab → ticket → contenu), Ct
   await expect(dialog.locator('.reader')).toBeFocused();
   await expect(dialog.getByText('Projet · 2 tâches à faire')).toBeVisible();
   await expect(dialog.locator('.ticket-value')).toHaveText('aucun');
+  // Repères repliés ; Tab jusqu'à leur ligne puis Entrée les déplie (et le reste en édition).
+  await expect(dialog.locator('.notes-preview')).toHaveCount(0);
+  await page.keyboard.press('Tab');
+  await expect(dialog.getByRole('button', { name: 'Repères (vides)' })).toBeFocused();
+  await page.keyboard.press('Enter');
   await expect(dialog.locator('.notes-preview')).toHaveText('Aucun repère');
   // Pas de tags ni de dates pour un projet.
   await expect(dialog.getByText('Tags :')).toHaveCount(0);
@@ -988,6 +992,8 @@ test('fiche du projet : o lit, e édite (nom → Tab → ticket → contenu), Ct
   await page.keyboard.press('Tab');
   await expect(dialog.getByLabel('Ticket', { exact: true })).toBeFocused();
   await page.keyboard.type('epic-7');
+  await page.keyboard.press('Tab');
+  await expect(dialog.getByRole('button', { name: 'Repères' })).toBeFocused(); // ligne des repères
   await page.keyboard.press('Tab');
   const editor = dialog.getByLabel('Repères');
   await expect(editor).toBeFocused();
@@ -1038,9 +1044,11 @@ test('fiche du projet : Maj+Entrée et clic sur 🗒 (au survol sans contenu) ; 
   const dialog = page.getByRole('dialog', { name: 'Beta' });
   await expect(dialog.getByText('Projet · 1 tâche à faire')).toBeVisible();
   // Double-clic sur le contenu : édition directement dedans.
+  await dialog.getByRole('button', { name: 'Repères' }).click(); // déplie
   await dialog.locator('.notes-preview').dblclick();
   await expect(dialog.getByLabel('Repères')).toBeFocused();
   await page.keyboard.type('Contexte');
+  await page.keyboard.press('Shift+Tab'); // ligne des repères
   await page.keyboard.press('Shift+Tab'); // ticket
   await page.keyboard.type('pas un ticket');
   await page.keyboard.press('Enter');
@@ -1055,6 +1063,7 @@ test('fiche du projet : Maj+Entrée et clic sur 🗒 (au survol sans contenu) ; 
 
   // Maj+Entrée sur l'en-tête : lecture ; le contenu s'affiche.
   await page.keyboard.press('Shift+Enter');
+  await page.getByRole('dialog', { name: 'Beta' }).getByRole('button', { name: 'Repères' }).click();
   await expect(page.getByRole('dialog', { name: 'Beta' }).locator('.notes-preview')).toHaveText('Contexte');
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);

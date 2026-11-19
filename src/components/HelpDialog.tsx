@@ -34,7 +34,7 @@ const SECTIONS: [title: string, shortcuts: Shortcut[]][] = [
       ],
       [[['Entrée']], 'Modifier le nom ; sur « + Ajouter », écrire'],
       [[['Échap']], 'Quitter l’édition sans enregistrer ; « + Ajouter » : vider, repasser en lecture'],
-      [[['P', 'T', 'S', 'L']], 'Onglet Projets, Aujourd’hui, Suivant, Log'],
+      [[['P', 'T', 'N', 'L']], 'Onglet Projets, Aujourd’hui, Suivant, Log'],
       [[[`${MOD}+Maj+←/→`]], 'Onglet précédent / suivant'],
     ],
   ],
