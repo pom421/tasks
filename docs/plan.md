@@ -24,7 +24,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[?]` décision att
 
 ## Fait (récent)
 
-- [x] Réglages → À propos : identifiant du commit cliquable, ouvre le commit sur GitHub dans un nouvel onglet (adresse du dépôt : `repository` de `package.json`) (1.2.0)
+- [x] Réglages → À propos : identifiant du commit cliquable, ouvre le commit sur GitHub dans un nouvel onglet (adresse du dépôt : `repository` de `package.json`) ([PR #29](https://github.com/pom421/tasks/pull/29), 1.2.0)
 - [x] Réglages : section « À propos » repliée en bas (version de l'outil et commit, version de la base et version attendue, dernière migration, fichier de la base) ; `GET /api/about` ; version de l'outil augmentée à chaque livraison (fonction → mineure, correction → corrective) ([PR #28](https://github.com/pom421/tasks/pull/28), 1.1.0)
 - [x] README : commandes `vp` (installation, démarrage, démo, vérifications, migration) et procédure de mise à jour sûre d'une installation existante (copie, essai à blanc, vérification, retour arrière)
 - [x] Synthèse : flèches des bilans comme celles du Log (à contour, toujours visibles, grisées s'il n'y a rien avant / après, date du bilan voisin en info-bulle)
